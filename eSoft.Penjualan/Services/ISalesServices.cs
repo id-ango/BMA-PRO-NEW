@@ -51,7 +51,7 @@ namespace eSoft.Penjualan.Services
         Task<bool> DelKurir(int kurirs);
         bool AddKurir(OeKurirView customers);
         Task<bool> EditKurir(OeKurirView customers);
-        List<OeTransH> GetTransKurir();
+        Task<List<OeTransH>> GetTransKurirAsync();
         void SimpanKurir(OeTransH transaksi);
         void SimpanSalesman(OeTransH transaksi);
         List<OeTransD> GetOeTransDByDokumen(string dokumen);

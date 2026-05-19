@@ -5,16 +5,19 @@
 
 <div class="bg-light justify-content-between">
     @if (TotalEnabled)
+    {
         @TotalJumlah.ToString("N")
+    }
 
 
-        @if (SearchEnabled)
+    @if (SearchEnabled)
     {
         <p align="right">
             <input class="mr-sm-2" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
             <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="searchFind">Search</button>
         </p>
-    } else
+    }
+    else
     {
         <p>
             &emsp;
@@ -36,7 +39,7 @@
             <tr>@TableHeader</tr>
             </thead>*@
         <tbody>
-            @foreach (var item in Items)
+            @foreach (var item in SafeItems)
             {
                 <tr>@RowTemplate(item)</tr>
             }
@@ -53,7 +56,7 @@
     public RenderFragment<TItem> RowTemplate { get; set; }
 
     [Parameter]
-    public IEnumerable<TItem> Items { get; set; }
+    public IEnumerable<TItem> Items { get; set; } = Enumerable.Empty<TItem>();
 
     [Parameter]
     public Func<TItem, string> GetFilterableText { get; set; }
@@ -81,6 +84,8 @@
 
 
 
+    private IEnumerable<TItem> SafeItems => Items ?? Enumerable.Empty<TItem>();
+
     private void searchFind()
     {
         Func<TItem, string> filterFunc = GetFilterableText ?? DefaultGetFilterableText;
@@ -89,7 +94,7 @@
         {
             result = result.
             Where(x =>
-            (GetFilterableText(x) ?? "")
+            (filterFunc(x) ?? "")
             .Contains(searchText, StringComparison.InvariantCultureIgnoreCase));
 
         }

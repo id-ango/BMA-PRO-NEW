@@ -325,13 +325,13 @@
     public bool DetailOpen3 { get; set; }
 
     string currentUri;
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // base.OnInitialized();
         currentUri = navigationmanager.Uri;
 
         LoadCek();
-        LoadGet();
+        await LoadGetAsync();
 
         LoadKurirs();
         LoadSalesmans();
@@ -356,10 +356,10 @@
         // GC.SuppressFinalize(this);
     }
 
-    private void LoadGet()
+    private async Task LoadGetAsync()
     {
 
-        TransHeader = serviceSales.GetTransKurir();
+        TransHeader = await serviceSales.GetTransKurirAsync();
         LoadpoTransAktif();
         foreach (var aktif in poTransh)
         {
@@ -398,7 +398,7 @@
         }
 
         DeleteDialogOpen = false;
-        LoadGet();
+        await LoadGetAsync();
 
         StateHasChanged();
 
@@ -420,7 +420,7 @@
         //Console.WriteLine(bank.NoLpb);
         //Console.WriteLine(bank.Kurir);
         //System.Console.WriteLine(bank.Keterangan);
-        LoadGet();
+        _ = LoadGetAsync();
         StateHasChanged();
     }
 

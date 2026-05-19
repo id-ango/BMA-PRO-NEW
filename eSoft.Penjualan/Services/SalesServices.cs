@@ -1783,15 +1783,15 @@ namespace eSoft.Penjualan.Services
 
         #region indexjual
 
-        public List<OeTransH> GetTransKurir()
+        public async Task<List<OeTransH>> GetTransKurirAsync()
         {
             DateTime date1 = new DateTime(2022, 4, 17, 0, 0, 0);
 
             try
             {
                 var query = _context.OeTransHs
-                    .AsNoTracking()  // Menghindari pelacakan perubahan
-                    .Where(e => e.Kode == "94" && string.IsNullOrEmpty(e.Kurir) && e.Tanggal > date1)
+                    .AsNoTracking()
+                    .Where(e => e.Kode == "94" && (e.Kurir == null || e.Kurir == "") && e.Tanggal > date1)
                     .OrderByDescending(e => e.Tanggal)
                     .Select(e => new OeTransH
                     {
@@ -1818,7 +1818,7 @@ namespace eSoft.Penjualan.Services
                         Pajak = e.Pajak
                     });
 
-                return query.ToList(); // Eksekusi query di sini
+                return await query.ToListAsync(); // Eksekusi query secara async
             }
             catch (Exception ex)
             {
