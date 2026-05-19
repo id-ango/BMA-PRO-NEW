@@ -315,8 +315,8 @@
     public bool DeleteDialogOpen { get; set; }
     public string textAlert { get; set; } = "Transaction Already Posting";
     public string textDelete { get; set; } = "Do you want to delete this entry?";
-    private List<OeKurir> kurirs;
-    private List<OeSalesman> salesmans;
+    private List<OeKurir> kurirs = new List<OeKurir>();
+    private List<OeSalesman> salesmans = new List<OeSalesman>();
 
     private List<PoTransH> poTransh;
     public List<OeTrans> TransDetail2;
