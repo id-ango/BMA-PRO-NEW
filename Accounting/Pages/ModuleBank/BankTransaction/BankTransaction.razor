@@ -1,0 +1,208 @@
+﻿@page "/ModuleBank/BankTransaction"
+
+@using System.Globalization
+@using System.IO
+@using System.ComponentModel.DataAnnotations
+@using eSoft.CashBank.View
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.Services
+
+@inject ICashBankServices service
+@inject NavigationManager navigationmanager
+@inject IJSRuntime JS
+
+<style>
+    .textarea-auto-height {
+        height: 100px;
+        width: 100%;
+        overflow-y: auto;
+        resize: none;
+    }
+
+    .small-width {
+        width: 270px;
+    }
+</style>
+
+<div class="top-row px-4" style="z-index:5">
+    <h3>Bank Transactions</h3>
+</div>
+
+<div class="container">
+    <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label>Select Bank:</label>
+            <InputSelect class="form-control" @bind-Value="formModel.BankName" style="width:100% !important">
+                <option value="">---Select Bank---</option>
+                @foreach (var item in banks)
+                {
+                    <option value="@item.KodeBank">[@item.KodeBank] @item.NmBank</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="form-group">
+            <label>Date:</label>
+            <InputDate class="form-control" @bind-Value="formModel.Date" />
+        </div>
+        <br />
+        <div class="form-group">
+            <label>Upload CSV:</label>
+            <InputFile OnChange="HandleFileSelected" />
+        </div>
+
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Submit</button>
+        </div>
+    </EditForm>
+</div>
+
+<div class="container">
+    @if (transactions != null && transactions.Any())
+    {
+        <h4>Transaction Data</h4>
+        <button class="btn btn-danger" @onclick="DeleteSelectedTransactions">Delete Selected</button>
+        <DataGridGeneralComponent TItem="BankTransactionView" Items="transactions" PageSize="700" TotalEnabled="false" SearchEnabled="true" GetFilterableText="@(item => $"{item.Description} {item.Type}")">
+            <TableHeader>
+                <th><input type="checkbox" @onclick="SelectAllCheckboxes" /></th>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Balance</th>
+                <th>Transaction Date</th>
+            </TableHeader>
+            <RowTemplate>
+                <td>
+                    <input type="checkbox" @bind="@context.IsSelected" />
+                </td>
+                <td>@context.Date</td>
+                <td>
+                    <textarea class="form-control textarea-auto-height">@context.Description</textarea>
+                </td>
+                <td>@context.Amount.ToString("N2")</td>
+                <td>@context.Balance.ToString("N2")</td>
+                <td>
+                    <input type="date" @bind="context.Tanggal" class="form-control small-width" />
+                    <select class="form-control" @bind="context.SrcCode" style="width:60%; display:inline">
+                        <option value="">&nbsp;&nbsp;---Select Salesman---&nbsp;&nbsp;</option>
+                        @foreach (var item in SourceCode)
+                        {
+                            <option value="@item.SrcCode">[@item.SrcCode]&nbsp; @item.NamaSrc</option>
+                        }
+
+                    </select>
+                   @*  <InputDate @bind-Value="@context.Tanggal" class="form-control small-width" />
+
+                    <InputSelect @bind-Value="@context.SrcCode" class="form-control small-width">
+                        <option value="">--- Select ---</option>
+                        @foreach (var item in SourceCode)
+                        {
+                            <option value="@item.SrcCode">@item.NamaSrc</option>
+                        }
+                    </InputSelect> *@
+                </td>
+            </RowTemplate>
+        </DataGridGeneralComponent>
+    }
+</div>
+
+@code {
+    private BankTransactionFormModel formModel = new BankTransactionFormModel();
+    private List<BankTransactionView> transactions = new();
+    private List<CbBank> banks = new();
+    private List<CbSrcCode> SourceCode = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBank();
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        transactions.Clear();
+        var file = e.File;
+        try
+        {
+            using var reader = new StreamReader(file.OpenReadStream());
+            for (int i = 0; i < 4; i++) await reader.ReadLineAsync();
+            string line;
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("Starting Balance"))
+                {
+                    var values = line.Split(',');
+                    if (values.Length >= 6)
+                    {
+                        var transaction = ParseTransaction(values);
+                        if (transaction != null) transactions.Add(transaction);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error processing file: {ex.Message}");
+        }
+        StateHasChanged();
+    }
+
+    private BankTransactionView ParseTransaction(string[] values)
+    {
+        try
+        {
+            return new BankTransactionView
+                {
+                    Date = values[0].Trim('\''),
+                    Description = values[1].Trim(),
+                    Branch = values[2].Trim(),
+                    Amount = decimal.Parse(values[3], NumberStyles.Any, CultureInfo.InvariantCulture),
+                    Type = values[4].Trim(),
+                    Balance = decimal.Parse(values[5], NumberStyles.Any, CultureInfo.InvariantCulture),
+                    Tanggal = DateTime.TryParseExact(values[0], "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime result) ? result : formModel.Date
+                };
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error parsing transaction: {ex.Message}");
+            return null;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            await service.SaveTransactionsAsync(transactions, formModel.Date, formModel.BankName, "X1", "Y1");
+            await JS.InvokeVoidAsync("alert", "Proses Sudah Selesai");
+            transactions.Clear();
+            formModel = new BankTransactionFormModel();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error saving transactions: {ex.Message}");
+        }
+        StateHasChanged();
+    }
+
+    void LoadBank()
+    {
+        banks = service.GetBank();
+        SourceCode = service.GetSrcCode();
+    }
+
+    private void DeleteSelectedTransactions() => transactions.RemoveAll(t => t.IsSelected);
+
+    private void SelectAllCheckboxes() => transactions.ForEach(t => t.IsSelected = !transactions.All(x => x.IsSelected));
+
+    public class BankTransactionFormModel
+    {
+        [Required]
+        public string BankName { get; set; }
+        public DateTime Date { get; set; } = DateTime.Today;
+    }
+
+}

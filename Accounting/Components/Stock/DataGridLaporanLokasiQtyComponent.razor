@@ -1,0 +1,159 @@
+﻿@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+
+@using System.Collections.Generic
+@using System.Linq
+@inject IInventoryServices service
+
+<div class="bg-light justify-content-between">
+    @nJumlah
+    <p align="right">
+        <input class="mr-sm-2" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
+        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="searchFind">Search</button>
+    </p>
+</div>
+<table class="table table-striped table-hover">
+
+    <thead>
+        <tr>
+            <th scope="col" style="width:40%">Item</th>
+            <th scope="col" style="width:15%">Stock</th>
+          @*   <th scope="col" style="width:15%">Awal</th> *@
+            @foreach(var location in icLocations)
+            {
+                <th scope="col" style="width:15%">@location.NamaLokasi</th>
+            }
+           
+         
+            <th></th>
+        </tr>
+    </thead>
+</table>
+<div style="display:block;position:relative;height:430px;overflow:auto ">
+    <table class="table table-striped table-hover">
+
+
+        <tbody>
+            @foreach (var transaksi in result)
+            {
+                <tr style="background-color:@(transaksi.Qty < 0 ? "yellow" : "") ">
+
+                    <td  style="width:40%; font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; background-color:@(transaksi.Qty < 0 ? "magenta" : (transaksi.Qty == 0 ? "gold" : "")) ">
+                        @transaksi.NamaItem
+                        <br />
+                        <span class="badge bg-primary">@transaksi.ItemCode</span>
+                        <br />
+                        <span class="badge bg-primary">@transaksi.Satuan</span>
+                    </td>
+                    <td style="width:15%; font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; background-color:@(transaksi.Qty < 0 ? "magenta" : (transaksi.Qty == 0 ? "gold" : ""))">@transaksi.Qty.ToString("N")</td>
+                   @*  <td style="width:15%">@transaksi.QtyAwal.ToString("N")</td> *@
+                    @foreach (var location in icLocations)
+                    {
+                        <td >
+                            @if (transaksi.Locations.Any(x => x.Lokasi == location.Lokasi))
+                            {
+                                <span>@transaksi.Locations.FirstOrDefault(x => x.Lokasi == location.Lokasi).Qty</span>
+                            }
+                        </td>
+                    }
+
+                   @* <td>
+                        <button @onclick="() => BtnDetail(transaksi)" class="btn btn-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-down-square" viewBox="0 0 16 16">
+                                <path d="M3.626 6.832A.5.5 0 0 1 4 6h8a.5.5 0 0 1 .374.832l-4 4.5a.5.5 0 0 1-.748 0l-4-4.5z" />
+                                <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 0a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2z" />
+                            </svg>
+                        </button>
+                        <button @onclick="() => OpenPrint(transaksi)" class="btn btn-info">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
+                                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
+                            </svg>
+                        </button>
+                        @*<button @onclick="() => OpenPrint(transaksi.OeTransHId)" class="btn btn-danger">Print</button>*@
+                    @*</td>*@
+                </tr>
+            }
+        </tbody>
+
+    </table>
+</div>
+
+@code {
+
+    [Parameter]
+    public List<IcItemQtyByLocationView> Items { get; set; }
+
+    [Parameter]
+    public EventCallback<IcItemQtyByLocationView> OnDetail { get; set; }
+
+    [Parameter]
+    public EventCallback<IcItemQtyByLocationView> PrintDetail { get; set; }
+
+    private string nJumlah { get; set; }
+
+    public List<IcLokasi> icLocations;
+
+    private List<IcItemQtyByLocationView> result = new List<IcItemQtyByLocationView>();
+    private List<IcItemQtyByLocationView> result2 = new List<IcItemQtyByLocationView>();
+
+    private string searchText;
+
+
+    //private Task BtnDetail(IcItem xKode)
+    //{
+    //    return OnDetail.InvokeAsync(xKode);
+
+    //}
+
+    //private Task OpenPrint(IcItem xKode)
+    //{
+    //    return PrintDetail.InvokeAsync(xKode);
+
+    //}
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        icLocations = service.GetIcLokasi();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        result2 = Items;
+        searchFind();
+        StateHasChanged();
+    }
+
+    private void searchFind()
+    {
+        result2 = Items;
+
+        if (!string.IsNullOrEmpty(searchText))
+        {
+
+
+            //   result = result.Where(x => x.NamaCust || x.AlamatKirim).ToList();
+            result2 = (from t in result2
+                       where
+       ((t.NamaItem?.Contains(searchText, StringComparison.InvariantCultureIgnoreCase) ?? false) ||
+       (t.ItemCode?.Contains(searchText, StringComparison.InvariantCultureIgnoreCase) ?? false) ||
+     (t.Satuan?.Contains(searchText, StringComparison.InvariantCultureIgnoreCase) ?? false))
+                       select t).ToList();
+
+
+
+        }
+        if (result2.Count != 0)
+            result = result2;
+        else
+            result = Items;
+
+        nJumlah = result.Sum(x => x.Qty).ToString("N");
+    }
+
+
+
+}

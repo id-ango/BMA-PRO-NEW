@@ -1,0 +1,101 @@
+﻿@page "/ModuleMaintenance/BatalPiutang"
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Identity;
+@using Accounting.Services;
+@using Accounting.Services.View;
+@using Accounting.Data;
+@using eSoft.Piutang.Data;
+@using eSoft.Piutang.Model;
+@using eSoft.Piutang.Services;
+@using eSoft.Penjualan.Model;
+@using eSoft.Penjualan.Services;
+
+
+@inject IReceivableServices service;
+@inject ISalesServices serviceOE;
+
+
+<h3>Batal Piutang</h3>
+
+<div class="content px-4">
+    <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Dokumen :
+                <InputText id="codeBank" class="form-control" @bind-Value="bank.Dokumen" style="text-transform:uppercase" />
+            </label>
+        </div>
+        
+        <br/>
+
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Proses</button>
+       
+        </div>
+
+    </EditForm>
+</div>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text=@Testing TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+
+@code {
+    ArPiutng bank = new ArPiutng();
+    private bool DialogOpen { get; set; }
+    public string Testing { get; set; }
+
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+    private void HandleValidSubmit()
+    {
+        var newEdit = service.GetPiutang(bank.Dokumen);
+        var newOE = serviceOE.GetOeTransDokumen(bank.Dokumen);
+
+        if(newEdit != null)
+        {
+            if(newEdit.Bayar != 0)
+            {
+                DialogOpen = true;
+                Testing = "Dokumen ini sdh ada Pembayaran";
+            } 
+            else
+            {
+                if(newOE == null)
+                {
+                    var Batal = service.BatalPiutang(newEdit);
+
+                    if(Batal)
+                    {
+                        DialogOpen = true;
+                        Testing = "Dokumen ini sdh dihapus";
+                    }
+                }
+                else
+                {
+                    DialogOpen = true;
+                    Testing = "Dokumen ini bukan satu-satunya";
+                }
+            }
+        }
+
+    }
+}

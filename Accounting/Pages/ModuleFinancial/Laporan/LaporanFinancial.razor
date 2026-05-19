@@ -1,0 +1,210 @@
+﻿@page "/ModuleFinancial/LaporanFinancial"
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.View
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+
+
+@using System.ComponentModel.DataAnnotations
+
+@using eSoft.Ledger.Services
+
+@inject IFinancialServices serviceFC
+@inject ILedgerServices serviceGL
+
+@inject NavigationManager navigationmanager
+
+
+
+<div class="container">
+    <h1>
+        Laporan Financial Tahun
+        <input type="number" min="2021" @bind-value="@Tahun" />
+    </h1>
+
+    <h3>
+        Perusahaan
+        <select @bind="@company">
+            @foreach (var item in Perusahaan)
+            {
+                <option value="@item.FcComKode" >@item.FcNamaPerusahaan</option>
+            }
+
+        </select>
+    </h3>
+    <h3>
+       Bulan
+        <select @bind="@Bulan">
+            @foreach(var item in dictBulan)
+            {
+                <option value="@item.Key" selected="@(item.Key == DateTime.Today.Month ? true : false)" >@item.Value</option>
+            }
+            
+        </select>
+    </h3>
+    <h3>
+        <select @bind="@kodeCetak">
+            @foreach (var item in cetakTP)
+            {
+                <option value="@item.KodeCetak" >@item.NamaCetak</option>
+            }
+
+        </select>
+    </h3>
+    <br/>
+
+   Bulan:  @Bulan
+   Cetak:  @kodeCetak
+   Tahun:  @Tahun
+   Company": @company
+
+     <p><button class="btn btn-success btn-small"  @onclick="prosesNeraca">Akumulasi</button>
+        <button class="btn btn-warning btn-small" @onclick="prosesNeracaCetak">Akumulasi Cetak</button>
+        <button class="btn btn-warning btn-small" @onclick="prosesNeracaCetak">Akumulasi Cetak</button>
+     </p>
+    <p><button class="btn btn-success btn-small" @onclick="prosesRugiLaba">Perbulan</button>
+        <button class="btn btn-warning btn-small" @onclick="prosesRugiLabaCetak">Perbulan Cetak</button>
+        <button class="btn btn-warning btn-small" @onclick="prosesTrialBalance">Trial Balance</button>
+    </p>
+     <br />
+</div>
+
+
+<div class="container">
+    <DataGridVerticalComponent Items="transFinancial" Context="transaksi" GetFilterableText="@(item =>$"{item.Keterangan}")">
+        <TableHeader>
+             <th scope="col" style="width:5%">No Baris</th>
+            <th scope="col" style="width:30%">Keterangan</th>
+            <th scope="col" style="width:20%">Jumlah</th>
+
+            <th scope="col" style="width:20%">Rekap</th>
+
+           
+        </TableHeader>
+        <RowTemplate>
+            <td style="width:5%; background-color:@(transaksi.CetakDetil == true ? "yellow" : (transaksi.CetakGaris2 == true ? "#DCDCDC" : ""))">
+                @transaksi.NoBaris
+               
+            </td>
+            <td style="width:30%; background-color:@(transaksi.CetakDetil == true ? "yellow" : (transaksi.CetakGaris2 == true ? "#DCDCDC" : ""))">
+               @(transaksi.Spasi != 0 ? $"---  {transaksi.Keterangan}" : transaksi.Keterangan)
+               
+               
+            </td>
+            <td style="width:20%; background-color:@(transaksi.CetakDetil == true ? "yellow" : (transaksi.CetakGaris2 == true ? "#DCDCDC" : ""))">@(transaksi.CetakNegatif ? (-1 * transaksi.JumTran1).ToString("#,###.##;;' '") : transaksi.JumTran1.ToString("#,###.##;;' '"))</td>
+
+            <td style="width:20%; background-color:@(transaksi.CetakDetil == true ? "yellow" : (transaksi.CetakGaris2 == true ? "#DCDCDC" : ""))">
+                @(transaksi.CetakNegatif ? (-1 * transaksi.JumRekap1).ToString("#,###.##;;' '") : transaksi.JumRekap1.ToString("#,###.##;;' '"))
+               
+               
+            </td>
+
+           
+
+        </RowTemplate>
+    </DataGridVerticalComponent>
+
+
+</div>
+@code {
+    private int Tahun = DateTime.Now.Year;
+    private Dictionary<int,string> dictBulan = new() ;
+    private int Bulan = DateTime.Now.Month ;
+    private List<FcPrintTP> cetakTP = new();
+    private string kodeCetak = "";
+    private List<FcPrintGLView> transFinancial = new();
+    private List<FcAccount> TrialBalance = new();
+    private List<FcCom> Perusahaan = new();
+    private string company = "";
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBulan();
+        LoadCetak();
+    }
+
+    private void LoadBulan()
+    {
+        dictBulan.Add(1, "Januari");
+        dictBulan.Add(2, "Februari");
+        dictBulan.Add(3, "Maret");
+        dictBulan.Add(4, "April");
+        dictBulan.Add(5, "Mei");
+        dictBulan.Add(6, "Juni");
+        dictBulan.Add(7, "Juli");
+        dictBulan.Add(8, "Agustus");
+        dictBulan.Add(9, "September");
+        dictBulan.Add(10, "Oktober");
+        dictBulan.Add(11, "Nopember");
+        dictBulan.Add(12, "Desember");
+
+    }
+
+    private void LoadCetak()
+    {
+        cetakTP = serviceFC.GetPrintTP();
+        Perusahaan = serviceFC.GetFcCom();
+
+    }
+
+    private void prosesNeraca()
+    {
+
+
+        transFinancial = serviceFC.printNeraca(kodeCetak, company, Bulan, Tahun);
+
+        StateHasChanged();
+    }
+    private void prosesNeracaCetak()
+    {
+
+        string words = kodeCetak + '+' + company + '+' + Bulan.ToString() + '+' + Tahun.ToString();
+
+
+        navigationmanager.NavigateTo($"/ModulePrinting/PrintFinancialNeraca/{words}");
+        StateHasChanged();
+
+        //    transFinancial = serviceFC.printNeraca(kodeCetak, company, Bulan, Tahun);
+
+        //  StateHasChanged();
+    }
+
+    private void prosesRugiLabaCetak()
+    {
+        string words = kodeCetak + '+' + company + '+' + Bulan.ToString() + '+' + Tahun.ToString();
+
+
+        navigationmanager.NavigateTo($"/ModulePrinting/PrintFinancialRugiLaba/{words}");
+        StateHasChanged();
+
+        //   transFinancial = serviceFC.printRugiLaba(kodeCetak, company, Bulan, Tahun);
+
+        //    StateHasChanged();
+    }
+
+    private void prosesRugiLaba()
+    {
+       
+
+        transFinancial = serviceFC.printRugiLaba(kodeCetak, company, Bulan, Tahun);
+
+        StateHasChanged();
+    }
+
+    private void prosesTrialBalance()
+    {
+        kodeCetak = dictBulan[Bulan] + ' '+Tahun.ToString();
+
+        string words = kodeCetak + '+' + company + '+' + Bulan.ToString() + '+' + Tahun.ToString();
+
+
+        navigationmanager.NavigateTo($"/ModulePrinting/PrintTrialBalance/{words}");
+        StateHasChanged();
+
+     //   TrialBalance = serviceFC.printTrialBalance(kodeCetak, company, Bulan, Tahun);
+
+     //   StateHasChanged();
+    }
+}

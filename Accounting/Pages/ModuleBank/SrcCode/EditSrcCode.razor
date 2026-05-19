@@ -1,0 +1,174 @@
+﻿@page "/ModuleBank/EditSrcCode/{Id:int}"
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.Services
+
+@inject ICashBankServices service
+@inject ILedgerServices serviceGl
+@inject NavigationManager navigationmanager
+
+<h3>Edit Source Code</h3>
+
+<EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>
+            Source Code :
+            <InputText id="codeBank" class="form-control" @bind-Value="bank.SrcCode" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Nama Source :
+            <InputText class="form-control" @bind-Value="bank.NamaSrc" />
+        </label>
+    </div>
+    <br/>
+    <div class="form-group">
+        <label>
+            GL Account :
+            <InputSelect class="form-control" @bind-Value="bank.GlAcct" style="width:60%; display:inline">
+                <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                @foreach (var item in GlAccounts)
+                {
+                    <option value="@item.GlAcct">@item.NamaLengkap</option>
+                }
+
+            </InputSelect>
+            <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+        </label>
+    </div>
+    <br/>
+    <div class="float-md-right">
+        <button class="btn-success" type="submit">Simpan</button>
+        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleBank/SetupSrcCode", false))">Batal</button>
+    </div>
+
+</EditForm>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Bank Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="GlAccounts" Context="cbBank" GetFilterableText="@(item =>$"{item.GlAcct} {item.GlNama} ")">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Bank Name</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.GlAcct</td>
+            <td>@cbBank.GlNama</td>
+
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.GlAcct)" class="btn btn-success">Choose</button>
+                
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    SrcCodeView bank = new SrcCodeView();
+    CbSrcCode Bank = new CbSrcCode();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    private List<GlAccount> GlAccounts;
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBank();
+        LoadGlAccounts();
+    }
+
+    void LoadBank()
+    {
+        Bank = service.GetSrcCodeId(Id);
+        bank.SrcCodeId = Bank.CbSrcCodeId;
+        bank.SrcCode = Bank.SrcCode;
+        bank.NamaSrc = Bank.NamaSrc;
+        bank.GlAcct = Bank.GlAcct;
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.SrcCode;
+        DialogOpen = service.CekSrcCode(Testing);
+        if (DialogOpen)
+        {
+            bank.SrcCode = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private async Task HandleValidSubmit()
+    {
+        var newEdit = await service.EditSrcCode(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleBank/SetupSrcCode", false);
+
+    }
+
+    void LoadGlAccounts()
+    {
+        GlAccounts = serviceGl.GetGlAccount();
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            bank.GlAcct = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+}
+
+

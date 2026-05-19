@@ -1,0 +1,383 @@
+﻿@page "/ModulePiutang/AddTransArPy"
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+@using eSoft.CashBank.Model
+
+@inject IPaymentArServices service
+@inject IReceivableServices serviceAR
+@inject ICashBankServices serviceCB
+@inject NavigationManager navigationmanager
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Transaksi Pembayaran</h3>
+</div>
+
+
+<div class="container">
+    <EditForm Model="@Transh" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+
+
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="Transh.Tanggal" style="width:60%"  />
+            </label>
+        </div>
+        
+        <br/>
+
+        <div class="form-group">
+            <label>
+                Customer :
+                <InputSelect class="form-control" @bind-Value="Transh.Customer" style="width:60%; display:inline" @oninput="OnChangeCustomer">
+                    <option value="">&nbsp;&nbsp;---Select Customer---&nbsp;&nbsp;</option>
+                    @foreach (var item in customers)
+                    {
+                        <option value="@item.Customer">[@item.Customer]&nbsp; @item.NamaCust</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+            </label>
+        </div>
+        <br/>
+
+        <div class="form-group">
+            <label>
+                Kode Bank :
+                <InputSelect class="form-control" @bind-Value="Transh.KdBank" style="width:60%; display:inline" @oninput="OnKurs">
+                    <option value="">&nbsp;&nbsp;---Select Bank---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.KodeBank">[@item.KodeBank]&nbsp; @item.NmBank</option>
+                    }
+
+                </InputSelect>
+                &nbsp;@kurs
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Jumlah Bayar :
+                <InputNumber class="form-control" @bind-Value="Transh.JumBayar" />
+            </label>
+        </div>
+
+
+        <div class="form-group">
+            <label>
+                Keterangan :
+                <InputTextArea class="form-control" @bind-Value="Transh.Keterangan"  />
+            </label>
+
+        </div>
+
+        <br/>
+
+        <div class="float-md-right">
+            <button class="btn-success"  type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePiutang/TransArCa", false))">Batal</button>
+        </div>
+        <br />
+        <br />
+
+        <div class="float-md-left form-message">
+            <span>UnApplied   : @Transh.UpdateUnapplied.ToString("#,##0.##")</span>
+        </div>
+        <div class="float-md-right form-message">
+            <span>Piutang Lunas   : @Transh.JumPiutang.ToString("#,##0.##")</span>
+        </div>
+
+        <div class="container">
+            <div class="details">
+
+                <table class="table table-responsive">
+                    <thead>
+                        <tr>
+                            <td>Faktur</td>
+                            <td>Tanggal</td>
+                            <td>Piutang</td>
+                            <td>Bayar</td>
+                            <td>Discount</td>
+                            <td>Sisa</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Transh.ArTransDs != null)
+                        {
+                            @foreach (var detail in Transh.ArTransDs)
+                            {
+                                <tr>
+                                    <td>
+
+                                        <span>@detail.Lpb</span>
+                                    </td>
+                                    <td>
+                                        <span>
+                                            @detail.DueDate?.ToShortDateString()
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span> @detail.Jumlah.ToString("#,##0.##")</span>
+
+                                    </td>
+                                    <td>
+                                        <InputNumber class="form-control" @bind-Value="@detail.Bayar" />
+
+                                    </td>
+                                    <td>
+                                        <InputNumber class="form-control" @bind-Value="@detail.Discount" />
+
+                                    </td>
+                                    <td>
+                                        <span>@detail.UpdateSisa.ToString("#,##0.##")</span>
+
+                                    </td>
+                                </tr>
+                            }
+                        }
+
+
+                        <tr>
+
+                            <td></td>
+                            <td></td>
+                            <td> </td>
+
+                        </tr>
+
+                    </tbody>
+                </table>
+
+
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class=" col-sm  form-message">
+                    <span>Saldo   : @Transh.Jumlah.ToString("N")</span>
+                </div>
+
+            </div>
+
+
+        </div>
+    </EditForm>
+</div>
+
+
+
+
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Bank Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="customers" Context="cbBank" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Alamat} ")">
+        <TableHeader>
+            <th scope="col">Customer</th>
+            <th scope="col">Nama</th>
+            <th scope="col">Alamat</th>
+            <th scope="col">Telpon</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.Customer</td>
+            <td>@cbBank.NamaCust</td>
+            <td>@cbBank.Alamat</td>
+            <td>@cbBank.Telpon</td>
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.Customer)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+@code {
+
+    private ArTransHView Transh = new ArTransHView() { ArTransDs = new List<ArTransDView>() };
+    private List<CbBank> banks;
+    private List<ArCust> customers;
+
+    private int dblclick = 1;
+
+    private ArTransDView Transd = new ArTransDView();
+    private ArTransDView TransK = new ArTransDView();
+
+    private string enabled { get; set; }
+
+    public int customerId { get; set; }
+    public string kurs { get; set; } = "";
+
+
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public bool IsKurs { get; set; }
+    public bool IsEdit { get; set; }
+    public bool SearchOpen { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        Transh.Tanggal = DateTime.Now;
+
+        LoadCustomers();
+        LoadBanks();
+    }
+
+    void LoadCustomers()
+    {
+
+        customers = serviceAR.GetCustomer();
+
+    }
+
+    void LoadBanks()
+    {
+
+        banks = serviceCB.GetBank();
+
+    }
+
+    private void OnVisibleClose()
+    {
+
+        IsVisible = false;
+        IsKurs = false;
+        StateHasChanged();
+
+    }
+
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+    private void OnKurs(ChangeEventArgs args)
+    {
+        kurs = (from e in banks where e.KodeBank == args.Value.ToString() select e.Kurs).FirstOrDefault();
+    }
+
+
+
+
+    public void OnChangeCustomer(ChangeEventArgs args)
+    {
+        //  var itemData = JsonConvert.DeserializeObject<ArCust>(args.ItemData != null ? args.ItemData.ToString() : "");
+
+        var transaksi = service.GetPiutangSisa(args.Value.ToString());
+        Transh.ArTransDs.Clear();
+        if (transaksi != null)
+        {
+            foreach (var item in transaksi)
+            {
+                Transh.ArTransDs.Add(new ArTransDView()
+                {
+                    Lpb = item.Dokumen,
+                    DueDate = item.Tanggal,
+                    Jumlah = item.Sisa,
+                    KodeTran = item.KodeTran
+
+                });
+            }
+        }
+
+
+    }
+
+
+    private void HandleValidSubmit()
+    {
+        if (Transh.UpdateUnapplied == 0)
+        {
+            if(dblclick != 1) return;
+
+            dblclick++;
+
+           
+
+           
+                Transh.ArCustId = this.customerId;
+
+                var newEdit = service.AddTransH(Transh);
+                // var id = newEdit.ArTransHId.ToString().Trim();
+
+                if (newEdit != null)
+                {
+                    var id = newEdit.ArTransHId.ToString().Trim();
+
+                    //   navigationmanager.NavigateTo($"printbayarpiutang/{id}");
+                }
+                //        navigationmanager.NavigateTo($"printbayarpiutang/{id}");
+                navigationmanager.NavigateTo("/ModulePiutang/TransArCa", false);
+                //add = !add;
+                //StateHasChanged();
+           
+            
+        }
+        else
+        {
+            // ShowOnClick();
+        }
+    }
+
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            Transh.Customer = textSearch;
+
+            var transaksi = service.GetPiutangSisa(Transh.Customer);
+            Transh.ArTransDs.Clear();
+            if (transaksi != null)
+            {
+                foreach (var item in transaksi)
+                {
+                    Transh.ArTransDs.Add(new ArTransDView()
+                    {
+                        Lpb = item.Dokumen,
+                        DueDate = item.Tanggal,
+                        Jumlah = item.Sisa,
+                        KodeTran = item.KodeTran
+
+                    });
+                }
+            }
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+}

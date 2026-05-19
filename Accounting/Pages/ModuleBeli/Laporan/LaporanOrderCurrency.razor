@@ -1,0 +1,200 @@
+﻿@page "/ModuleBeli/LaporanOrderCurrency"
+
+@using eSoft.Hutang.Model
+@using eSoft.Hutang.View
+@using eSoft.Hutang.Services
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+@using eSoft.Order.View
+@using eSoft.Order.Model
+@using eSoft.Order.Services
+@using eSoft.LaporanStock.Services
+@using Accounting.Services
+
+@inject IOrderPurchaseServices service
+@inject IPayableServices serviceAP
+@inject IInventoryServices serviceIC
+@inject ILaporanStockServices serviceLaporan
+@inject IExcelServices serviceXL
+@inject IJSRuntime JS
+@inject NavigationManager navigationmanager
+
+<h3>Laporan Order Pembelian</h3>
+<div class="row">
+    <div class="col-4">
+        <EditForm Model="TransDetail">
+            <div class="form-group">
+                <label>
+                    Supplier :
+                    <InputSelect class="form-control" @bind-Value="Vendor" style="width:60%; display:inline">
+                        <option value="">&nbsp;&nbsp;---Select Supplier---&nbsp;&nbsp;</option>
+                        @foreach (var item in supplier)
+                        {
+                            <option value="@item.Supplier">[@item.Supplier]&nbsp; @item.NamaSup</option>
+                        }
+
+                    </InputSelect>
+                    <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                </label>
+            </div>
+            
+
+        </EditForm>
+    </div>
+
+    <div class="col-4">
+        <br />
+        <button class="btn btn-primary" @onclick="@(() => proses1())">Display Item/Order</button>
+        <br />
+        <button class="btn btn-success" @onclick="@(() => DownloadFileFromStream())">Download PI Item/Order</button>
+        <br/>
+
+    </div>
+</div>
+
+@Vendor
+
+<div class="row">
+    <br />
+</div>
+
+@switch (Tampilan)
+{
+    case 1:
+        <div class="container">
+
+            <DataGridLaporanCurrencyComponent KodeVendor="@Vendor" Items="TransItemLokasi" icLocations="TransHeader"></DataGridLaporanCurrencyComponent>
+
+        </div>
+        
+
+        break;
+  
+}
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="supplier" Context="cbBank" GetFilterableText="@(item =>$"{item.Supplier} {item.NamaSup} {item.Alamat} {item.Kota}")">
+        <TableHeader>
+            <th scope="col">Supplier</th>
+            <th scope="col">Name</th>
+            <th scope="col">Alamat</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.Supplier</td>
+            <td>@cbBank.NamaSup</td>
+            <td>@cbBank.Alamat</td>
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.Supplier)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+@code {
+
+    private List<PoTransH> TransHeader = new();
+    public List<PoTransD> TransDetail = new();
+
+    private List<PoItemQtyByLocationView> TransItemLokasi = new();
+
+
+    private string Vendor { get; set; } = "";
+
+
+    private List<ApSuppl> supplier;
+
+ 
+    
+   
+    public bool SearchOpen { get; set; }
+    public int Tampilan { get; set; } = 1;
+
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Loadsupplier();
+        SearchOpen = false;
+        
+       // proses1();
+
+    }
+
+    void Loadsupplier()
+    {
+
+        supplier = serviceAP.GetSupplier();
+
+    }
+
+
+
+    private void proses1()
+    {
+        TransHeader = service.GetTransH().Where(x => x.Vendor == Vendor && x.Kode == "71").ToList();
+
+        TransItemLokasi = service.GetAllIcItemQtyByLocation(Vendor);
+        
+
+       // TransHeader = service.Laporan1(Tanggal1, Tanggal2);
+        Tampilan = 1;
+        //  nJumlah = TransHeader.Sum(x => x.Jumlah).ToString("N");
+       //  StateHasChanged();
+    }
+
+   
+
+   
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            Vendor = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+    private Stream GetFileStream()
+    {
+        var transHeader = service.GetTransH().Where(x => x.Vendor == Vendor && x.Kode == "71").ToList();
+
+        var transItemLokasi = service.GetAllIcItemQtyByLocation(Vendor);
+
+       
+
+        var randomBinaryData = serviceXL.CreateHargaPIWorksheet(transHeader,transItemLokasi);
+
+        //   var randomBinaryData = new byte[50 * 1024];
+        var fileStream = new MemoryStream(randomBinaryData);
+
+        return fileStream;
+    }
+
+    private async Task DownloadFileFromStream()
+    {
+        var fileStream = GetFileStream();
+        var fileName = $"ListHargaPI{DateTime.Now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}.xlsx";
+
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+}

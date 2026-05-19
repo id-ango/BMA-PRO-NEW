@@ -1,0 +1,265 @@
+﻿@page "/ModuleFinancial/SetupPrintTPGL"
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.Services
+@using eSoft.Ledger.View
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+
+@inject ILedgerServices serviceGL
+@inject IFinancialServices serviceFC
+@inject NavigationManager navigationmanager
+
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Setup Cetak Laporan</h3>
+</div>
+
+
+<div class="container">
+    <EditForm Model="@TransK">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label>
+                Kode GL : <br />
+                <select class="form-control" @bind="kodeCetak" style="width:60%; display:inline" @onclick="prosesCetak">
+                    <option value="">&nbsp;&nbsp;---Select Kode Cetak---&nbsp;&nbsp;</option>
+                    @foreach (var item in ListCetak)
+                    {
+                        <option value="@item.KodeCetak">@item.NamaCetak</option>
+                    }
+
+                </select>
+
+            </label>
+        </div>
+        <br />
+
+
+    </EditForm>
+</div>
+<div class="container">
+
+    <button Class="btn btn-info" @onclick="@OnAddLine">Add Line</button>
+</div>
+@if (ListDetail != null)
+{
+
+
+    <div class="container">
+        <DetailGridComponent Items="ListDetail" Context="transaksi">
+            <TableHeader>
+                <th scope="col">Baris</th>
+                <th scope="col">Keterangan</th>
+                <th scope="col">Detail</th>
+                 <th scope="col">Garis1</th>
+                  <th scope="col">Garis2</th>
+                <th scope="col">Tebal</th>
+                <th scope="col">Negatif</th>
+                <th scope="col">Hidden</th>
+               
+                <th scope="col">GL Akun</th>
+                <th scope="col">Rumus</th>
+
+                <th></th>
+            </TableHeader>
+            <RowTemplate>
+                <td>@transaksi.NoBaris</td>
+                <td>@transaksi.Keterangan</td>
+                <td>@transaksi.CetakDetil</td>
+                <td>@transaksi.CetakGaris1</td>
+                <td>@transaksi.CetakGaris2</td>
+                <td>@transaksi.CetakTebal</td>
+                <td>@transaksi.CetakNegatif</td>
+                <td>@transaksi.CetakHide</td>
+                <td>@transaksi.NoRek1</td>
+                <td>@transaksi.RumusBaris</td>
+
+                <td>
+            <button @onclick="(() => Rubah(transaksi))" class="btn btn-success">Edit</button>
+            <button @onclick="(() => Hapus(transaksi))" class="btn btn-danger">Delete</button>
+            </td>
+            </RowTemplate>
+        </DetailGridComponent>
+
+    </div>
+}
+
+<br />
+<br />
+<div class="float-md-right">
+   @* <button class="btn-success" type="submit">Simpan</button>*@
+    <button @onclick="() => BtnChoose()" class="btn-success">Simpan</button>
+    <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleFinancial/SetupPrintTPGL", false))">Batal</button>
+</div>
+<br />
+<br />
+
+
+@if (IsVisible)
+{
+    <ModalPrintGLComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd"></ModalPrintGLComponent>
+}
+
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Save" Text="Already Saved" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    //   FcPrintGLView Transh = new FcTransHView() { FcTransDs = new List<FcTransDView>() };
+    //   private List<GlCode> banks;
+    private List<GlAccount> srccode;
+    private FcPrintGl Transd = new();
+    private FcPrintGl TransK = new();
+
+    //  private string KodeCompany = "";
+    private List<FcPrintTP> ListCetak = new();
+    private List<FcPrintGl> ListDetail = new();
+    private List<FcPrintGl> ListDetail2 = new();
+
+    private string kodeCetak = "";
+
+    public string kurs { get; set; } = "";
+
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public bool IsKurs { get; set; }
+    public bool IsEdit { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+
+        LoadBank();
+        LoadSrcCode();
+    }
+
+    private void prosesCetak()
+    {
+        ListDetail = serviceFC.GetPrintGLPKode(kodeCetak);
+        ListDetail2 = ListDetail.ToList();
+
+    }
+
+    private void OnVisibleClose()
+    {
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+
+    }
+
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+        IsEdit = false;
+    }
+
+
+
+
+    private void BtnChoose()
+    {
+        //  Transh.Kurs = kurs;
+        DialogOpen = false;
+
+
+          if (ListDetail != null && !string.IsNullOrEmpty(kodeCetak))
+          {
+
+              var newEdit = serviceFC.SavePrintGL(ListDetail,kodeCetak);
+               if (newEdit)
+              {
+          //      var id = newEdit.CbTransHId.ToString().Trim();
+          //navigationmanager.NavigateTo("/PrintBuktiBayar/{id", false);
+                  navigationmanager.NavigateTo("/ModuleFinancial/TransLedgerFCGL", false);
+          //navigationmanager.NavigateTo($"/PrintBuktiBayar/{id}");
+             }
+           }
+           else
+           {
+               DialogOpen = true;
+           }
+
+    }
+
+    private void OnDetailTrans(FcPrintGl transD)
+    {
+        IsVisible = false;
+        if(IsEdit)
+        {
+            //  ListDetail2.Remove(transD);
+            ListDetail2.Find(x => x.NoBaris == transD.NoBaris).Keterangan = transD.Keterangan;
+            ListDetail2.Find(x => x.NoBaris == transD.NoBaris).NoRek1 = transD.NoRek1;
+            ListDetail2.Find(x => x.NoBaris == transD.NoBaris).RumusBaris = transD.RumusBaris;
+        }else
+        {
+            ListDetail2.Add(transD);
+        }
+        IsEdit = false;
+        ListDetail = ListDetail2.OrderBy(x => x.NoBaris).ToList();
+        StateHasChanged();
+    }
+
+
+    void LoadBank()
+    {
+
+        ListCetak = serviceFC.GetPrintTP();
+        // Companies = serviceFC.GetFcCom();
+    }
+
+    void LoadSrcCode()
+    {
+
+        srccode = serviceGL.GetGlAccount();
+
+    }
+
+
+    private void Rubah(FcPrintGl transd)
+    {
+        Transd = new FcPrintGl();
+        Transd = transd;
+        IsEdit = true;
+        OnAddLine();
+
+    }
+
+    private void Hapus(FcPrintGl transd)
+    {
+        ListDetail2.Remove(transd);
+        ListDetail = ListDetail2.OrderBy(x => x.NoBaris).ToList();
+        StateHasChanged();
+    }
+
+    private void OnAddLine()
+    {
+
+        this.IsVisible = true;
+
+        StateHasChanged();
+        
+    }
+
+
+}

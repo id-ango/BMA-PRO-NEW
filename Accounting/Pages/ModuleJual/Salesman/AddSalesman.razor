@@ -1,0 +1,156 @@
+﻿@page "/ModuleJual/AddSalesman"
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.View
+@using eSoft.Penjualan.Services
+@using Accounting.Services
+
+@inject ISalesServices service
+@inject NavigationManager navigationmanager
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Salesman</h3>
+</div>
+
+<div class="content px-4">
+   
+    <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Salesman :
+                <InputText id="codeBank" class="form-control" @bind-Value="bank.Salesman" style="text-transform:uppercase" @onfocusout="cekKode" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Nama :
+                <InputText class="form-control" @bind-Value="bank.NamaSales" />
+            </label>
+        </div>
+        <div class="form-group">
+            <table style="width:100%">
+                <tr>
+                    <td style="width:70%">
+                        <label>
+                            Alamat :
+                            <InputTextArea class="form-control" @bind-Value="bank.Alamat" />
+                        </label>
+                    </td>
+                    <td style="width:30%">
+                        <label>
+                            Kota :
+                            <InputText class="form-control" @bind-Value="bank.Kota" />
+                        </label>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width:70%">
+                        <label>
+                            Keterangan :
+                            <InputTextArea class="form-control" @bind-Value="bank.AlmtKrm" />
+                        </label>
+                    </td>
+                   @* <td style="width:30%">
+                        <label>
+                            Kota Kirim :
+                            <InputText class="form-control" @bind-Value="bank.KotaKrm" />
+                        </label>
+                    </td>*@
+                </tr>
+            </table>
+
+        </div>
+
+
+        <div class="form-group">
+            <label>
+                Telpon :
+                <InputText class="form-control" @bind-Value="bank.Telpon" />
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Kontak Person:
+                <InputText class="form-control" @bind-Value="bank.Kontak" />
+            </label>
+        </div>
+        @* <div class="form-group">
+            <label>
+                NPWP/NIK :
+                <InputText class="form-control" @bind-Value="bank.NPWP_Kurir" />
+            </label>
+        </div>*@
+        <br/>
+        
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleJual/SetupSalesman", false))">Batal</button>
+        </div>
+    </EditForm>
+    
+</div>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Salesman Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+@code {
+    OeSalesmanView bank = new ();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        bank.Salesman = "";
+       
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.Salesman;
+        DialogOpen = service.CekKdSalesman(Testing);
+        if (DialogOpen)
+        {
+            bank.Salesman = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private void HandleValidSubmit()
+    {
+        var newEdit = service.AddSalesman(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleJual/SetupSalesman", false);
+
+    }
+
+   
+}

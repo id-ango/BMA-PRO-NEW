@@ -1,0 +1,338 @@
+﻿@layout PrintLayout
+
+@page "/ModulePiutang/LaporanAgingPiutang"
+
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.Services
+
+
+@inject IReceivableServices serviceIC
+@inject ISalesServices serviceSales
+
+@inject NavigationManager navigationmanager
+
+<div class="dontprint" style="display:none inline">
+    <br />
+    &emsp;
+
+    <NavLink href="/" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
+
+    &emsp;
+    <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+    &emsp;
+</div>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+
+    <tr>
+        <td colspan="3">&nbsp;</td>
+    </tr>
+
+    <thead>
+        <tr>
+
+            <td colspan="3" style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:15px;" align="center">
+                @Title
+            </td>
+        </tr>
+    </thead>
+
+    <tr>
+        <td colspan="3">
+            <table width="100%" border="0" cellspacing="0" cellpadding="4">
+                <thead>
+                    <tr>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-left:1px solid #333; border-right:1px solid #333;" width="5%" height="32" align="center">No.</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="5%" align="center">Tanggal</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="15%" align="center">Dokumen</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="5%" align="center">Due Date</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">Piutang</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center"> &#60;Due Date</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">1-30</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">31-60</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">61-90</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">91 &gt;</td>
+                    </tr>
+                </thead>
+                @foreach (var item in TransDetail)
+                {
+                    @if (cekDivisi != item.Customer)
+                    {
+                        if (!string.IsNullOrEmpty(cekDivisi))
+                        {
+                            <tr>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  border-left:1px solid #333; " align="left"></td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="left"></td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="left"></td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right"></td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  " align="right">@nSisa.ToString("N")</td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  " align="right">@nJumlah.ToString("N")</td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  " align="right">@nJumlah1.ToString("N")</td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333; " align="right">@nJumlah2.ToString("N")</td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333; " align="right">@nJumlah3.ToString("N")</td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  border-right:1px solid #333;" align="right">@nJumlah4.ToString("N")</td>
+                            </tr>
+                        }
+
+
+                        cekDivisi = item.Customer;
+                        No = 1;
+
+                        <tr>
+                            <td colspan="10" style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px;  border-left:1px solid #333;  border-right:1px solid #333;" align="left">@item.NamaCust [@item.Customer]</td>
+                        </tr>
+
+                        nSisa = 0; nJumlah = 0; nJumlah1 = 0; nJumlah2 = 0; nJumlah3 = 0; nJumlah4 = 0;
+
+                    }
+
+                    nSisa += item.Sisa;
+                    nJumlah += item.Jumlah;
+                    nJumlah1 += item.Jumlah1;
+                    nJumlah2 += item.Jumlah2;
+                    nJumlah3 += item.Jumlah3;
+                    nJumlah4 += item.Jumlah4;
+
+                    nTSisa += item.Sisa;
+                    nTJumlah += item.Jumlah;
+                    nTJumlah1 += item.Jumlah1;
+                    nTJumlah2 += item.Jumlah2;
+                    nTJumlah3 += item.Jumlah3;
+                    nTJumlah4 += item.Jumlah4;
+
+
+                    <tr style="background-color:@(item.Kode =="CA" ? "yellow" : "")">
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:9px;  border-left:1px solid #333; " align="left">@(No++)</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:9px;  " align="left">@item.Tanggal.ToShortDateString() 
+
+                            <br/>
+                            <span style="color:red">@item.NamaSales</span>
+                        </td>
+
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:9px;  " align="left" data-toogle="tooltip" title="@item.Remarks">
+                            @item.Dokumen &emsp;&emsp;
+                            @if (item.Cicilan)
+                            {
+                                <button class="dontprint" @onclick="@(() => CicilanBayar(item.Dokumen))">Cicilan</button>
+                            }
+
+                            &emsp;
+
+                            @if(item.Kode != "CA")
+                            {
+                                <button class="dontprint" style="background-color:yellow" @onclick="@(() => DetailSales(item.Dokumen))">Detail</button>
+                            }
+                        </td>
+
+
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:9px;  " align="right">@item.Duedate.ToShortDateString()</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@item.Sisa.ToString("N")</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@item.Jumlah.ToString("N")</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@item.Jumlah1.ToString("N")</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@item.Jumlah2.ToString("N")</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@item.Jumlah3.ToString("N")</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;   border-right:1px solid #333;" align="right">@item.Jumlah4.ToString("N")</td>
+                    </tr>
+                }
+
+                <tr>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  border-left:1px solid #333; " align="left"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="left"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="left"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  " align="right">@nSisa.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  " align="right">@nJumlah.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  " align="right">@nJumlah1.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333; " align="right">@nJumlah2.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333; " align="right">@nJumlah3.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  border-right:1px solid #333;" align="right">@nJumlah4.ToString("N")</td>
+                </tr>
+
+                <tr>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  border-left:1px solid #333; " align="center">&emsp;</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;   border-right:1px solid #333;" align="center"></td>
+                </tr>
+
+                <tr>
+                    <td colspan="4" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;   " align="left">Tanggal cetak. @DateTime.Today.Date.ToShortDateString()</td>
+
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  " align="right">@nTSisa.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  " align="right">@nTJumlah.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333;  " align="right">@nTJumlah1.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333; " align="right">@nTJumlah2.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333; " align="right">@nTJumlah3.ToString("N")</td>
+                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-top:1px solid #333; " align="right">@nTJumlah4.ToString("N")</td>
+
+                </tr>
+
+
+            </table>
+        </td>
+    </tr>
+
+    <tr>
+        <td colspan="2">&nbsp;</td>
+    </tr>
+
+</table>
+
+
+
+@if (dispCicilan)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="TransCicilan" Context="transaksi2">
+        <TableHeader>
+            <th scope="col">Bukti</th>
+            <th scope="col">Tanggal</th>
+            <th scope="col">Bayar</th>
+
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi2.Bukti</td>
+            <td>@transaksi2.Tanggal.ToShortDateString()</td>
+            <td style="text-align:right">@transaksi2.Bayar.ToString("N")</td>
+
+
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+@if (dispDetail)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="TransDetailSales" Context="transaksi">
+        <TableHeader>
+            <th scope="col">Item</th>
+            <th scope="col">Nama Item</th>
+            <th scope="col">Satuan</th>
+            <th scope="col">Qty</th>
+            <th scope="col">Harga</th>
+            <th scope="col">Diskon</th>
+            <th scope="col">Jumlah</th>
+            <th scope="col">Lokasi</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi.ItemCode</td>
+            <td>@transaksi.NamaItem</td>
+            <td>@transaksi.Satuan</td>
+            <td>@transaksi.Qty.ToString("#,##0.##")</td>
+            <td>@transaksi.Harga.ToString("#,##0.##")</td>
+            <td>@transaksi.Discount.ToString("#,##0.##")</td>
+            <td>@transaksi.Jumlah.ToString("#,##0.##")</td>
+            <td>@transaksi.Lokasi</td>
+
+
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+@code {
+
+
+    public List<ArAgingView> TransDetail;
+    private List<ArTransD> TransCicilan;
+    private List<OeTransD> TransDetailSales;
+
+    private bool dispCicilan { get; set; }
+    private bool dispDetail { get; set; }
+
+    private string Title = "Laporan Aging Schedule";
+    private string cekDivisi = "";
+    private int No = 0;
+    private decimal nSisa;
+    private decimal nJumlah;
+    private decimal nJumlah1;
+    private decimal nJumlah2;
+    private decimal nJumlah3;
+    private decimal nJumlah4;
+
+    private decimal nTSisa;
+    private decimal nTJumlah;
+    private decimal nTJumlah1;
+    private decimal nTJumlah2;
+    private decimal nTJumlah3;
+    private decimal nTJumlah4;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        loadStock();
+
+    }
+
+    private void TotalNol()
+    {
+        nSisa = 0;
+        nJumlah = 0;
+        nJumlah1 = 0;
+        nJumlah2 = 0;
+        nJumlah3 = 0;
+        nJumlah4 = 0;
+
+        nTSisa = 0;
+        nTJumlah = 0;
+        nTJumlah1 = 0;
+        nTJumlah2 = 0;
+        nTJumlah3 = 0;
+        nTJumlah4 = 0;
+
+        cekDivisi = "";
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+        TotalNol();
+        dispCicilan = false;
+        dispDetail = false;
+        //  loadStock();
+        // StateHasChanged();
+
+    }
+
+    private void loadStock()
+    {
+
+        TransDetail = serviceIC.GetAgingSchedule();
+        foreach(var item in TransDetail)
+        {
+            if (!string.IsNullOrEmpty(item.Salesman))
+                item.NamaSales = serviceSales.GetSalesmanKode(item.Salesman);
+        }
+
+        StateHasChanged();
+
+    }
+    private void CicilanBayar(string dokumen)
+    {
+        TransCicilan = serviceIC.GetTransD().Where(x => x.Lpb == dokumen).ToList();
+        dispCicilan = true;
+        TotalNol();
+    }
+
+    private void DetailSales(string dokumen)
+    {
+        TransDetailSales = serviceSales.GetTransD().Where(x => x.NoLpb == dokumen).ToList();
+        dispDetail = true;
+        TotalNol();
+    }
+}

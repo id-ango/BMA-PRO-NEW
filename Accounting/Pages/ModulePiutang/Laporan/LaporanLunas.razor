@@ -1,0 +1,89 @@
+﻿@page "/ModulePiutang/laporan-lunas"
+
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.Services
+@using eSoft.LaporanStock.Services
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject ILaporanStockServices serviceLaporan
+
+<h3>Laporan Penjualan Lunas</h3>
+
+<EditForm Model="@formModel" OnValidSubmit="LoadData">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Tanggal Lunas Dari:</label>
+        <InputDate @bind-Value="formModel.TanggalLunas1" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label>Sampai Tanggal:</label>
+        <InputDate @bind-Value="formModel.TanggalLunas2" class="form-control" />
+    </div>
+    <button class="btn btn-primary mb-3" type="submit">Cari</button>
+</EditForm>
+
+@if (hasil?.Any() == true)
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>No LPB</th>
+                <th>Tanggal</th>
+                <th>Customer</th>
+                <th>Nama Cust</th>
+                <th>Jumlah</th>
+                <th>Status</th>
+                <th>Tanggal Lunas</th>
+                <th>Hari</th>
+                <></>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in hasil)
+            {
+                <tr>
+                    <td>@item.NoLpb</td>
+                    <td>@item.Tanggal.ToString("dd-MM-yyyy")</td>
+                    <td>@item.Customer</td>
+                    <td>@item.NamaCust</td>
+                    <td>@item.Jumlah.ToString("N2")</td>
+                    <td>@item.Status</td>
+                    <td>@item.TanggalLunas.ToString("dd-MM-yyyy")</td>
+                    <td>@item.SelisihTanggal</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (hasil != null)
+{
+    <p>Tidak ada data ditemukan.</p>
+}
+
+@code {
+    private PenjualanLunasFormModel formModel = new PenjualanLunasFormModel
+        {
+            TanggalLunas1 = DateTime.Today.AddDays(-30),
+            TanggalLunas2 = DateTime.Today
+        };
+
+    private List<ResultLunasView> hasil;
+
+    private async Task LoadData()
+    {
+        hasil = await serviceLaporan.GetPenjualanLunasAsync(formModel.TanggalLunas1, formModel.TanggalLunas2);
+    }
+
+    public class PenjualanLunasFormModel
+    {
+        public DateTime TanggalLunas1 { get; set; }
+        public DateTime TanggalLunas2 { get; set; }
+    }
+
+
+}

@@ -1,0 +1,220 @@
+﻿@page "/ModuleMaintenance/ProsesStock"
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Identity;
+@using Accounting.Services;
+@using Accounting.Services.View;
+@using Accounting.Data;
+@using eSoft.LaporanStock.Services;
+@using eSoft.Persediaan.Model;
+@using eSoft.Persediaan.Services;
+
+@inject ILaporanStockServices service;
+@inject IInventoryServices serviceIC;
+@inject IJSRuntime JSRuntime
+
+<h3>Proses Stock</h3>
+
+<button class="btn-success" @onclick="prosesstock" style="display: flex; justify-content:space-between;">
+    <span>Proses Stock</span>
+    <span style="display: @(isProcessing ? "inline" : "none");margin-left:5px; ">
+        <i class="fas fa-spinner fa-spin"></i>
+    </span>
+
+</button>
+<br/>
+<br />
+<br />
+<button class="btn-success" @onclick="prosesSalesPiutang" style="display: flex; justify-content:space-between;">
+    <span>Proses Sales Piutang </span>
+    <span style="display: @(isProcessPiutang ? "inline" : "none");margin-left:5px; ">
+        <i class="fas fa-spinner fa-spin"></i>
+    </span>
+
+</button>
+<br />
+<br />
+<br />
+<div>
+    <h3>Proses Rubah Item untuk Seluruh Transaksi</h3>
+</div>
+<div class="content px-4">
+    <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Kode Item Awal
+                <InputSelect class="form-control" @bind-Value="bank.ItemCode" style="width:75%; display:inline" @oninput="OnChangeItem">
+                    <option value="">&nbsp;&nbsp;---Select Item Code---&nbsp;&nbsp;</option>
+                    @foreach (var item in SrcCode)
+                    {
+                        <option value="@item.ItemCode">@item.NamaItem [@item.ItemCode]</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Diganti dengan Kode
+                <InputText class="form-control" @bind-Value="bank.NamaLengkap" >                   
+                </InputText>
+              
+            </label>
+        </div>
+        <br />
+
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Proses Rubah Item</button>
+
+        </div>
+
+    </EditForm>
+</div>
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="SrcCode" Context="cbBank" GetFilterableText="@(item =>$"{item.ItemCode} {item.NamaItem} ")">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Name</th>
+            <th scope="col">Satuan</th>
+            <th scope="col">Qty</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.ItemCode</td>
+            <td>@cbBank.NamaItem</td>
+            <td>@cbBank.Satuan</td>
+            <td>@cbBank.Qty</td>
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.ItemCode)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+@code {
+
+    IcItem bank = new ();
+    private bool DialogOpen { get; set; }
+    public string Testing { get; set; }
+    public List<IcItem> SrcCode { get; set; }
+    public bool SearchOpen { get; set; }
+    private int dblclick = 1;
+    private bool isProcessing = false;
+private bool isProcessPiutang = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        LoadSrcCode();
+
+    }
+
+
+    private async void prosesstock()
+    {
+        try
+        {
+            isProcessing = true;
+           await service.prosesStock();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Terjadi Kesalahan: " + ex.Message);
+        }
+        finally
+        {
+            isProcessing = false;
+            await JSRuntime.InvokeVoidAsync("alert", "Proses Stock Sudah Selesai");
+            StateHasChanged();
+        }
+    }
+
+     private async void prosesSalesPiutang()
+    {
+        try
+        {
+            isProcessPiutang = true;
+           await service.ProsesSalesPiutang();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Terjadi Kesalahan: " + ex.Message);
+        }
+        finally
+        {
+            isProcessPiutang = false;
+            await JSRuntime.InvokeVoidAsync("alert", "Proses Sales Piutang Sudah Selesai");
+            StateHasChanged();
+        }
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+    void LoadSrcCode()
+    {
+
+        SrcCode = serviceIC.GetIcItem(false);
+
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            bank.ItemCode = textSearch;
+            var itemcode = (from e in SrcCode where e.ItemCode == bank.ItemCode select e).FirstOrDefault();
+            bank.NamaItem = itemcode.NamaItem;
+            bank.Satuan = itemcode.Satuan;
+            bank.Harga = itemcode.HrgJual;
+         
+
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    public void OnChangeItem(ChangeEventArgs args)
+    {
+
+        var itemcode = (from e in SrcCode where e.ItemCode == args.Value.ToString() select e).FirstOrDefault();
+        bank.NamaItem = itemcode.NamaItem;
+        bank.Satuan = itemcode.Satuan;
+        bank.Harga = itemcode.HrgJual;
+      
+      
+
+    }
+
+    private void HandleValidSubmit()
+    {
+         if (dblclick != 1) return;
+
+           dblclick++;
+
+        service.ProsesRubahKodeItem(bank.ItemCode, bank.NamaLengkap);
+        // if (newEdit != null)
+        // {
+        //     var id = newEdit.OeTransHId.ToString().Trim();
+            
+        // }
+
+
+    }
+
+}

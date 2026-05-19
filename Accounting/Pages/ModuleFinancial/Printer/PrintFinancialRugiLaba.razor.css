@@ -1,0 +1,30 @@
+﻿body {
+}
+
+@page {
+    size: 210mm 297mm;
+    margin: 0 auto;
+    /* @bottom-right {
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 2em;
+        content: counter(page);
+    }*/
+}
+
+
+@media print {
+    header, footer, aside, form, menu, nav {
+        display: none;
+    }
+
+    .dontprint {
+        display: none;
+    }
+}
+
+p {
+    font-family: Verdana, Geneva, sans-serif;
+    font-weight: 300;
+    font-size: 10px;
+}

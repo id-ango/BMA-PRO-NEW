@@ -1,0 +1,138 @@
+﻿<!-- FileList.razor -->
+@using eSoft.Penjualan.View
+
+
+
+@if (Files != null && Files.Any())
+{
+    <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="Cari file..." @bind="searchTerm" />
+        <div class="input-group-append">
+            <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    @if (FilteredFiles.Any())
+    {
+        @foreach (var group in GroupedFiles)
+        {
+            <h5>@group.Key</h5>
+            <ul>
+                @foreach (var file in group)
+                {
+                    var decodedFileName = System.Net.WebUtility.UrlDecode(file.FileName);
+                    <li style="display: flex; justify-content: space-between; align-items: center;">
+                        <a href="@($"/pdfkontrak/{decodedFileName}")" target="_blank">@decodedFileName</a>
+                        <button class="btn btn-danger btn-sm" @onclick="() => ShowDeleteConfirmation(file)">Hapus</button>
+                    </li>
+                }
+            </ul>
+        }
+    }
+    else
+    {
+        <p>Tidak ada file PDF yang sesuai dengan kriteria pencarian.</p>
+    }
+}
+else
+{
+    <p>Tidak ada file PDF yang tersimpan.</p>
+}
+
+@if (showDeleteConfirmation)
+{
+    <div class="modal">
+        <div class="modal-content">
+            <p>Apakah Anda yakin ingin menghapus file ini?</p>
+            <button class="btn btn-yes" @onclick="DeleteConfirmed">Ya</button>
+            <button class="btn btn-cancel" @onclick="CancelDelete">Batal</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public List<FileModel> Files { get; set; }
+    private string searchTerm = "";
+    private bool showDeleteConfirmation = false;
+    private FileModel fileToDelete;
+
+    private IEnumerable<IGrouping<string, FileModel>> GroupedFiles
+    {
+        get
+        {
+            return FilteredFiles
+                .GroupBy(file => file.FileName.Substring(0, 1).ToUpper())
+                .OrderBy(group => group.Key);
+        }
+    }
+
+    private List<FileModel> FilteredFiles
+    {
+        get
+        {
+            return Files
+                .Where(file => file.FileName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+    protected override void OnInitialized()
+    {
+        GetList();
+    }
+
+    private void GetList()
+    {
+        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "PDFKontrak");
+
+        Files = Directory.GetFiles(uploadsFolder, "*.pdf")
+            .Select(filePath => new FileModel
+                {
+                    FileName = Path.GetFileName(filePath),
+                    FilePath = filePath
+                })
+            .ToList();
+    }
+
+    private void DeleteFile(FileModel file)
+    {
+        // Hapus file dari penyimpanan (misalnya, direktori)
+        File.Delete(file.FilePath);
+
+        // Hapus file dari daftar
+        Files.Remove(file);
+
+        // Refresh tampilan
+        StateHasChanged();
+    }
+
+    public void Refresh()
+    {
+        GetList();
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+    }
+
+    private void ShowDeleteConfirmation(FileModel file)
+    {
+        fileToDelete = file;
+        showDeleteConfirmation = true;
+    }
+
+    private void DeleteConfirmed()
+    {
+        DeleteFile(fileToDelete);
+        showDeleteConfirmation = false;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirmation = false;
+    }
+}

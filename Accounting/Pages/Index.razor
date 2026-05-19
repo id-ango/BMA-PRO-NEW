@@ -1,0 +1,470 @@
+﻿@page "/"
+@using Accounting.Services;
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.Services
+@using eSoft.Penjualan.View
+@using eSoft.Piutang.Services
+@using eSoft.Order.Model
+@using eSoft.Order.Services
+
+
+
+@implements IDisposable
+@inject IAdministrationServices service
+@inject ISalesServices serviceSales
+@inject IOrderSalesServices serviceOrderSales
+@inject NavigationManager navigationmanager
+
+
+<div class="row">
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Inventory</h5>
+                    @* <p class="card-text">List Stock Sekarang</p>*@
+                    <a href="/ModulePersediaan/LaporanCurrentStock" class="btn btn-primary">Laporan Stock</a>
+                    <br />
+                    <br />
+
+                    <a href="/ModulePersediaan/LaporanPersediaan" class="btn btn-primary">Laporan Persediaan</a>
+
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Hutang</h5>
+                    @*   <p class="card-text">Daftar Hutang Aging Schedule</p>*@
+                    <a href="/ModuleHutang/LaporanAgingHutang" class="btn btn-primary">Laporan Aging Payable</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleHutang/LaporanHutang" class="btn btn-primary">Laporan Hutang</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Penjualan</h5>
+                    @* <p class="card-text">Daftar Penjualan PerTahun</p>*@
+                    <a href="/ModuleJual/LaporanJualPertahun" class="btn btn-primary">Laporan Penjualan/Tahun</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleJual/LaporanPenjualan" class="btn btn-primary">Laporan Penjualan</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleJual/LaporanJualPerCustomer" class="btn btn-primary">Laporan Penjualan/Customer</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+</div>
+<div class="row">
+    &emsp;
+</div>
+<div class="row">
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Piutang</h5>
+                    @* <p class="card-text">Daftar Piutang Aging Schedule</p>*@
+                    <a href="/ModulePiutang/LaporanAgingPiutang" class="btn btn-primary">Laporan Aging Receivable</a>
+                    <br />
+                    <br />
+                    <a href="/ModulePiutang/LaporanPiutang" class="btn btn-primary">Laporan Piutang</a>
+                    <br />
+                    <br />
+                    <a href="/ModulePiutang/AgingPiutangDashboard" class="btn btn-success">&#9733; Aging Dashboard</a>
+                    @* <a href="/ModulePiutang/LaporanCustomer" class="btn btn-primary">Daftar Customer</a>*@
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Bank and Cash</h5>
+                    @* <p class="card-text">Daftar Kas Bank</p>*@
+                    <a href="/ModuleBank/LaporanCashBank" class="btn btn-primary">Laporan Kas Bank</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleBank/SourceBank" class="btn btn-primary">Laporan per Kode</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Pembelian</h5>
+                    @* <p class="card-text">Daftar Pembelian</p>*@
+                    <a href="/ModuleBeli/LaporanPembelian" class="btn btn-primary">Laporan Pembelian</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+</div>
+
+<AuthorizeView Roles="Admin, Finance">
+    <div class="container">
+        <DataGridVerticalComponent Items="TransHeader"
+                                   Context="transaksi"
+                                   GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaCust} {item.Keterangan}")"
+                                   TotalEnabled=false
+                                   SearchEnabled=false>
+
+            <TableHeader>
+
+                <th scope="col" style="width:15%">No Bukti</th>
+                <th scope="col" style="width:20%">Customer</th>
+
+                <th scope="col" style="width:20%">Keterangan</th>
+                <th scope="col" style="width:40%">Kurir</th>
+
+
+                <th scope="col" style="width:5%"></th>
+            </TableHeader>
+            <RowTemplate>
+                @if (transaksi.Kode != "76")
+
+                {
+
+                    <td style="width:15%; background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
+                        @transaksi.NoLpb
+                        <br />
+                        <span class="badge bg-primary">@transaksi.Tanggal.ToShortDateString()</span>
+                        <br />
+                        <span class="badge bg-success">@transaksi.NoPrj</span>
+                    </td>
+                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">@transaksi.NamaCust</td>
+
+                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">@transaksi.Keterangan</td>
+                    <td style="width:40%;text-align:right;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
+
+                        @*<SearchInputSelectComponent Items="kurirs" Context="transaksi2" GetFilterableText="@(item =>$"{item.Kurir}")">
+                    <BindTemplate>
+                    @transaksi2.Kurir
+                    </BindTemplate>
+                    <OptionTemplate>
+                    <option value="@transaksi2.Kurir">[@transaksi2.Kurir]&nbsp; @transaksi2.NamaKurir</option>
+                    </OptionTemplate>
+
+                    </SearchInputSelectComponent>*@
+                        <select class="form-control" @bind="transaksi.Kurir" style="width:60%; display:inline">
+                            <option value="">&nbsp;&nbsp;---Select Kurir---&nbsp;&nbsp;</option>
+                            @foreach (var item in kurirs)
+                            {
+                                <option value="@item.Kurir">[@item.Kurir]&nbsp; @item.NamaKurir</option>
+                            }
+
+                        </select>
+
+                        <select class="form-control" @bind="transaksi.Salesman" style="width:60%; display:inline">
+                            <option value="">&nbsp;&nbsp;---Select Salesman---&nbsp;&nbsp;</option>
+                            @foreach (var item in salesmans)
+                            {
+                                <option value="@item.Salesman">[@item.Salesman]&nbsp; @item.NamaSales</option>
+                            }
+
+                        </select>
+                        @*   <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+
+                    </td>
+
+
+
+                    <td style="width:5%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
+
+                        <button @onclick="() => OpenDeleteDialog(transaksi)" class="btn btn-danger">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save" viewBox="0 0 16 16">
+                                <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z" />
+                            </svg>
+                        </button>
+                        <button @onclick="() => OpenPrint(transaksi.OeTransHId)" class="btn btn-info">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
+                                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
+                            </svg>
+                        </button>
+                        <button @onclick="() => OpenDetail3(transaksi.Customer)" class="btn btn-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-expand" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13A.5.5 0 0 1 1 8zM7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708l2-2zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10z" />
+                            </svg>
+
+                        </button>
+                    </td>
+
+                }
+            </RowTemplate>
+        </DataGridVerticalComponent>
+    </div>
+</AuthorizeView>
+
+
+<AuthorizeView Roles="Admin, Finance">
+    <div class="container">
+        <DataGridVerticalComponent Items="TransHeader"
+                                   Context="transaksi"
+                                   GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaCust} {item.Keterangan}")"
+                                   TotalEnabled=false
+                                   SearchEnabled=false>
+
+            <TableHeader>
+
+                <th scope="col" style="width:15%">No Bukti</th>
+                <th scope="col" style="width:20%">Customer</th>
+
+                <th scope="col" style="width:20%">Keterangan</th>
+                <th scope="col" style="width:40%">Kurir</th>
+
+
+                <th scope="col" style="width:5%"></th>
+            </TableHeader>
+            <RowTemplate>
+                @if (transaksi.Kode == "76")
+                {
+                    <td style="width:15%; background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">
+                        @transaksi.NoLpb
+                        <br />
+                        <span class="badge bg-primary">@transaksi.Tanggal.ToShortDateString()</span>
+                        <br />
+                        <span class="badge bg-success">@transaksi.NoPrj</span>
+                    </td>
+                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">@transaksi.NamaCust</td>
+
+                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">@transaksi.Keterangan</td>
+                    <td style="width:40%;text-align:right;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")"> </td>
+                   
+
+
+
+                    <td style="width:5%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">
+
+
+                        <button @onclick="() => OpenPrintOrder(transaksi.OeTransHId)" class="btn btn-info">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
+                                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
+                            </svg>
+                        </button>
+                    </td>
+                }
+
+            </RowTemplate>
+        </DataGridVerticalComponent>
+    </div>
+</AuthorizeView>
+
+@if (DetailOpen3)
+{
+    <ModalDetailJualComponent OnClose="OnSearchClose" Items="TransDetail2" Context="transaksi2" GetFilterableText="@(item =>$"{item.ItemCode} {item.NamaItem} {item.NoLpb} ")">
+        <TableHeader>
+            <th scope="col">Item</th>
+            <th scope="col">Dokumen</th>
+
+            <th scope="col">Qty</th>
+            <th scope="col">Harga</th>
+            <th scope="col">Diskon</th>
+            <th scope="col">Jumlah</th>
+            <th scope="col">Lokasi</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>
+                @transaksi2.NamaItem
+                <br />
+                <span class="badge bg-primary">@transaksi2.ItemCode</span>
+                <br />
+                <span class="badge bg-secondary">@transaksi2.Satuan</span>
+            </td>
+
+            <td>
+                @transaksi2.NoLpb
+                <br />
+                <span class="badge bg-primary">@transaksi2.Tanggal.ToShortDateString()</span>
+                <br />
+                <span class="badge bg-success">@transaksi2.Keterangan</span>
+            </td>
+
+            <td style="text-align:right">@transaksi2.Qty.ToString("N")</td>
+            <td style="text-align:right">@transaksi2.Harga.ToString("N")</td>
+            <td style="text-align:right">@transaksi2.Persen.ToString("N")</td>
+            <td style="text-align:right">@transaksi2.Jumlah.ToString("N")</td>
+            <td>@transaksi2.Lokasi</td>
+        </RowTemplate>
+    </ModalDetailJualComponent>
+}
+
+@code {
+
+    private List<OeTransH> TransHeader;
+    private OeTransH _bankToDelete;
+    public bool DeleteDialogOpen { get; set; }
+    public string textAlert { get; set; } = "Transaction Already Posting";
+    public string textDelete { get; set; } = "Do you want to delete this entry?";
+    private List<OeKurir> kurirs;
+    private List<OeSalesman> salesmans;
+
+    private List<PoTransH> poTransh;
+    public List<OeTrans> TransDetail2;
+
+    public bool NullDialogOpen { get; set; }
+    public bool DetailOpen3 { get; set; }
+
+    string currentUri;
+    protected override void OnInitialized()
+    {
+        // base.OnInitialized();
+        currentUri = navigationmanager.Uri;
+
+        LoadCek();
+        LoadGet();
+
+        LoadKurirs();
+        LoadSalesmans();
+
+    }
+
+
+    private void LoadCek()
+    {
+       service.SeedUserRole();
+    }
+
+    void LoadpoTransAktif()
+    {
+
+        poTransh = serviceOrderSales.GetTransHAktif();
+
+    }
+
+    public void Dispose()
+    {
+        // GC.SuppressFinalize(this);
+    }
+
+    private void LoadGet()
+    {
+
+        TransHeader = serviceSales.GetTransKurir();
+        LoadpoTransAktif();
+        foreach (var aktif in poTransh)
+        {
+            TransHeader.Add(
+                new OeTransH()
+                    {
+                        OeTransHId = aktif.PoTransHId,
+                        Tanggal = aktif.Tanggal,
+                        Kode = aktif.Kode,
+                        NoLpb = aktif.NoLpb,
+                        NoPrj = aktif.NoPrj,
+                        Customer = aktif.Vendor,
+                        NamaCust = aktif.NamaVendor,
+                        Keterangan = aktif.Keterangan
+                    }
+            );
+        }
+        StateHasChanged();
+    }
+
+    private void OpenPrint(int xKdBank)
+    {
+
+        navigationmanager.NavigateTo($"/ModulePrinting/PrintSuratJalan/{xKdBank}?prevUri = {Uri.EscapeDataString(currentUri)}");
+    }
+
+    private async Task OnDeleteDialogClose(bool accepted)
+    {
+        if (accepted)
+        {
+
+            await serviceSales.DelTransH(_bankToDelete.OeTransHId);
+
+
+            _bankToDelete = null;
+        }
+
+        DeleteDialogOpen = false;
+        LoadGet();
+
+        StateHasChanged();
+
+    }
+
+    private void OpenDeleteDialog(OeTransH bank)
+    {
+        try
+        {
+            serviceSales.SimpanKurir(bank);
+        }
+        catch
+        {
+
+        };
+
+
+
+        //Console.WriteLine(bank.NoLpb);
+        //Console.WriteLine(bank.Kurir);
+        //System.Console.WriteLine(bank.Keterangan);
+        LoadGet();
+        StateHasChanged();
+    }
+
+    private void LoadKurirs()
+    {
+
+        kurirs = serviceSales.GetKurir();
+
+    }
+    private void LoadSalesmans()
+    {
+        salesmans = serviceSales.GetSalesman();
+    }
+
+    private void OpenPrintOrder(int xKdBank)
+    {
+
+        navigationmanager.NavigateTo($"/ModulePrinting/PrintOrderSales/{xKdBank}");
+    }
+
+    private void OpenDetail3(string xKdBank)
+    {
+        try
+        {
+
+
+            TransDetail2 = serviceSales.Detail3Index(xKdBank);
+            DetailOpen3 = !DetailOpen3;
+            //  navigationmanager.NavigateTo($"/ModuleJual/EditTransJual/{xKdBank}");
+            StateHasChanged();
+        }
+        catch
+        {
+
+        };
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+
+        DetailOpen3 = false;
+
+        StateHasChanged();
+
+    }
+}

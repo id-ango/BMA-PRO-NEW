@@ -1,0 +1,65 @@
+﻿@layout PrintLayout
+
+
+
+@page "/moduleprinting/stockcard/{namaItem}/{satuanItem}/{kodeItem}"
+
+
+<div class="dontprint" style="display:none inline">
+    <br />
+    &emsp;
+   
+            <NavLink href="/ModulePersediaan/LaporanCurrentStock" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>  
+    &emsp;
+    <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+   
+</div>
+
+<div class="stock-card">
+    <!-- Judul Kartu Stock -->
+    <div class="header">KARTU STOK</div>
+
+    <!-- Nama Barang dan Satuan -->
+    <div class="details">
+        <div class="details-row">
+            <span>Kode Barang: @KodeItem</span>
+            <span>Nama Barang: @namaItem</span>
+            <span>Satuan Barang: @satuanItem</span>
+        </div>
+    </div>
+
+    <!-- Tabel Stok -->
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width: 60%;">Keterangan</th>
+                <th style="width: 10%;">Tanggal</th>
+                <th style="width: 10%;">Qty</th>
+                <th style="width: 10%;">Saldo</th>
+                <th style="width: 10%;">Pemeriksa</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < 30; i++)
+            {
+                <!-- Contoh jumlah baris kosong -->
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+        // Variabel untuk mengisi data yang sesuai
+
+
+    [Parameter] public string namaItem { get; set; }
+    [Parameter] public string satuanItem { get; set; }
+    [Parameter] public string KodeItem { get; set; }
+}

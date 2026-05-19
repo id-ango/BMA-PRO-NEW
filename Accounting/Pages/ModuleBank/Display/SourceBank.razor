@@ -1,0 +1,273 @@
+﻿@page "/ModuleBank/SourceBank"
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+@using System.ComponentModel.DataAnnotations
+
+@using eSoft.CashBank.Services
+
+@inject ICashBankServices cashBank
+
+@inject NavigationManager navigationmanager
+
+
+<div class="container">
+    <h1>Laporan Cash Bank</h1>
+</div>
+<div class="container">
+
+    <EditForm Model="@SrcCodes" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <div class="row">
+                <div class="col-6">
+                    <InputSelect class="form-control" @bind-Value="selectedList" style="width:80%; height:250px;">
+                        <option value="">&nbsp;&nbsp;---Select Source Bank---&nbsp;&nbsp;</option>
+                        @foreach (var item in SrcCodes)
+                        {
+                            <option value="@item.SrcCode">[@item.SrcCode]&nbsp; @item.NamaSrc</option>
+                        }
+
+                    </InputSelect>
+                    <br />
+                    <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                    <button @onclick="() => BtnClear()" class="btn btn-success">Clear</button>
+
+                </div>
+                <div class="col-6">
+                    <InputSelect class="form-control" @bind-Value="selectedBank" style="width:80%; height:250px;">
+                        <option value="">&nbsp;&nbsp;---Select Bank---&nbsp;&nbsp;</option>
+                        @foreach (var item in Banks)
+                        {
+                            <option value="@item.KodeBank">[@item.KodeBank]&nbsp; @item.NmBank</option>
+                        }
+
+                    </InputSelect>
+
+                </div>
+            </div>
+
+
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="@TglStart" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="@TglEnd" />
+            </label>
+        </div>
+
+
+        <br />
+
+        <br />
+        <div class="float-md-right">
+            @*<button class="btn-success" type="submit">Mutasi</button>*@
+            <button class="btn-success" type="button" @onclick="OpenCetak">Mutasi</button>
+            <button class="btn-info" type="button" @onclick="PrintCetak">Cetak Mutasi</button>
+             <button class="btn-info" type="button" @onclick="OpenRekap">Rekap</button>
+        </div>
+        <br />
+        <br />
+
+    </EditForm>
+</div>
+
+<br />
+
+
+<div class="container">
+    <DataGridVerticalComponent Items="RekKoran" Context="cbBank" GetFilterableText="@(item => $"{item.Keterangan} {item.DocNo} ")" TotalJumlah=@nJumlah fieldName="Saldo">
+        <TableHeader>
+            <th scope="col" style="width:15%">Doc #</th>
+            <th scope="col" style="width: 15%">Tanggal</th>
+            <th scope="col" style="width: 5%">Src Code</th>
+            <th scope="col" style="width: 5%">Bank</th>
+            <th scope="col" style="width: 40%">Keterangan</th>
+            <th scope="col" style="width: 10%">Mutasi</th>
+            <th scope="col" style="width: 10%">Saldo</th>
+
+        </TableHeader>
+        <RowTemplate>
+            <td style="width:15%">@cbBank.DocNo</td>
+            <td style="width:15%">@cbBank.Tanggal.ToShortDateString()</td>
+            <td style="width:5%">@cbBank.SrcCode</td>
+            <td style="width:5%">@cbBank.KodeBank</td>
+            <td style="width:40%">@cbBank.Keterangan</td>
+            <td style="text-align: right; width: 10%">@cbBank.Saldo.ToString("N")</td>
+            <td style="text-align: right; width: 10%">@cbBank.Balance.ToString("N")</td>
+
+        </RowTemplate>
+    </DataGridVerticalComponent>
+
+
+</div>
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="SrcCodes" Context="cbBank" GetFilterableText="@(item =>$"{item.SrcCode} {item.NamaSrc} ")">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Nama Code</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.SrcCode</td>
+            <td>@cbBank.NamaSrc</td>
+
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.SrcCode)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+
+@code {
+
+    private List<CbSrcCode> SrcCodes;
+    private List<CbSrcCode> SrcCodeView = new List<CbSrcCode>();
+    private List<RekeningView> RekKoran = new List<RekeningView>();
+    private List<CbBank> Banks;
+    private List<CbBank> BankView = new List<CbBank>();
+
+
+    private string[] selectedList = new string[] { };
+    private string[] selectedBank = new string[] { };
+
+    public string kurs { get; set; } = "";
+    private string kodeBank { get; set; } = "";
+
+    private DateTime TglStart = DateTime.Today;
+    private DateTime TglEnd = DateTime.Today;
+
+    public decimal nJumlah { get; set; }
+
+    public List<string> list = new List<string>();
+    public List<string> listBank = new List<string>();
+
+    public bool DeleteDialogOpen { get; set; }
+    public bool NullDialogOpen { get; set; }
+    public bool SearchOpen { get; set; }
+
+    public bool asChecked { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadGet();
+        //this.TglStart = DateTime.Today;
+        //this.TglEnd = DateTime.Now;
+        //StateHasChanged();
+    }
+
+    private void LoadGet()
+    {
+        SrcCodes = cashBank.GetSrcCode();
+        Banks = cashBank.GetBank();
+      
+    }
+
+    private void BtnClear()
+    {
+        list.Clear();
+        selectedList = list.ToArray();
+
+        StateHasChanged();
+    }
+
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+
+            list.Add(textSearch);
+            selectedList = list.ToArray();
+
+            //  string.Join(textSearch,selectedList);
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    //public class SelectedList
+    //{
+
+
+    //    public SelectedList()
+    //    {
+    //        SelectedClassification = new Array[] { };
+    //    }
+
+    //    [Required, MinLength(2), MaxLength(3)]
+    //    public Array[] SelectedClassification { get; set; }
+    //}
+
+
+    private void OpenCetak()
+    {
+        //   SearchOpen = !SearchOpen;
+        //   string OutputValue = string.Join(",", starship.SelectedClassification);
+        RekKoran = cashBank.CetakSourceBank(TglStart, TglEnd, selectedList, selectedBank);
+        nJumlah = RekKoran.Sum(x => x.Saldo);
+
+        StateHasChanged();
+
+    }
+
+    private void PrintCetak()
+    {
+
+        var srccode = string.Join("-", selectedList);
+        var kodebank = string.Join("-", selectedBank);
+        //  SearchOpen = !SearchOpen;
+
+        //   RekKoran = cashBank.CetakMutasi(TglStart, TglEnd, kodeBank);
+        string words = srccode + '+' + TglStart.ToString("yyyy-MM-dd") + '+' + TglEnd.ToString("yyyy-MM-dd") + '+' + kodebank;
+
+
+        navigationmanager.NavigateTo($"/ModulePrinting/PrintSourceBank/{words}");
+        StateHasChanged();
+
+    }
+
+
+    private void HandleValidSubmit()
+    {
+
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+        private void OpenRekap()
+    {
+        //   SearchOpen = !SearchOpen;
+        //   string OutputValue = string.Join(",", starship.SelectedClassification);
+        RekKoran = cashBank.CetakSourceRekapBank(TglStart, TglEnd, selectedList, selectedBank);
+        nJumlah = RekKoran.Sum(x => x.Balance);
+
+        StateHasChanged();
+
+    }
+}
+

@@ -1,0 +1,227 @@
+﻿@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+
+
+<div class="modal fade show" role="dialog" style="display:block">
+    <div class="modal-dialog" role="treegrid">
+        <div class="modal-content">
+
+            <div class="modal-header alert-success)">
+
+
+                <h5 class="modal-title">Detail Transaksi</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="@ModalOk">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@Detail">
+                    <div class="form-group">
+                        <label>
+                            Source Code
+                            <InputSelect class="form-control" @bind-Value="Detail.SrcCode" style="width:60%; display:inline">
+                                <option value="">&nbsp;&nbsp;---Select Source Code---&nbsp;&nbsp;</option>
+                                @foreach (var item in SrcCode)
+                                {
+                                    <option value="@item.SrcCode">@item.NamaSrc</option>
+                                }
+
+                            </InputSelect>
+                            <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            Keterangan
+                            <InputTextArea class="form-control" @bind-Value="@Detail.Keterangan"></InputTextArea>
+                        </label>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Currency))
+                    {
+                        <div class="form-group">
+                            <label>
+                                Kurs
+                                <InputNumber class="form-control" @bind-Value="@Detail.KValue"></InputNumber>
+                            </label>
+                        </div>
+                    }
+                    <table>
+                        @if (!string.IsNullOrEmpty(Currency))
+                        {
+
+
+                            <tr>
+                                <td>
+                                    <div class="form-group">
+                                        <label>
+                                            Receipt :
+                                            <InputNumber class="form-control" @bind-Value="Detail.KTerima" @onfocusout="KTerimaChange" />
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <label>
+                                            Payment:
+                                            <InputNumber class="form-control" @bind-Value="Detail.KBayar" @onfocusout="KBayarChange" />
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        <tr>
+                            <td>
+                                <div class="form-group">
+                                    <label>
+                                        Terima :
+                                        <InputNumber class="form-control" @bind-Value="Detail.Terima" @onfocusout="TerimaChange" />
+                                    </label>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <label>
+                                        Bayar:
+                                        <InputNumber class="form-control" @bind-Value="Detail.Bayar" @onfocusout="BayarChange" />
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+
+                    </table>
+
+
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+
+                @*<button type="button" class="btn btn-primary" @onclick="@ModalOk">OK</button>*@
+                <button type="submit" class="btn btn-primary" @onclick="@SaveDetail">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="SrcCode" Context="cbBank" GetFilterableText="@(item =>$"{item.SrcCode} {item.NamaSrc} ")">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Nama Code</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.SrcCode</td>
+            <td>@cbBank.NamaSrc</td>
+
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.SrcCode)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+@code{
+
+    [Parameter]
+    public string Currency { get; set; }
+
+    [Parameter]
+    public List<CbSrcCode> SrcCode { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<TransDView> OnDetail { get; set; }
+
+    [Parameter]
+    public TransDView DetailRubah { get; set; }
+
+    [Parameter]
+    public bool isEdit { get; set; }
+
+    public TransDView Detail = new TransDView();
+
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if(isEdit)
+        {
+            Detail = DetailRubah;
+        }
+    }
+
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+
+    private Task SaveDetail()
+    {
+        return OnDetail.InvokeAsync(Detail);
+
+    }
+
+    private void TerimaChange()
+    {
+        if (Detail.Bayar != 0)
+        {
+            Detail.Bayar = 0;
+        }
+    }
+
+    private void BayarChange()
+    {
+        if (Detail.Terima != 0)
+        {
+            Detail.Terima = 0;
+        }
+    }
+
+    private void KTerimaChange()
+    {
+        if (Detail.KBayar != 0 && Detail.KTerima != 0)
+        {
+            Detail.KBayar = 0;
+            Detail.Bayar = 0;
+        }
+        Detail.Terima = Detail.KTerima * Detail.KValue;
+    }
+
+    private void KBayarChange()
+    {
+        if (Detail.KTerima != 0 && Detail.KBayar != 0)
+        {
+            Detail.KTerima = 0;
+            Detail.Terima = 0;
+        }
+        Detail.Bayar = Detail.KBayar * Detail.KValue;
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            Detail.SrcCode = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+}

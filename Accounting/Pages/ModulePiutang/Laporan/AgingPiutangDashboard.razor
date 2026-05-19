@@ -1,0 +1,1351 @@
+@page "/ModulePiutang/AgingPiutangDashboard"
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+@using Accounting.Services
+@using System.IO
+
+@inject IReceivableServices serviceAR
+@inject IExcelServices serviceXL
+@inject IJSRuntime JS
+
+<div class="ar-page-shell">
+
+    
+    <div class="container-fluid py-2 border-bottom">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h4 class="mb-0 fw-bold">&#128196; Aging Piutang Dashboard</h4>
+                <small class="text-muted">Per tanggal: @DateTime.Today.ToString("dd MMMM yyyy")</small>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="Refresh">
+                    &#8635; Refresh
+                </button>
+                <a class="btn btn-sm btn-outline-primary" href="/ModulePiutang/LaporanAgingPiutang" target="_blank">
+                    &#128438; Versi Print
+                </a>
+                <button class="btn btn-sm btn-success" @onclick="DownloadExcel">
+                    &#128196; Download Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (Aging == null)
+    {
+        <div class="container-fluid mt-4 text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Memuat data...</p>
+        </div>
+    }
+    else
+    {
+        
+        <div class="container-fluid py-2">
+            <div class="row g-2">
+                <div class="col-6 col-md-2">
+                    <div class="card text-white h-100" style="background:#0d6efd; cursor:pointer;" @onclick='()=>SetTab("semua")'>
+                        <div class="card-body p-2 text-center">
+                            <div class="fw-bold" style="font-size:1.2rem;">@TotalSisa.ToString("N0")</div>
+                            <small>Total Piutang</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="card text-dark h-100" style="background:#d1e7dd; cursor:pointer;" @onclick='()=>SetTab("belum")'>
+                        <div class="card-body p-2 text-center">
+                            <div class="fw-bold" style="font-size:1.2rem;">@TotalBelum.ToString("N0")</div>
+                            <small>Belum JT</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="card text-dark h-100" style="background:#fff3cd; cursor:pointer;" @onclick='()=>SetTab("1-30")'>
+                        <div class="card-body p-2 text-center">
+                            <div class="fw-bold" style="font-size:1.2rem;">@Total130.ToString("N0")</div>
+                            <small>1 – 30 hari</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="card text-dark h-100" style="background:#ffc107; cursor:pointer;" @onclick='()=>SetTab("31-60")'>
+                        <div class="card-body p-2 text-center">
+                            <div class="fw-bold" style="font-size:1.2rem;">@Total3160.ToString("N0")</div>
+                            <small>31 – 60 hari</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="card text-white h-100" style="background:#fd7e14; cursor:pointer;" @onclick='()=>SetTab("61-90")'>
+                        <div class="card-body p-2 text-center">
+                            <div class="fw-bold" style="font-size:1.2rem;">@Total6190.ToString("N0")</div>
+                            <small>61 – 90 hari</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="card text-white h-100" style="background:#dc3545; cursor:pointer;" @onclick='()=>SetTab("90+")'>
+                        <div class="card-body p-2 text-center">
+                            <div class="fw-bold" style="font-size:1.2rem;">@Total90Plus.ToString("N0")</div>
+                            <small>&gt; 90 hari</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="container-fluid py-1">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <input class="form-control form-control-sm" @bind="SearchText" @bind:event="oninput"
+                           placeholder="Cari customer / dokumen / keterangan..." />
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" @bind="SelectedCustomer">
+                        <option value="">Semua Customer</option>
+                        @foreach (var c in CustomerList)
+                        {
+                            <option value="@c">@c</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" @bind="SortBy">
+                        <option value="aging">Urutkan: Paling Lama JT</option>
+                        <option value="customer">Urutkan: Customer</option>
+                        <option value="sisa">Urutkan: Sisa Terbesar</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ResetFilter">Reset</button>
+                </div>
+                <div class="col-auto ms-auto">
+                    <span class="badge bg-secondary">@FilteredRows.Count dokumen</span>
+                    <span class="badge bg-primary ms-1">@FilteredRows.Select(x=>x.Customer).Distinct().Count() customer</span>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="container-fluid">
+            <ul class="nav nav-tabs nav-fill" style="font-size:0.85rem;">
+                <li class="nav-item">
+                    <button class="nav-link @(ActiveTab=="overview" ? "active fw-bold" : "")" @onclick='()=>ActiveTab="overview"'>
+                        &#127968; Overview
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(ActiveTab=="tabel" ? "active fw-bold" : "")" @onclick='()=>ActiveTab="tabel"'>
+                        &#128203; Tabel Aging
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(ActiveTab=="customer" ? "active fw-bold" : "")" @onclick='()=>ActiveTab="customer"'>
+                        &#128101; Per Customer
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(ActiveTab=="alert" ? "active fw-bold" : "")" @onclick='()=>ActiveTab="alert"'>
+                        &#128680; Alert
+                        @if (AlertCount > 0)
+                        {
+                            <span class="badge bg-danger ms-1">@AlertCount</span>
+                        }
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(ActiveTab=="collection" ? "active fw-bold" : "")" @onclick="LoadCollection">
+                        &#128179; Collection
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(ActiveTab=="forecast" ? "active fw-bold" : "")" @onclick='()=>ActiveTab="forecast"'>
+                        &#128197; Forecast Tagihan
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(ActiveTab=="analisa" ? "active fw-bold" : "")" @onclick="LoadAnalisa">
+                        &#128202; Analisa Customer
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        
+        @* ══════════════════ TAB OVERVIEW ══════════════════ *@
+        @if (ActiveTab == "overview")
+        {
+            <div class="ar-scroll-tab">
+            <div class="container-fluid py-3">
+
+                @* ── Baris 1: Distribusi aging (bar) ── *@
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header py-2 fw-bold">📊 Distribusi Aging Piutang</div>
+                            <div class="card-body py-2">
+                                @{
+                                    var totalAll = TotalSisa > 0 ? TotalSisa : 1;
+                                    var bars = new[]
+                                    {
+                                        ("Belum JT",  TotalBelum,  "#198754"),
+                                        ("1–30 hr",   Total130,    "#ffc107"),
+                                        ("31–60 hr",  Total3160,   "#fd7e14"),
+                                        ("61–90 hr",  Total6190,   "#dc3545"),
+                                        (">90 hr",    Total90Plus, "#6f1a1a"),
+                                    };
+                                }
+                                <div class="d-flex gap-1 mb-1" style="height:28px;">
+                                    @foreach (var (lbl, val, color) in bars)
+                                    {
+                                        var pct = (double)val / (double)totalAll * 100;
+                                        if (pct > 0)
+                                        {
+                                            <div title="@lbl: @val.ToString("N0")"
+                                                 style="width:@pct.ToString("0.##")%;background:@color;border-radius:4px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                                                @if (pct > 6)
+                                                {
+                                                    <span style="color:#fff;font-size:0.7rem;font-weight:600;">@pct.ToString("0")%</span>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                                <div class="d-flex flex-wrap gap-3 mt-1">
+                                    @foreach (var (lbl, val, color) in bars)
+                                    {
+                                        <span style="font-size:0.78rem;">
+                                            <span style="display:inline-block;width:10px;height:10px;background:@color;border-radius:2px;margin-right:3px;"></span>
+                                            @lbl: <strong>@val.ToString("N0")</strong>
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    @* ── Top 10 Outstanding ── *@
+                    <div class="col-md-6">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header py-2 fw-bold">🏆 Top 10 Outstanding Terbesar</div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Customer</th>
+                                            <th class="text-end">Sisa</th>
+                                            <th class="text-center">Maks JT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{
+                                            var top10 = Aging
+                                                .GroupBy(x => x.NamaCust)
+                                                .Select(g => new {
+                                                    Nama = g.Key,
+                                                    Sisa = g.Sum(x => x.Sisa),
+                                                    MaxHari = g.Max(x => (int)(DateTime.Today - x.Duedate).TotalDays)
+                                                })
+                                                .OrderByDescending(x => x.Sisa)
+                                                .Take(10)
+                                                .ToList();
+                                            int r10 = 1;
+                                        }
+                                        @foreach (var c in top10)
+                                        {
+                                            var bg = c.MaxHari > 90 ? "#ffe0e0" : c.MaxHari > 60 ? "#fff3cd" : "";
+                                            <tr style="background:@bg;">
+                                                <td class="text-muted">@r10</td>
+                                                <td>@c.Nama</td>
+                                                <td class="text-end fw-bold">@c.Sisa.ToString("N0")</td>
+                                                <td class="text-center">@GetTerlambatBadge(c.MaxHari)</td>
+                                            </tr>
+                                            r10++;
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* ── Salesman performance ── *@
+                    <div class="col-md-6">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header py-2 fw-bold">👤 Piutang per Salesman</div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Salesman</th>
+                                            <th class="text-end">Total Sisa</th>
+                                            <th class="text-end">&gt;60hr</th>
+                                            <th class="text-center">Cust</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{
+                                            var bySales = Aging
+                                                .GroupBy(x => string.IsNullOrWhiteSpace(x.NamaSales) ? "(kosong)" : x.NamaSales)
+                                                .Select(g => new {
+                                                    Sales = g.Key,
+                                                    Sisa  = g.Sum(x => x.Sisa),
+                                                    Macet = g.Where(x => (int)(DateTime.Today - x.Duedate).TotalDays > 60)
+                                                             .Sum(x => x.Sisa),
+                                                    Cust  = g.Select(x => x.Customer).Distinct().Count()
+                                                })
+                                                .OrderByDescending(x => x.Sisa)
+                                                .ToList();
+                                        }
+                                        @foreach (var s in bySales)
+                                        {
+                                            <tr>
+                                                <td>@s.Sales</td>
+                                                <td class="text-end fw-bold">@s.Sisa.ToString("N0")</td>
+                                                <td class="text-end @(s.Macet > 0 ? "text-danger fw-bold" : "text-muted")">@s.Macet.ToString("N0")</td>
+                                                <td class="text-center">@s.Cust</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* ── Baris 3: Faktur jatuh tempo 7 hari ke depan ── *@
+                @{
+                    var jt7 = Aging.Where(x =>
+                    {
+                        var hari = (int)(x.Duedate - DateTime.Today).TotalDays;
+                        return hari >= 0 && hari <= 7;
+                    }).OrderBy(x => x.Duedate).ToList();
+                }
+                @if (jt7.Any())
+                {
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="card shadow-sm border-warning">
+                                <div class="card-header py-2 fw-bold text-warning">
+                                    ⏰ Jatuh Tempo dalam 7 Hari ke Depan (@jt7.Count dokumen · @jt7.Sum(x=>x.Sisa).ToString("N0"))
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Customer</th>
+                                                <th>Dokumen</th>
+                                                <th class="text-center">Due Date</th>
+                                                <th class="text-center">Sisa Hari</th>
+                                                <th class="text-end">Sisa</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var f in jt7)
+                                            {
+                                                var hariSisa = (int)(f.Duedate - DateTime.Today).TotalDays;
+                                                <tr>
+                                                    <td class="fw-bold">@f.NamaCust</td>
+                                                    <td style="font-size:0.75rem;">@f.Dokumen</td>
+                                                    <td class="text-center">@(f.Duedate.ToString("dd/MM/yy"))</td>
+                                                    <td class="text-center">
+                                                        <span class="badge @(hariSisa == 0 ? "bg-danger" : "bg-warning text-dark")">@(hariSisa == 0 ? "HARI INI" : $"{hariSisa} hari")</span>
+                                                    </td>
+                                                    <td class="text-end fw-bold">@f.Sisa.ToString("N0")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            </div>
+        }
+
+        @* ══════════════════ TAB ALERT ══════════════════ *@
+        @if (ActiveTab == "alert")
+        {
+            <div class="ar-scroll-tab">
+            <div class="container-fluid py-3">
+                @{
+                    var alertMacet   = Aging.Where(x => (int)(DateTime.Today - x.Duedate).TotalDays > 60).OrderByDescending(x=>x.Sisa).ToList();
+                    var alertJt7     = Aging.Where(x => { var h=(int)((x.Duedate)-DateTime.Today).TotalDays; return h>=0&&h<=7; }).OrderBy(x=>x.Duedate).ToList();
+                    var alertBelumBayar = Aging.Where(x => x.JumlahCicilan == 0 && (int)(DateTime.Today-(x.Duedate)).TotalDays > 30).OrderByDescending(x=>x.Sisa).ToList();
+                }
+
+                @* Macet >60 hari *@
+                <div class="card border-danger mb-3 shadow-sm">
+                    <div class="card-header bg-danger text-white py-2 fw-bold">
+                        🚨 Belum Bayar / Cicilan Berhenti &gt;60 Hari (@alertMacet.Count dokumen · @alertMacet.Sum(x=>x.Sisa).ToString("N0"))
+                    </div>
+                    @if (alertMacet.Any())
+                    {
+                        <div class="card-body p-0" style="max-height:280px;overflow-y:auto;">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Dokumen</th>
+                                        <th class="text-end">Sisa</th>
+                                        <th class="text-center">Hari Telat</th>
+                                        <th>Info Bayar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var f in alertMacet)
+                                    {
+                                        var hari = (int)(DateTime.Today - f.Duedate).TotalDays;
+                                        <tr style="background:#fff5f5;">
+                                            <td class="fw-bold">@f.NamaCust</td>
+                                            <td style="font-size:0.75rem;">@f.Dokumen</td>
+                                            <td class="text-end fw-bold text-danger">@f.Sisa.ToString("N0")</td>
+                                            <td class="text-center">@GetTerlambatBadge(hari)</td>
+                                            <td>@GetInfoBayarBadge(f)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card-body text-muted py-2">✅ Tidak ada piutang >60 hari.</div>
+                    }
+                </div>
+
+                @* Belum pernah bayar sama sekali >30 hari *@
+                <div class="card border-warning mb-3 shadow-sm">
+                    <div class="card-header py-2 fw-bold" style="background:#fff3cd;">
+                        ⚠️ Belum Ada Pembayaran Sama Sekali &gt;30 Hari (@alertBelumBayar.Count dokumen · @alertBelumBayar.Sum(x=>x.Sisa).ToString("N0"))
+                    </div>
+                    @if (alertBelumBayar.Any())
+                    {
+                        <div class="card-body p-0" style="max-height:250px;overflow-y:auto;">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Dokumen</th>
+                                        <th class="text-end">Sisa</th>
+                                        <th class="text-center">Terlambat</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var f in alertBelumBayar)
+                                    {
+                                        var hari = (int)(DateTime.Today - f.Duedate).TotalDays;
+                                        <tr style="background:#fffbe6;">
+                                            <td class="fw-bold">@f.NamaCust</td>
+                                            <td style="font-size:0.75rem;">@f.Dokumen</td>
+                                            <td class="text-end fw-bold">@f.Sisa.ToString("N0")</td>
+                                            <td class="text-center">@GetTerlambatBadge(hari)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card-body text-muted py-2">✅ Semua faktur sudah ada cicilan.</div>
+                    }
+                </div>
+
+                @* Jatuh tempo 7 hari *@
+                <div class="card border-info mb-3 shadow-sm">
+                    <div class="card-header py-2 fw-bold" style="background:#e0f7fa;">
+                        ⏰ Jatuh Tempo dalam 7 Hari (@alertJt7.Count dokumen · @alertJt7.Sum(x=>x.Sisa).ToString("N0"))
+                    </div>
+                    @if (alertJt7.Any())
+                    {
+                        <div class="card-body p-0" style="max-height:250px;overflow-y:auto;">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Dokumen</th>
+                                        <th class="text-center">Due Date</th>
+                                        <th class="text-center">Sisa Hari</th>
+                                        <th class="text-end">Sisa</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var f in alertJt7)
+                                    {
+                                        var hariSisa = (int)(f.Duedate - DateTime.Today).TotalDays;
+                                        <tr style="background:#e0f7fa;">
+                                            <td class="fw-bold">@f.NamaCust</td>
+                                            <td style="font-size:0.75rem;">@f.Dokumen</td>
+                                            <td class="text-center">@(f.Duedate.ToString("dd/MM/yy"))</td>
+                                            <td class="text-center">
+                                                <span class="badge @(hariSisa==0?"bg-danger":"bg-info text-dark")">@(hariSisa==0?"HARI INI":$"{hariSisa} hari")</span>
+                                            </td>
+                                            <td class="text-end fw-bold">@f.Sisa.ToString("N0")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card-body text-muted py-2">✅ Tidak ada yang jatuh tempo dalam 7 hari.</div>
+                    }
+                </div>
+            </div>
+            </div>
+        }
+
+        @* ══════════════════ TAB COLLECTION ══════════════════ *@
+        @if (ActiveTab == "collection")
+        {
+            <div class="ar-scroll-tab">
+            <div class="container-fluid py-3">
+                @if (CollectionLoading)
+                {
+                    <div class="text-center mt-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Memuat data collection...</p>
+                    </div>
+                }
+                else if (CollectionData != null)
+                {
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-md-3">
+                            <div class="card text-white h-100" style="background:#0d6efd;">
+                                <div class="card-body p-2 text-center">
+                                    <div class="fw-bold" style="font-size:1.1rem;">@(ColLast?.TotalPenerimaan.ToString("N0") ?? "0")</div>
+                                    <small>Bulan Ini / Terakhir</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card text-dark h-100" style="background:#d1e7dd;">
+                                <div class="card-body p-2 text-center">
+                                    <div class="fw-bold" style="font-size:1.1rem;">@(((decimal)Col3MonthAvg).ToString("N0"))</div>
+                                    <small>Rata-rata 3 Bulan</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card text-dark h-100" style="background:#fff3cd;">
+                                <div class="card-body p-2 text-center">
+                                    <div class="fw-bold" style="font-size:1.1rem;">@ColMax.ToString("N0")</div>
+                                    <small>Tertinggi</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card text-white h-100" style="background:#6c757d;">
+                                <div class="card-body p-2 text-center">
+                                    <div class="fw-bold" style="font-size:1.1rem;">@ColTotal.ToString("N0")</div>
+                                    <small>Total @CollectionData.Count Bulan</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header py-2 fw-bold">📈 Tren Penerimaan Bulanan</div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-flex-end gap-2" style="height:140px;">
+                                @foreach (var m in CollectionData)
+                                {
+                                    var pct = ColMaxVal > 0 ? (double)m.TotalPenerimaan / ColMaxVal * 100.0 : 0;
+                                    var isLast = m == ColLast;
+                                    <div class="d-flex flex-column align-items-center justify-content-end" style="flex:1;height:100%;">
+                                        <span style="font-size:0.6rem;color:#555;margin-bottom:2px;">@m.TotalPenerimaan.ToString("N0")</span>
+                                        <div title="@m.LabelBulan: @m.TotalPenerimaan.ToString("N0")"
+                                             style="width:100%;height:@pct.ToString("0.##")%;background:@(isLast?"#0d6efd":"#86b7fe");border-radius:3px 3px 0 0;min-height:4px;">
+                                        </div>
+                                        <span style="font-size:0.65rem;margin-top:3px;font-weight:@(isLast?"700":"400");">@m.LabelBulan</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Tabel detail *@
+                    <div class="card shadow-sm">
+                        <div class="card-header py-2 fw-bold">📋 Detail per Bulan</div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:0.82rem;">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Bulan</th>
+                                        <th class="text-end">Penerimaan</th>
+                                        <th class="text-end">Bayar</th>
+                                        <th class="text-end">Diskon</th>
+                                        <th class="text-center">Faktur</th>
+                                        <th class="text-center">Tren</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int ci = 0; ci < CollectionData.Count; ci++)
+                                    {
+                                        var m = CollectionData[ci];
+                                        var prev = ci > 0 ? CollectionData[ci - 1].TotalPenerimaan : m.TotalPenerimaan;
+                                        var diff = m.TotalPenerimaan - prev;
+                                        var trendIcon = ci == 0 ? "–" : diff > 0 ? "▲" : diff < 0 ? "▼" : "–";
+                                        var trendColor = diff > 0 ? "text-success" : diff < 0 ? "text-danger" : "text-muted";
+                                        <tr>
+                                            <td class="fw-bold">@m.LabelBulan</td>
+                                            <td class="text-end fw-bold">@m.TotalPenerimaan.ToString("N0")</td>
+                                            <td class="text-end text-muted">@m.TotalBayar.ToString("N0")</td>
+                                            <td class="text-end text-muted">@m.TotalDiscount.ToString("N0")</td>
+                                            <td class="text-center">@m.JumlahFaktur</td>
+                                            <td class="text-center @trendColor fw-bold">
+                                                @trendIcon
+                                                @if (ci > 0)
+                                                {
+                                                    <small style="font-size:0.7rem;">@diff.ToString("N0")</small>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-secondary fw-bold">
+                                    <tr>
+                                        <td>Total</td>
+                                        <td class="text-end">@ColTotal.ToString("N0")</td>
+                                        <td class="text-end">@CollectionData.Sum(x=>x.TotalBayar).ToString("N0")</td>
+                                        <td class="text-end">@CollectionData.Sum(x=>x.TotalDiscount).ToString("N0")</td>
+                                        <td class="text-center">@CollectionData.Sum(x=>x.JumlahFaktur)</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+            </div>
+        }
+
+        @* ══════════════════ TAB TABEL (existing) ══════════════════ *@
+        @if (ActiveTab == "tabel")
+        {
+            <div class="container-fluid px-0 ar-table-host">
+                <div class="ar-table-wrapper">
+                    <table class="table table-sm ar-table" style="border-collapse:separate; border-spacing:0; white-space:nowrap; font-size:0.82rem; margin:0;">
+                        <thead>
+                            <tr>
+                                <th class="ar-th ar-sticky-col-1">Customer</th>
+                                <th class="ar-th ar-sticky-col-2">Dokumen</th>
+                                <th class="ar-th">Tanggal</th>
+                                <th class="ar-th">Due Date</th>
+                                <th class="ar-th text-center">Terlambat</th>
+                                <th class="ar-th text-end">Sisa Piutang</th>
+                                <th class="ar-th text-end" style="background:#d1e7dd; color:#212529;">Belum JT</th>
+                                <th class="ar-th text-end" style="background:#fff3cd; color:#212529;">1-30 hr</th>
+                                <th class="ar-th text-end" style="background:#ffc107; color:#212529;">31-60 hr</th>
+                                <th class="ar-th text-end" style="background:#fd7e14; color:#fff;">61-90 hr</th>
+                                <th class="ar-th text-end" style="background:#dc3545; color:#fff;">&gt;90 hr</th>
+                                <th class="ar-th text-center">Info Bayar</th>
+                                <th class="ar-th">Salesman</th>
+                                <th class="ar-th">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ string prevCust = null; }
+                            @foreach (var item in FilteredRows)
+                            {
+                                @if (prevCust != item.Customer)
+                                {
+                                    prevCust = item.Customer;
+                                    <tr style="background:#e9ecef;">
+                                        <td colspan="14" class="ar-sticky-col-1 fw-bold" style="background:#e9ecef; font-size:0.88rem;">
+                                            &#128101; @item.NamaCust &nbsp;<span class="text-muted fw-normal">[@item.Customer]</span>
+                                        </td>
+                                    </tr>
+                                }
+                                var hariTerlambat = (int)(DateTime.Today - item.Duedate).TotalDays;
+                                var rowBg = GetAgingRowBg(item);
+                                var terlambatBadge = GetTerlambatBadge(hariTerlambat);
+                                <tr style="background:@rowBg;">
+                                    <td class="ar-sticky-col-1" style="background:@rowBg; min-width:140px;">@item.NamaCust</td>
+                                    <td class="ar-sticky-col-2" style="background:@rowBg; min-width:130px;">
+                                        <strong>@item.Dokumen</strong>
+                                        @if (item.Cicilan)
+                                        {
+                                            <span class="badge bg-info text-dark ms-1" style="font-size:0.65rem;">Cicilan</span>
+                                        }
+                                    </td>
+                                    <td>@item.Tanggal.ToString("dd/MM/yy")</td>
+                                    <td style="@(hariTerlambat > 0 ? "color:#dc3545; font-weight:bold;" : "")">@item.Duedate.ToString("dd/MM/yy")</td>
+                                    <td class="text-center">@terlambatBadge</td>
+                                    <td class="text-end fw-bold">@item.Sisa.ToString("N0")</td>
+                                    <td class="text-end">@(item.Jumlah > 0 ? item.Jumlah.ToString("N0") : "-")</td>
+                                    <td class="text-end">@(item.Jumlah1 > 0 ? item.Jumlah1.ToString("N0") : "-")</td>
+                                    <td class="text-end">@(item.Jumlah2 > 0 ? item.Jumlah2.ToString("N0") : "-")</td>
+                                    <td class="text-end">@(item.Jumlah3 > 0 ? item.Jumlah3.ToString("N0") : "-")</td>
+                                    <td class="text-end">@(item.Jumlah4 > 0 ? item.Jumlah4.ToString("N0") : "-")</td>
+                                    <td class="text-center" style="white-space:nowrap;">@GetInfoBayarBadge(item)</td>
+                                    <td style="font-size:0.75rem;">@item.NamaSales</td>
+                                    <td style="font-size:0.75rem; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="@item.Keterangan">@item.Keterangan</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr style="background:#212529; color:#fff; font-weight:bold;">
+                                <td colspan="5" class="ar-sticky-col-1" style="background:#212529;">TOTAL (@FilteredRows.Count dok)</td>
+
+                                <td class="text-end">@FilteredRows.Sum(x=>x.Sisa).ToString("N0")</td>
+                                <td class="text-end">@FilteredRows.Sum(x=>x.Jumlah).ToString("N0")</td>
+                                <td class="text-end">@FilteredRows.Sum(x=>x.Jumlah1).ToString("N0")</td>
+                                <td class="text-end">@FilteredRows.Sum(x=>x.Jumlah2).ToString("N0")</td>
+                                <td class="text-end">@FilteredRows.Sum(x=>x.Jumlah3).ToString("N0")</td>
+                                <td class="text-end">@FilteredRows.Sum(x=>x.Jumlah4).ToString("N0")</td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        }
+
+        
+        @if (ActiveTab == "customer")
+        {
+            <div class="container-fluid ar-scroll-area">
+                @foreach (var grp in CustomerGroups)
+                {
+                    var totalSisa = grp.Value.Sum(x => x.Sisa);
+                    var worst = grp.Value.OrderBy(x => x.Duedate).First();
+                    var worstDays = (int)(DateTime.Today - worst.Duedate).TotalDays;
+                    <div class="card mb-2 @(worstDays > 90 ? "border-danger" : worstDays > 30 ? "border-warning" : "border-success")">
+                        <div class="card-header d-flex justify-content-between align-items-center py-1"
+                             style="cursor:pointer; background:@(worstDays > 90 ? "#fff5f5" : worstDays > 30 ? "#fffbe6" : "#f0fff4");"
+                             @onclick="()=>ToggleCustomer(grp.Key)">
+                            <div>
+                                <strong>@grp.Value.First().NamaCust</strong>
+                                <span class="text-muted ms-2" style="font-size:0.8rem;">[@grp.Key]</span>
+                                <span class="badge ms-2 @(worstDays > 90 ? "bg-danger" : worstDays > 30 ? "bg-warning text-dark" : "bg-success")" style="font-size:0.7rem;">
+                                    @grp.Value.Count dok
+                                </span>
+                            </div>
+                            <div class="text-end">
+                                <span class="fw-bold">@totalSisa.ToString("N0")</span>
+                                @if (worstDays > 0)
+                                {
+                                    <span class="badge bg-danger ms-2">Terlambat max @worstDays hr</span>
+                                }
+                            </div>
+                        </div>
+                        @if (ExpandedCustomers.Contains(grp.Key))
+                        {
+                            <div class="card-body p-0">
+                                <table class="table table-sm mb-0" style="font-size:0.82rem;">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Dokumen</th>
+                                            <th>Tanggal</th>
+                                            <th>Due Date</th>
+                                            <th class="text-center">Terlambat</th>
+                                            <th class="text-center">Info Bayar</th>
+                                            <th class="text-end">Awal</th>
+                                            <th class="text-end">Sisa</th>
+                                            <th>Salesman</th>
+                                            <th>Keterangan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var row in grp.Value.OrderBy(x => x.Duedate))
+                                        {
+                                            var hariRow = (int)(DateTime.Today - row.Duedate).TotalDays;
+                                            <tr style="background:@GetAgingRowBg(row);">
+                                                <td>
+                                                    <strong>@row.Dokumen</strong>
+                                                    @if (row.Cicilan)
+                                                    {
+                                                        <span class="badge bg-info text-dark ms-1" style="font-size:0.65rem;">Cicilan</span>
+                                                    }
+                                                </td>
+                                                <td>@row.Tanggal.ToString("dd/MM/yy")</td>
+                                                <td style="@(hariRow > 0 ? "color:#dc3545;font-weight:bold;" : "")">@row.Duedate.ToString("dd/MM/yy")</td>
+                                                <td class="text-center">@GetTerlambatBadge(hariRow)</td>
+                                                <td class="text-center">@GetInfoBayarBadge(row)</td>
+                                                <td class="text-end">@row.JumlahAwal.ToString("N0")</td>
+                                                <td class="text-end fw-bold">@row.Sisa.ToString("N0")</td>
+                                                <td>@row.NamaSales</td>
+                                                <td title="@row.Keterangan" style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@row.Keterangan</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-secondary fw-bold">
+                                            <td colspan="5">Subtotal @grp.Value.Count dokumen</td>
+                                            <td class="text-end">@grp.Value.Sum(x=>x.JumlahAwal).ToString("N0")</td>
+                                            <td class="text-end">@totalSisa.ToString("N0")</td>
+                                            <td colspan="2"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        
+        @if (ActiveTab == "forecast")
+        {
+            <div class="container-fluid ar-scroll-area">
+                <p class="text-muted mb-2" style="font-size:0.85rem;">
+                    Tagihan yang akan jatuh tempo berdasarkan Due Date dari piutang yang belum lunas. Klik bulan untuk lihat detail.
+                </p>
+                @if (!ForecastData.Any())
+                {
+                    <div class="alert alert-info">Tidak ada data forecast.</div>
+                }
+                else
+                {
+                    <div class="row g-2 mb-3">
+                        @foreach (var bulan in ForecastData)
+                        {
+                            var isExpanded = ExpandedForecast == $"{bulan.Tahun}-{bulan.Bulan}";
+                            <div class="col-md-4 col-lg-3">
+                                <div class="card @(isExpanded ? "border-primary" : "") h-100" style="cursor:pointer;"
+                                     @onclick="()=>ToggleForecast(bulan.Tahun, bulan.Bulan)">
+                                    <div class="card-header py-1 d-flex justify-content-between align-items-center
+                                                @(bulan.TotalTagihan == 0 ? "bg-light text-muted" : "bg-primary text-white")">
+                                        <strong>@bulan.NamaBulan @bulan.Tahun</strong>
+                                        <span class="badge bg-white text-primary">@bulan.JumlahDokumen dok</span>
+                                    </div>
+                                    <div class="card-body p-2 text-center">
+                                        <div class="fw-bold fs-6" style="color:@(bulan.TotalTagihan > 0 ? "#0d6efd" : "#adb5bd");">
+                                            @bulan.TotalTagihan.ToString("N0")
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @if (isExpanded && bulan.Details.Any())
+                            {
+                                <div class="col-12">
+                                    <div class="card border-primary">
+                                        <div class="card-header bg-primary text-white py-1">
+                                            <strong>Detail @bulan.NamaBulan @bulan.Tahun</strong>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <table class="table table-sm mb-0" style="font-size:0.82rem;">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Customer</th>
+                                                        <th>Dokumen</th>
+                                                        <th>Due Date</th>
+                                                        <th class="text-end">Sisa</th>
+                                                        <th>Salesman</th>
+                                                        <th>Keterangan</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var d in bulan.Details.OrderBy(x => x.DueDate))
+                                                    {
+                                                        <tr>
+                                                            <td><strong>@d.NamaCust</strong></td>
+                                                            <td>@d.Dokumen</td>
+                                                            <td>@d.DueDate.ToString("dd/MM/yy")</td>
+                                                            <td class="text-end fw-bold">@d.Sisa.ToString("N0")</td>
+                                                            <td>@d.Salesman</td>
+                                                            <td title="@d.Keterangan" style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@d.Keterangan</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr class="table-secondary fw-bold">
+                                                        <td colspan="3">Total @bulan.JumlahDokumen dokumen</td>
+                                                        <td class="text-end">@bulan.TotalTagihan.ToString("N0")</td>
+                                                        <td colspan="2"></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        @* ══ TAB: ANALISA CUSTOMER ══ *@
+        @if (ActiveTab == "analisa")
+        {
+            <div class="container-fluid ar-scroll-area">
+                @if (AnalisaLoading)
+                {
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Menghitung analisa customer...</p>
+                    </div>
+                }
+                else if (AnalisaData == null || !AnalisaData.Any())
+                {
+                    <div class="alert alert-info mt-2">Tidak ada data analisa.</div>
+                }
+                else
+                {
+                    @* ── Ringkasan distribusi risiko ── *@
+                    <div class="row g-2 mb-3 mt-1">
+                        <div class="col-6 col-md-3">
+                            <div class="card text-center border-danger" style="background:#fff5f5;">
+                                <div class="card-body p-2">
+                                    <div class="fw-bold fs-4 text-danger">@AnalisaData.Count(x=>x.RiskLabel=="Blacklist")</div>
+                                    <small>⛔ Blacklist</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card text-center border-danger" style="background:#fff0f0;">
+                                <div class="card-body p-2">
+                                    <div class="fw-bold fs-4 text-danger">@AnalisaData.Count(x=>x.RiskLabel=="Macet")</div>
+                                    <small>🔴 Macet</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card text-center" style="background:#fff3e0;border-color:#e67e22;">
+                                <div class="card-body p-2">
+                                    <div class="fw-bold fs-4" style="color:#e67e22;">@AnalisaData.Count(x=>x.RiskLabel=="Jelek")</div>
+                                    <small>🟠 Jelek</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card text-center" style="background:#fffbe6;border-color:#fd7e14;">
+                                <div class="card-body p-2">
+                                    <div class="fw-bold fs-4" style="color:#fd7e14;">@AnalisaData.Count(x=>x.RiskLabel=="Hati-hati")</div>
+                                    <small>🔶 Hati-hati</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card text-center border-warning" style="background:#fffff0;">
+                                <div class="card-body p-2">
+                                    <div class="fw-bold fs-4" style="color:#856404;">@AnalisaData.Count(x=>x.RiskLabel=="Cukup")</div>
+                                    <small>⚠️ Cukup</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card text-center border-success" style="background:#f0fff4;">
+                                <div class="card-body p-2">
+                                    <div class="fw-bold fs-4 text-success">@AnalisaData.Count(x=>x.RiskLabel=="Baik")</div>
+                                    <small>✅ Baik</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* ── Filter analisa ── *@
+                    <div class="row g-2 mb-2 align-items-end">
+                        <div class="col-md-4">
+                            <input class="form-control form-control-sm" @bind="AnalisaSearch" @bind:event="oninput"
+                                   placeholder="Cari nama customer / salesman..." />
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" @bind="AnalisaFilterLabel">
+                                <option value="">Semua Risiko</option>
+                                <option value="Blacklist">⛔ Blacklist</option>
+                                <option value="Macet">🔴 Macet</option>
+                                <option value="Jelek">🟠 Jelek</option>
+                                <option value="Hati-hati">🔶 Hati-hati</option>
+                                <option value="Cukup">⚠️ Cukup</option>
+                                <option value="Baik">✅ Baik</option>
+                                <option value="Baru">🔵 Baru</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="()=>{AnalisaSearch=string.Empty;AnalisaFilterLabel=string.Empty;}">Reset</button>
+                        </div>
+                        <div class="col-auto ms-auto">
+                            <span class="badge bg-secondary">@FilteredAnalisa.Count customer</span>
+                        </div>
+                    </div>
+
+                    @* ── Tabel analisa ── *@
+                    <div class="ar-table-wrapper" style="max-height:calc(100vh - 340px);">
+                        <table class="table table-sm ar-table" style="border-collapse:separate;border-spacing:0;font-size:0.81rem;white-space:nowrap;margin:0;">
+                            <thead>
+                                <tr>
+                                    <th class="ar-th ar-sticky-col-1">Customer</th>
+                                    <th class="ar-th" style="min-width:80px;">Salesman</th>
+                                    <th class="ar-th text-center" style="min-width:90px;">Risk Score</th>
+                                    <th class="ar-th text-center" style="min-width:100px;">Label Risiko</th>
+                                    <th class="ar-th text-end">Outstanding</th>
+                                    <th class="ar-th text-center">Faktur Open</th>
+                                    <th class="ar-th text-center">Cicilan</th>
+                                    <th class="ar-th text-center">Diam (hr)</th>
+                                    <th class="ar-th text-center">Tgl Bayar Terakhir</th>
+                                    <th class="ar-th text-end">Nunggak &gt;60hr</th>
+                                    <th class="ar-th text-center">Avg Terlambat</th>
+                                    <th class="ar-th text-center">Max Terlambat</th>
+                                    <th class="ar-th text-center">On-Time %</th>
+                                    <th class="ar-th text-center">DSO (hr)</th>
+                                    <th class="ar-th" style="min-width:300px;">Rekomendasi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in FilteredAnalisa)
+                                {
+                                    var (rowBg, labelBadge) = GetRiskStyle(a.RiskLabel);
+                                    var scoreBar = GetScoreBar(a.RiskScore);
+                                    <tr style="background:@rowBg;">
+                                        <td class="ar-sticky-col-1 fw-bold" style="background:@rowBg;">@a.NamaCust</td>
+                                        <td style="font-size:0.75rem;">@a.Salesman</td>
+                                        <td class="text-center">@scoreBar</td>
+                                        <td class="text-center">@labelBadge</td>
+                                        <td class="text-end fw-bold">@a.TotalOutstanding.ToString("N0")</td>
+                                        <td class="text-center">@a.JumlahFakturOpen</td>
+                                        <td class="text-center">
+                                            @if (a.JumlahFakturCicilan == 0)
+                                            {
+                                                <span style="color:#aaa;">-</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="ar-badge" style="background:#e67e22;color:#fff;">@a.JumlahFakturCicilan fk</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @GetDiamBadge(a.MaxHariMacetOutstanding, a.JumlahFakturOpen)
+                                        </td>
+                                        <td class="text-center" style="font-size:0.75rem;">
+                                            @if (a.TglTerakhirBayarOutstanding.HasValue)
+                                            {
+                                                <span>@a.TglTerakhirBayarOutstanding.Value.ToString("dd/MM/yy")</span>
+                                            }
+                                            else if (a.JumlahFakturOpen > 0)
+                                            {
+                                                <span style="color:#aaa;">belum bayar</span>
+                                            }
+                                            else
+                                            {
+                                                <span style="color:#aaa;">-</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (a.CountTelat60 == 0)
+                                            {
+                                                <span class="ar-badge ar-badge-baru">-</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="ar-badge ar-badge-lama">@a.CountTelat60 fk · @a.OutstandingTelat60.ToString("N0")</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">@GetDaysLateBadge(a.AvgDaysLate, false)</td>
+                                        <td class="text-center">@GetDaysLateBadge(a.MaxDaysLate, true)</td>
+                                        <td class="text-center">@GetOnTimeRateBadge(a.OnTimeRate)</td>
+                                        <td class="text-center">@GetDsoBadge(a.DSO)</td>
+                                        <td style="font-size:0.78rem; white-space:normal; max-width:300px;">@a.Rekomendasi</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+</div>
+
+@code {
+    private List<ArAgingView> Aging;
+    private List<ArForecastPiutangView> ForecastData = new();
+    private List<ArCustomerAnalysisView> AnalisaData;
+    private bool AnalisaLoading = false;
+
+    private List<ArMonthlyCollectionView> CollectionData;
+    private bool CollectionLoading = false;
+
+    private string SearchText = string.Empty;
+    private string SelectedCustomer = string.Empty;
+    private string SortBy = "aging";
+    private string ActiveTab = "overview";
+    private string AgingFilter = string.Empty;
+    private string ExpandedForecast = string.Empty;
+    private HashSet<string> ExpandedCustomers = new();
+    private string AnalisaSearch = string.Empty;
+    private string AnalisaFilterLabel = string.Empty;
+
+    // ── Computed ──────────────────────────────────────────────
+    private List<string> CustomerList =>
+        Aging?.Select(x => x.NamaCust).Distinct().OrderBy(x => x).ToList() ?? new();
+
+    private List<ArAgingView> FilteredRows
+    {
+        get
+        {
+            if (Aging == null) return new();
+
+            var q = Aging.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(SelectedCustomer))
+                q = q.Where(x => x.NamaCust == SelectedCustomer);
+
+            if (!string.IsNullOrWhiteSpace(SearchText))
+                q = q.Where(x =>
+                    $"{x.NamaCust} {x.Customer} {x.Dokumen} {x.Keterangan} {x.NamaSales}"
+                    .Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+
+            if (AgingFilter == "belum")   q = q.Where(x => x.Jumlah > 0);
+            if (AgingFilter == "1-30")    q = q.Where(x => x.Jumlah1 > 0);
+            if (AgingFilter == "31-60")   q = q.Where(x => x.Jumlah2 > 0);
+            if (AgingFilter == "61-90")   q = q.Where(x => x.Jumlah3 > 0);
+            if (AgingFilter == "90+")     q = q.Where(x => x.Jumlah4 > 0);
+
+            q = SortBy switch
+            {
+                "aging"    => q.OrderBy(x => x.Duedate).ThenBy(x => x.Customer),
+                "customer" => q.OrderBy(x => x.NamaCust).ThenBy(x => x.Duedate),
+                "sisa"     => q.OrderByDescending(x => x.Sisa),
+                _          => q
+            };
+
+            return q.ToList();
+        }
+    }
+
+    private Dictionary<string, List<ArAgingView>> CustomerGroups =>
+        FilteredRows
+            .GroupBy(x => x.Customer)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+    // ── Totals ────────────────────────────────────────────────
+    private decimal TotalSisa   => FilteredRows.Sum(x => x.Sisa);
+    private decimal TotalBelum  => FilteredRows.Sum(x => x.Jumlah);
+    private decimal Total130    => FilteredRows.Sum(x => x.Jumlah1);
+    private decimal Total3160   => FilteredRows.Sum(x => x.Jumlah2);
+    private decimal Total6190   => FilteredRows.Sum(x => x.Jumlah3);
+    private decimal Total90Plus => FilteredRows.Sum(x => x.Jumlah4);
+
+    // ── Lifecycle ─────────────────────────────────────────────
+    protected override void OnInitialized()
+    {
+        Load();
+    }
+
+    private void Load()
+    {
+        Aging = serviceAR.GetAgingSchedule();
+        ForecastData = serviceAR.GetForecastPiutang(DateTime.Today, 12);
+    }
+
+    private void Refresh()
+    {
+        Aging = null;
+        StateHasChanged();
+        Load();
+    }
+
+    // ── Filter helpers ────────────────────────────────────────
+    private void SetTab(string filter)
+    {
+        AgingFilter = filter == "semua" ? string.Empty : filter;
+        ActiveTab = "tabel";
+    }
+
+    private void ResetFilter()
+    {
+        SearchText = string.Empty;
+        SelectedCustomer = string.Empty;
+        SortBy = "aging";
+        AgingFilter = string.Empty;
+    }
+
+    private void ToggleCustomer(string code)
+    {
+        if (!ExpandedCustomers.Add(code))
+            ExpandedCustomers.Remove(code);
+    }
+
+    private void ToggleForecast(int tahun, int bulan)
+    {
+        var key = $"{tahun}-{bulan}";
+        ExpandedForecast = ExpandedForecast == key ? string.Empty : key;
+    }
+
+    // ── Analisa Customer ─────────────────────────────────────
+    private List<ArCustomerAnalysisView> FilteredAnalisa
+    {
+        get
+        {
+            if (AnalisaData == null) return new();
+            var q = AnalisaData.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(AnalisaFilterLabel))
+                q = q.Where(x => x.RiskLabel == AnalisaFilterLabel);
+            if (!string.IsNullOrWhiteSpace(AnalisaSearch))
+                q = q.Where(x => $"{x.NamaCust} {x.Customer} {x.Salesman}"
+                    .Contains(AnalisaSearch, StringComparison.OrdinalIgnoreCase));
+            return q.ToList();
+        }
+    }
+
+    private async Task LoadCollection()
+    {
+        ActiveTab = "collection";
+        if (CollectionData != null) return;
+        CollectionLoading = true;
+        StateHasChanged();
+        CollectionData = await Task.Run(() => serviceAR.GetMonthlyCollection(12));
+        CollectionLoading = false;
+    }
+
+    private int AlertCount =>
+        Aging == null ? 0 :
+        Aging.Count(x => (int)(DateTime.Today - x.Duedate).TotalDays > 60);
+
+    // ── Collection computed ───────────────────────────────────
+    private ArMonthlyCollectionView ColLast => CollectionData?.LastOrDefault();
+    private double Col3MonthAvg => CollectionData != null && CollectionData.Count >= 3 ? CollectionData.TakeLast(3).Average(x => (double)x.TotalPenerimaan) : 0;
+    private decimal ColTotal    => CollectionData?.Sum(x => x.TotalPenerimaan) ?? 0;
+    private decimal ColMax      => CollectionData != null && CollectionData.Any() ? CollectionData.Max(x => x.TotalPenerimaan) : 0;
+    private double ColMaxVal    => ColMax > 0 ? (double)ColMax : 1;
+
+    private async Task LoadAnalisa()
+    {
+        ActiveTab = "analisa";
+        if (AnalisaData != null) return; // sudah dimuat
+        AnalisaLoading = true;
+        StateHasChanged();
+        AnalisaData = await Task.Run(() => serviceAR.GetCustomerAnalysis());
+        AnalisaLoading = false;
+    }
+
+    private (string bg, MarkupString badge) GetRiskStyle(string label) => label switch
+    {
+        "Blacklist"  => ("#fde8e8", new MarkupString("<span class='badge bg-dark'>⛔ Blacklist</span>")),
+        "Macet"      => ("#ffe0e0", new MarkupString("<span class='badge bg-danger'>🔴 Macet</span>")),
+        "Jelek"      => ("#fff3e0", new MarkupString("<span class='badge' style='background:#e67e22;color:#fff;'>🟠 Jelek</span>")),
+        "Hati-hati"  => ("#fffbe6", new MarkupString("<span class='badge' style='background:#fd7e14;color:#fff;'>🔶 Hati-hati</span>")),
+        "Cukup"      => ("#fffff0", new MarkupString("<span class='badge' style='background:#ffc107;color:#212529;'>⚠️ Cukup</span>")),
+        "Baik"       => ("#f0fff4", new MarkupString("<span class='badge bg-success'>✅ Baik</span>")),
+        "Baru"       => ("#f8f9fa", new MarkupString("<span class='badge bg-info text-dark'>🔵 Baru</span>")),
+        _            => ("#fff",    new MarkupString("<span class='badge bg-secondary'>-</span>"))
+    };
+
+    private MarkupString GetDiamBadge(int hari, int fakturOpen)
+    {
+        if (fakturOpen == 0) return new MarkupString("<span style='color:#aaa;'>-</span>");
+        if (hari <= 0) return new MarkupString("<span class='ar-badge ar-badge-baru'>belum JT</span>");
+        var cls = hari > 60 ? "ar-badge-lama" : hari > 30 ? "ar-badge-sedang" : "ar-badge-baru";
+        return new MarkupString($"<span class='ar-badge {cls}'>{hari} hr</span>");
+    }
+
+    private MarkupString GetScoreBar(int score)
+    {
+        var color = score >= 75 ? "#198754" : score >= 55 ? "#ffc107" : score >= 35 ? "#e67e22" : score >= 15 ? "#dc3545" : "#6f1a1a";
+        var textColor = (score >= 55 && score < 75) ? "#212529" : "#fff";
+        return new MarkupString(
+            $"<div style='display:flex;align-items:center;gap:4px;'>" +
+            $"<div style='flex:1;height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;'>" +
+            $"<div style='width:{score}%;height:100%;background:{color};border-radius:4px;'></div></div>" +
+            $"<span class='badge' style='background:{color};color:{textColor};min-width:34px;'>{score}</span>" +
+            $"</div>");
+    }
+
+    private MarkupString GetOnTimeRateBadge(double rate)
+    {
+        var color = rate >= 80 ? "ar-badge-baru" : rate >= 50 ? "ar-badge-sedang" : "ar-badge-lama";
+        return new MarkupString($"<span class='ar-badge {color}'>{rate:0.0}%</span>");
+    }
+
+    private MarkupString GetDaysLateBadge(double days, bool isMax)
+    {
+        if (days <= 0) return new MarkupString("<span class='ar-badge ar-badge-baru'>0 hr</span>");
+        var color = days <= 15 ? "ar-badge-baru" : days <= 30 ? "ar-badge-sedang" : "ar-badge-lama";
+        var prefix = isMax ? "max " : "avg ";
+        return new MarkupString($"<span class='ar-badge {color}'>{prefix}{days:0.0} hr</span>");
+    }
+
+    private MarkupString GetDsoBadge(double dso)
+    {
+        if (dso <= 0) return new MarkupString("<span class='ar-badge ar-badge-baru'>0</span>");
+        var color = dso <= 30 ? "ar-badge-baru" : dso <= 60 ? "ar-badge-sedang" : "ar-badge-lama";
+        return new MarkupString($"<span class='ar-badge {color}'>{dso:0.0}</span>");
+    }
+
+    // ── UI helpers ────────────────────────────────────────────
+    private string GetAgingRowBg(ArAgingView item)
+    {
+        if (item.Jumlah4 > 0) return "#ffe0e0";   // >90 hari — merah muda
+        if (item.Jumlah3 > 0) return "#ffe8d1";   // 61-90 — oranye muda
+        if (item.Jumlah2 > 0) return "#fff3cd";   // 31-60 — kuning
+        if (item.Jumlah1 > 0) return "#fffbe6";   // 1-30  — kuning terang
+        return "#f0fff4";                           // belum JT — hijau muda
+    }
+
+    private MarkupString GetTerlambatBadge(int hari)
+    {
+        if (hari <= 0) return new MarkupString($"<span class='badge bg-success'>Belum JT</span>");
+        if (hari <= 30) return new MarkupString($"<span class='badge' style='background:#ffc107;color:#212529;'>{hari} hr</span>");
+        if (hari <= 60) return new MarkupString($"<span class='badge' style='background:#fd7e14;color:#fff;'>{hari} hr</span>");
+        if (hari <= 90) return new MarkupString($"<span class='badge bg-danger'>{hari} hr</span>");
+        return new MarkupString($"<span class='badge bg-danger'><strong>⚠ {hari} hr</strong></span>");
+    }
+
+    private MarkupString GetInfoBayarBadge(ArAgingView item)
+    {
+        var sb = new System.Text.StringBuilder();
+
+        // Deteksi uang muka: nilai awal atau sisa negatif
+        if (item.JumlahAwal < 0 || item.Sisa < 0)
+        {
+            sb.Append("<span class='ar-badge' style='background:#e0cffc;color:#3d0a91;border:1px solid #c5a3ff;' title='Ini adalah uang muka / advance payment'>&#128176; Uang Muka</span>");
+            return new MarkupString(sb.ToString());
+        }
+
+        // Badge: sudah bayar berapa kali
+        if (item.JumlahCicilan > 0)
+        {
+            sb.Append($"<span class='ar-badge ar-badge-cicilan' title='Sudah {item.JumlahCicilan}x cicilan'>&#128178; {item.JumlahCicilan}x</span> ");
+        }
+        else
+        {
+            sb.Append("<span class='ar-badge ar-badge-belum' title='Belum ada pembayaran sama sekali'>&#10060; Blm bayar</span> ");
+        }
+
+        // Badge: persen sudah dibayar
+        if (item.SudahBayar > 0)
+        {
+            var persen = item.JumlahAwal > 0 ? (int)(item.SudahBayar / item.JumlahAwal * 100) : 0;
+            sb.Append($"<span class='ar-badge ar-badge-bayar' title='Sudah bayar: {item.SudahBayar:N0} dari {item.JumlahAwal:N0}'>&#10003; {persen}%</span> ");
+        }
+
+        // Badge: tanggal terakhir bayar
+        if (item.TglTerakhirBayar.HasValue)
+        {
+            var hariSejak = item.HariSejakTerakhirBayar;
+            var warna = hariSejak > 60 ? "ar-badge-lama" : hariSejak > 30 ? "ar-badge-sedang" : "ar-badge-baru";
+            sb.Append($"<span class='ar-badge {warna}' title='Terakhir bayar: {item.TglTerakhirBayar:dd/MM/yy}'>"
+                      + $"&#128337; {item.TglTerakhirBayar:dd/MM/yy} ({hariSejak}hr lalu)</span>");
+        }
+        else
+        {
+            sb.Append($"<span class='ar-badge ar-badge-lama' title='Invoice tgl {item.Tanggal:dd/MM/yy}, belum pernah ada pembayaran'>&#128337; Invoice {item.HariSejakTerakhirBayar}hr lalu</span>");
+        }
+
+        return new MarkupString(sb.ToString());
+    }
+
+    // ── Excel ─────────────────────────────────────────────────
+    private async Task DownloadExcel()
+    {
+        var data = serviceXL.CreateAgingPiutangExcel(FilteredRows, ForecastData, AnalisaData);
+        var stream = new MemoryStream(data);
+        var fileName = $"AgingPiutang_{DateTime.Today:yyyyMMdd}.xlsx";
+        using var streamRef = new DotNetStreamReference(stream: stream);
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+}
+

@@ -1,0 +1,218 @@
+﻿@page "/ModuleJual/EditKurir/{Id:int}"
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.View
+@using eSoft.Penjualan.Services
+@using Accounting.Services
+
+@inject ISalesServices service
+@inject NavigationManager navigationmanager
+
+<h3>Edit Kurir</h3>
+
+<EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>
+            Kurir :
+            <InputText id="codeBank" class="form-control" @bind-Value="bank.Kurir" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Nama :
+            <InputText class="form-control" @bind-Value="bank.NamaKurir" />
+        </label>
+    </div>
+    <div class="form-group">
+        <table style="width:100%">
+            <tr>
+                <td style="width:70%">
+                    <label>
+                        Alamat :
+                        <InputTextArea class="form-control" @bind-Value="bank.Alamat" />
+                    </label>
+                </td>
+                <td style="width:30%">
+                    <label>
+                        Kota :
+                        <InputText class="form-control" @bind-Value="bank.Kota" />
+                    </label>
+                </td>
+            </tr>
+            <tr>
+                <td style="width:70%">
+                    <label>
+                        Keterangan :
+                        <InputTextArea class="form-control" @bind-Value="bank.AlmtKrm" />
+                    </label>
+                </td>
+               @* <td style="width:30%">
+                    <label>
+                        Kota Kirim :
+                        <InputText class="form-control" @bind-Value="bank.KotaKrm" />
+                    </label>
+                </td>*@
+            </tr>
+        </table>
+
+    </div>
+
+
+    <div class="form-group">
+        <label>
+            Telpon :
+            <InputText class="form-control" @bind-Value="bank.Telpon" />
+        </label>
+    </div>
+
+    <div class="form-group">
+        <label>
+            Kontak Person :
+            <InputText class="form-control" @bind-Value="bank.Kontak" />
+        </label>
+    </div>
+@*    <div class="form-group">
+        <label>
+            NPWP/NIK :
+            <InputText class="form-control" @bind-Value="bank.NPWP_Cust" />
+        </label>
+    </div>
+*@
+@*    <br />
+     <div class="form-group">
+        <label>
+            Termin :
+            <InputNumber class="form-control" @bind-Value="bank.Termin" />
+        </label>
+    </div>*@
+
+@*    <br />
+    <div class="form-group">
+        <label>
+            Set Account :
+            <InputSelect class="form-control" @bind-Value="bank.AcctSet" style="width:80%; display:inline">
+                <option value="">&nbsp;&nbsp;---Select Set Account---&nbsp;&nbsp;</option>
+                @foreach (var item in GlAccounts)
+                {
+                    <option value="@item.AcctSet">@item.Description</option>
+                }
+
+            </InputSelect>
+            <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+        </label>
+    </div>*@
+
+    <br />
+    <div class="float-md-right">
+        <button class="btn-success" type="submit">Simpan</button>
+        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleJual/SetupKurir", false))">Batal</button>
+    </div>
+
+
+</EditForm>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kurir Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    OeKurirView bank = new OeKurirView();
+    OeKurir Bank = new ();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+ 
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBank();
+      
+    }
+
+    void LoadBank()
+    {
+        Bank = service.GetKurirId(Id);
+        bank.OeKurirId = Bank.OeKurirId;
+        bank.Kurir = Bank.Kurir;
+        bank.NamaKurir = Bank.NamaKurir;
+        bank.Alamat = Bank.Alamat;
+        bank.Kota = Bank.Kota;
+        bank.AlmtKrm = Bank.AlmtKrm;
+        bank.KotaKrm = Bank.KotaKrm;
+        bank.Telpon = Bank.Telpon;
+        bank.Kontak = Bank.Kontak;
+        bank.AcctSet = Bank.AcctSet;
+        bank.NPWP_Kurir = Bank.NPWP_Kurir;
+        bank.Termin = Bank.Termin;
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.Kurir;
+        DialogOpen = service.CekKdKurir(Testing);
+        if (DialogOpen)
+        {
+            bank.Kurir = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private async Task HandleValidSubmit()
+    {
+        var newEdit = await service.EditKurir(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleJual/SetupKurir", false);
+
+    }
+
+   
+
+    //private void BtnChoose(string textSearch)
+    //{
+    //    if (textSearch != null || textSearch != "")
+    //    {
+    //        bank.AcctSet = textSearch;
+    //    }
+
+    //    SearchOpen = false;
+    //    StateHasChanged();
+    //}
+
+    //private void OnSearchClose(bool accepted)
+    //{
+
+    //    SearchOpen = false;
+    //    StateHasChanged();
+
+    //}
+}

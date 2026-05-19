@@ -1,0 +1,172 @@
+﻿@page "/ModuleAdministration/SetupUserRole"
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Identity;
+@using Accounting.Services;
+@using Accounting.Services.View;
+@using Accounting.Data;
+
+@inject IAdministrationServices service
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@implements IDisposable
+@inject NavigationManager navigationmanager
+
+<div class="container">
+    <h1>Setup Role</h1>
+</div>
+
+
+<div class="container">
+    <NavLink href="/ModuleAdministration/AddRole" class="btn btn-primary">Add</NavLink>
+</div>
+
+<br />
+<br />
+
+<div class="container">
+    <EditForm Model="Banks">
+
+        <table class="table table-striped table-hover">
+            <thead>
+
+                <tr>
+                    <th scope="col">Id User</th>
+                    <th scope="col">User Name</th>
+                    <th scope="col">Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Banks)
+                {
+                    <tr>
+                        <td>@item.IdUser</td>
+                        <td>@item.Name</td>
+                        <td>
+                            <InputSelect class="form-control" @bind-Value="item.IdRole" style="width:60%; display:inline">
+                                <option value="">&nbsp;&nbsp;---Select Role---&nbsp;&nbsp;</option>
+                                @foreach (var role in roles)
+                                {
+                                <option value="@role.Id">@role.Name</option>
+                                }
+
+                        </InputSelect>
+                    </td>
+                    <td>
+                        <button @onclick="() => OpenRubah(item.IdUser,item.IdRole)" class="btn btn-success">Save</button>
+                    </td>
+                </tr>
+                }
+            </tbody>
+
+        </table>
+
+    </EditForm>
+
+
+
+</div>
+
+@if (DeleteDialogOpen)
+{
+    <ModalDialogComponent Title="Are you sure?" Text="Do you want to delete this entry?" OnClose="OnDeleteDialogClose"></ModalDialogComponent>
+}
+
+@if (NullDialogOpen)
+{
+    <ModalDialogComponent Title="MESSAGE" Text="Saldo is not Zero" TombolSave="false" OnClose="OnDeleteNullClose"></ModalDialogComponent>
+}
+
+
+
+@code {
+
+    
+    private List<IdentityView> Banks;
+    //  private  IdentityUserRole<Id> _bankToDelete ;
+    private List<IdentityRole> roles;
+
+    public bool DeleteDialogOpen { get; set; }
+    public bool NullDialogOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadGet();
+        LoadRoles();
+
+    }
+
+    private List<IdentityRole> LoadRoles()
+    {
+        roles = service.GetRoles();
+
+        return roles;
+    }
+
+    private List<IdentityView> LoadGet()
+    {
+        Banks = service.GetUsersRole();
+
+
+        return Banks;
+    }
+
+
+    private void OnDeleteDialogClose(bool accepted)
+    {
+        if (accepted)
+        {
+            //   service.DelRoles(_bankToDelete.Id);
+
+
+            //   _bankToDelete = null;
+        }
+
+        DeleteDialogOpen = false;
+        LoadGet();
+
+        // StateHasChanged();
+
+    }
+
+    private void OnDeleteNullClose(bool accepted)
+    {
+        //if (accepted)
+        //{
+        //    await cashBank.DelBank(_bankToDelete.CbBankId);
+        //    _bankToDelete = null;
+        //}
+
+        DeleteDialogOpen = false;
+        NullDialogOpen = false;
+        //  LoadGet();
+        StateHasChanged();
+
+    }
+    private void OpenDeleteDialog(IdentityRole bank)
+    {
+
+        DeleteDialogOpen = true;
+
+
+
+        //   _bankToDelete = bank;
+        StateHasChanged();
+    }
+
+    private void OpenRubah(string xKdBank,string xKdRole)
+    {
+        var test = service.SaveRole(xKdBank, xKdRole);
+        NullDialogOpen = test;
+
+
+        // navigationmanager.NavigateTo($"/ModuleAdministration/EditRole/{xKdBank}");
+    }
+
+
+    public void Dispose()
+    {
+
+    }
+}

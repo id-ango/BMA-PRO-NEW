@@ -1,0 +1,460 @@
+﻿@page "/ModuleJual/EditTransOrderJual/{Id:int}"
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+@using eSoft.Order.Model
+@using eSoft.Order.View
+@using eSoft.Order.Services
+
+@inject IOrderSalesServices  service
+@inject IReceivableServices   serviceAR
+@inject IInventoryServices serviceIC
+@inject NavigationManager navigationmanager
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Edit Transaksi Order Sales</h3>
+</div>
+
+
+<div class="container">
+    <EditForm Model="@Transh" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                No Bukti :
+                <InputText class="form-control" @bind-Value="Transh.NoLpb" style="text-transform:uppercase" disabled="disabled" />
+            </label>
+        </div>
+        <br />
+
+        <div class="form-group">
+            <label>
+                Customer :
+                <InputSelect class="form-control" @bind-Value="Transh.Vendor" style="width:60%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select Customer---&nbsp;&nbsp;</option>
+                    @foreach (var item in supplier)
+                    {
+                    <option value="@item.Customer">[@item.Customer]&nbsp; @item.NamaCust</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="Transh.Tanggal" />
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
+                No. P/I :
+                <InputText class="form-control" @bind-Value="Transh.NoPrj" />
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
+                Keterangan :
+                <InputTextArea class="form-control" @bind-Value="Transh.Keterangan" />
+            </label>
+        </div>
+        <br />
+        <div class="container">
+            <table>
+                <tr>
+                    <td>
+                        <div class="row">
+                            <div class=" col-sm  form-message">
+                                <span>Saldo   : @Transh.TtlJumlah.ToString("N")</span>
+                            </div>
+
+                        </div>
+                    </td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="form-group">
+                            <label>
+                                Diskon :
+                                <InputNumber class="form-control" @bind-Value="Transh.Discount" @onchange="HitungTotal" />
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="form-group">
+                            <label>
+                                PPN % :
+                                <InputNumber class="form-control" @bind-Value="Transh.PpnPersen" @onchange="rubahppn" />
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="form-group">
+                            <label>
+                                PPN :
+                                <InputNumber class="form-control" @bind-Value="Transh.Ppn" />
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="form-group">
+                            <label>
+                                Ongkos :
+                                <InputNumber class="form-control" @bind-Value="Transh.Ongkos" />
+                            </label>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="row">
+                            <div class=" col-sm  form-message">
+                                <span>Jumlah   : @Transh.Jumlah.ToString("N")</span>
+                            </div>
+
+                        </div>
+                    </td>
+                    <td></td>
+                </tr>
+            </table>
+
+
+        </div>
+
+        <br />
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleBeli/TransOrderBeli", false))">Batal</button>
+
+        </div>
+        <br />
+        <br />
+
+    </EditForm>
+</div>
+
+<div class="container">
+    <DetailGridComponent Items="Transh.PoTransDs" Context="transaksi">
+        <TableHeader>
+
+            <th scope="col">Item</th>
+            <th scope="col">Nama Item</th>
+            <th scope="col">Satuan</th>
+            <th scope="col">Qty</th>
+            <th scope="col">Harga</th>
+            <th scope="col">Diskon</th>
+            <th scope="col">Jumlah</th>
+            <th scope="col">Lokasi</th>
+            <th scope="col">&nbsp;</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi.ItemCode</td>
+            <td>@transaksi.NamaItem</td>
+            <td>@transaksi.Satuan</td>
+            <td>@transaksi.Qty.ToString("N")</td>
+            <td>@transaksi.Harga.ToString("N")</td>
+            <td>@transaksi.Discount.ToString("N")</td>
+            <td>@transaksi.Jumlah.ToString("N")</td>
+            <td>@transaksi.Lokasi</td>
+            <td>
+                <button @onclick="(() => Rubah(transaksi))" class="btn btn-success">Edit</button>
+                <button @onclick="(() => Hapus(transaksi))" class="btn btn-danger">Delete</button>
+            </td>
+        </RowTemplate>
+    </DetailGridComponent>
+
+
+    <button Class="btn btn-info" @onclick="@OnAddLine">Add Line</button>
+</div>
+
+@if (IsVisible)
+{
+    <ModalOrderBeliComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd" Location="lokasi"></ModalOrderBeliComponent>
+}
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Piutang sdh ada Pembayaran" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="supplier" Context="cbBank" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Alamat} {item.Kota}")">
+        <TableHeader>
+            <th scope="col">Customer</th>
+            <th scope="col">Name</th>
+            <th scope="col">Alamat</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.Customer</td>
+            <td>@cbBank.NamaCust</td>
+            <td>@cbBank.Alamat</td>
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.Customer)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+
+@code {
+
+    [Parameter]
+    public int Id { get; set; }
+
+
+    private PoTransH TransAll = new PoTransH() { PoTransDs = new List<PoTransD>() };
+    private PoTransHView Transh = new PoTransHView() { PoTransDs = new List<PoTransDView>() };
+    private List<ArCust> supplier;
+    private List<IcItem> srccode;
+    private List<IcLokasi> lokasi;
+    private PoTransDView Transd = new PoTransDView();
+    private PoTransDView TransK = new PoTransDView();
+
+
+    private string enabled { get; set; }
+
+    public int SupplierId { get; set; }
+    public string namaItem { get; set; }
+    public string namasupplier { get; set; }
+    public int ItemId { get; set; }
+
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public bool IsKurs { get; set; }
+    public bool IsEdit { get; set; }
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // Transh.Tanggal = DateTime.Now;
+        Loadsupplier();
+        LoadSrcCode();
+        Loadlokasi();
+        LoadTrans();
+    }
+
+    #region ondialogbutton
+
+    private void OnVisibleClose()
+    {
+
+        IsVisible = false;
+        IsKurs = false;
+        StateHasChanged();
+
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        navigationmanager.NavigateTo("/ModuleJual/TransOrderJual", false);
+        StateHasChanged();
+
+    }
+
+
+
+    #endregion
+
+    private void HitungTotal()
+    {
+        // Hitung total setelah diskon dan PPN (PPN bisa manual)
+        var ttl = Transh.TtlJumlah;
+        var diskon = Transh.Discount;
+        var ppn = Transh.Ppn;
+        var ongkos = Transh.Ongkos;
+
+        if (diskon > ttl) diskon = ttl;
+
+        var subtotal = ttl - diskon;
+        if (subtotal < 0) subtotal = 0;
+
+        // Transh.Jumlah = subtotal + ppn + ongkos;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        Transh.NamaVendor = serviceAR.GetCustomerCode(Transh.Vendor).NamaLengkap;
+        var newEdit = await service.EditTransH(Transh);
+        if (newEdit)
+        {
+            // var id = newEdit.IrTransHId.ToString().Trim();
+            var id = Transh.PoTransHId.ToString().Trim();
+            //     navigationmanager.NavigateTo($"/PrintBuktiBayar/{id}");
+            navigationmanager.NavigateTo("/ModuleJual/TransOrderJual", false);
+        }
+        else
+        {
+            DialogOpen = true;
+        }
+
+
+    }
+
+    private void OnDetailTrans(PoTransDView transD)
+    {
+        if (!IsEdit)
+        {
+            Transh.PoTransDs.Add(transD);
+        }
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+    }
+
+
+
+    private void Rubah(PoTransDView transd)
+    {
+        Transd = new PoTransDView();
+        Transd = transd;
+        IsEdit = true;
+        OnAddLine();
+
+    }
+
+    private void OnAddLine()
+    {
+
+        this.IsVisible = true;
+
+
+        StateHasChanged();
+
+
+    }
+
+    #region loadall
+
+    void Loadsupplier()
+    {
+
+        supplier = serviceAR.GetCustomer();
+
+    }
+
+    void LoadSrcCode()
+    {
+
+        srccode = serviceIC.GetIcItem();
+
+    }
+
+    void Loadlokasi()
+    {
+
+        lokasi = serviceIC.GetIcLokasi();
+
+    }
+
+    void LoadTrans()
+    {
+        TransAll = service.GetPoTrans(Id);
+        Transh.PoTransHId = Id;
+        Transh.NoLpb = TransAll.NoLpb;
+        Transh.Tanggal = TransAll.Tanggal;
+        Transh.NamaVendor = TransAll.NamaVendor;
+        Transh.Vendor = TransAll.Vendor;
+        Transh.NoPrj = TransAll.NoPrj;
+        Transh.Ongkos = TransAll.Ongkos;
+        Transh.Discount = TransAll.Discount;
+        Transh.Ppn = TransAll.Ppn;
+        Transh.PpnPersen = TransAll.PpnPersen;
+        Transh.DPayment = TransAll.DPayment;
+        Transh.Kode = TransAll.Kode;
+        Transh.Cek = TransAll.Cek;
+        Transh.Keterangan = TransAll.Keterangan;
+        foreach (var item in TransAll.PoTransDs)
+        {
+            Transh.PoTransDs.Add(new PoTransDView
+            {
+                ItemCode = item.ItemCode,
+                NamaItem = item.NamaItem,
+                Satuan = item.Satuan,
+                Qty = item.Qty,
+                Harga = item.Harga,
+                Persen = item.Persen,
+                Discount = item.Discount,
+                Jumlah = item.Jumlah,
+                Kode = item.Kode,
+                NoLpb = item.NoLpb,
+                Tanggal = item.Tanggal,
+                JumDpp = item.JumDpp,
+                Lokasi = item.Lokasi
+            });
+        }
+    }
+    #endregion
+
+    #region button detail
+
+    private void Hapus(PoTransDView transd)
+    {
+
+        Transh.PoTransDs.Remove(transd);
+        //ShowOnClick();
+    }
+
+    private void rubahppn()
+    {
+
+        var persen = Transh.TtlJumlah * (Transh.PpnPersen / 100);
+
+        Transh.Ppn = persen;
+    }
+
+
+    #endregion
+
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            Transh.Vendor = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+
+}

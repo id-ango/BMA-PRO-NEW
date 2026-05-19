@@ -1,0 +1,266 @@
+﻿@page "/ModuleBank/AddTrfBank"
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+@using eSoft.CashBank.Services
+
+@inject ICashBankServices service
+@inject NavigationManager navigationmanager
+
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Transfer Antar Bank</h3>
+</div>
+
+
+
+
+<div class="container">
+
+    <EditForm Model="@Transh" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+       
+
+    
+
+        <div class="form-group">
+            <label>
+                Dari Rekening : <br />
+                <InputSelect class="form-control" @bind-Value="Transh.KodeBank1" style="width:60%; display:inline" @oninput="OnKurs1">
+                    <option value="">&nbsp;&nbsp;---Select Bank---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.KodeBank">[@item.KodeBank]&nbsp; @item.NmBank</option>
+                    }
+
+                </InputSelect>
+                &nbsp;@kurs1
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Dari Rekening : <br />
+                <InputSelect class="form-control" @bind-Value="Transh.KodeBank2" style="width:60%; display:inline" @oninput="OnKurs2">
+                    <option value="">&nbsp;&nbsp;---Select Bank---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.KodeBank">[@item.KodeBank]&nbsp; @item.NmBank</option>
+                    }
+
+                </InputSelect>
+                &nbsp;@kurs2
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="Transh.Tanggal" />
+            </label>
+        </div>
+
+
+        <div class="form-group">
+            <label>
+                Keterangan :
+                <InputTextArea class="form-control" @bind-Value="Transh.Keterangan" />
+            </label>
+        </div>
+
+
+        @if (this.IsKurs1 || this.IsKurs2)
+        {
+            <div class="container">
+
+
+                <div class="row">
+                    <div class="col">
+                        <label>
+                            Kurs :
+                            <InputNumber class="form-control" @bind-Value="Transh.KValue" @onfocusout="KursUbah" />
+                        </label>
+                       
+                    </div>
+
+                    <div class="col">
+                        <label>
+                            Receipt :
+                            <InputNumber class="form-control" @bind-Value="Transh.KSaldo" @onfocusout="KursUbah" />
+                        </label>
+                     
+                    </div>
+                </div>
+
+            </div>
+        }
+        else
+        {
+            <div class="form-group">
+                <label>
+                    Jumlah :
+                    <InputNumber class="form-control" @bind-Value="Transh.Saldo" />
+                </label>
+               
+
+            </div>
+        }
+
+        <br/>
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleBank/TransAntarBank", false))">Batal</button>
+        </div>
+        <br />
+        <br />
+
+
+    </EditForm>
+
+    <div class="float-md-right form-message">
+        <span>Saldo   : @Transh.Saldo.ToString("#,##0.##")</span>
+    </div>
+    <div class="float-md-right form-message">
+        <span> Balance : @Transh.KSaldo.ToString("#,##0.##")</span>
+    </div>
+
+</div>
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+
+
+@code {
+    BankView bank = new BankView();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    private int dblclick = 1;
+
+    public bool SearchOpen { get; set; }
+
+    private List<CbBank> banks;
+    private List<CbSrcCode> srccode;
+    private TransDView Transd = new TransDView();
+    private TransDView TransK = new TransDView();
+
+    private TransferView Transh = new TransferView();
+
+
+    //   private List<TransDView> TransDs = new List<TransDView>();
+    private string enabled { get; set; }
+    public string kurs { get; set; } = "";
+
+
+    public string kurs1 { get; set; }
+    public string kurs2 { get; set; }
+
+    //  private bool IsVisible = false;
+    private bool IsKurs1 = false;
+    private bool IsKurs2 = false;
+    //   private bool IsEdit = false;
+
+    //  SfToast ToastObj;
+    //private string ToastPosition = "Right";
+    //private string ToastContent { get; set; } = " ";
+
+    //private void ShowOnClick()
+    //{
+    //    this.ToastObj.Show();
+    //}
+
+    protected override void OnInitialized()
+    {
+        Transh.Tanggal = DateTime.Now;
+
+        LoadBank();
+        LoadSrcCode();
+    }
+
+    void LoadBank()
+    {
+
+        banks = service.GetBank();
+
+    }
+
+    void LoadSrcCode()
+    {
+
+        srccode = service.GetSrcCode();
+
+    }
+
+    private void OnKurs1(ChangeEventArgs args)
+    {
+        kurs1 = (from e in banks where e.KodeBank == args.Value.ToString() select e.Kurs).FirstOrDefault();
+
+        if (string.IsNullOrEmpty(this.kurs1))
+        {
+            this.IsKurs1 = false;
+        }
+        else
+        {
+            this.IsKurs1 = true;
+        }
+
+    }
+
+    private void OnKurs2(ChangeEventArgs args)
+    {
+        kurs2 = (from e in banks where e.KodeBank == args.Value.ToString() select e.Kurs).FirstOrDefault();
+        if (string.IsNullOrEmpty(this.kurs2))
+        {
+            this.IsKurs2 = false;
+        }
+        else
+        {
+            this.IsKurs2 = true;
+        }
+
+    }
+
+
+    private void KursUbah()
+    {
+
+        Transh.Saldo = Transh.KValue * Transh.KSaldo;
+
+    }
+
+
+
+    private void HandleValidSubmit()
+    {
+        Transh.Kurs = this.kurs1;
+        Transh.Kurs2 = this.kurs2;
+
+         if(dblclick != 1) return;
+
+            dblclick++;
+
+        var newEdit = service.AddTransfer(Transh);
+        if (newEdit != null)
+        {
+            //  await ExportToPdf(Transh);
+            // GeneratePDF(newEdit);
+            var id = newEdit.CbTransferId.ToString().Trim();
+            navigationmanager.NavigateTo($"/ModulePrinting/BuktiTrfAntarBank/{id}");
+            //  await ExportToPdf(Transh);
+            //  GeneratePDF(newEdit);
+            //string Url = "/printbuktikasbank/"+id;
+            //await JS.InvokeAsync<object>("open", Url, "_blank");
+        }
+
+        //  navigationmanager.NavigateTo("TransBank", false);
+        //add = !add;
+        //StateHasChanged();
+
+    }
+
+
+}

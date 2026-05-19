@@ -1,0 +1,283 @@
+﻿@page "/ModuleBank/EditTransBank/{Id:int}"
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+
+@inject ICashBankServices service
+@inject NavigationManager navigationmanager
+
+
+
+
+<div class="container">
+    <EditForm Model="@Transh" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Kode :
+                <InputText class="form-control" @bind-Value="Transh.DocNo" style="text-transform:uppercase" disabled="disabled" />
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Kode Bank : <br/>
+                <InputSelect class="form-control" @bind-Value="Transh.KodeBank" style="width:60%; display:inline" @oninput="OnKurs">
+                    <option value="">&nbsp;&nbsp;---Select Bank---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.KodeBank">[@item.KodeBank]&nbsp; @item.NmBank</option>
+                    }
+
+                </InputSelect>
+                &nbsp;@kurs
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="Transh.Tanggal" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Keterangan :
+                <InputTextArea class="form-control" @bind-Value="Transh.Keterangan" style="width:150%" />
+            </label>
+        </div>
+
+        <br/>
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleBank/TransBank", false))">Batal</button>
+        </div>
+        <br />
+        <br />
+
+    </EditForm>
+</div>
+<div class="container">
+    <div class="row">
+        <div class=" col-sm  form-message">
+            <span>Saldo   : @Transh.Saldo.ToString("N")</span>
+        </div>
+        <div class="col-sm form-message">
+            <span> Balance : @Transh.KSaldo.ToString("N")</span>
+        </div>
+    </div>
+
+
+</div>
+<div class="container">
+    <DetailGridComponent Items="Transh.TransDs" Context="transaksi">
+        <TableHeader>
+            <th scope="col">Source</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Jumlah</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi.SrcCode</td>
+            <td>@transaksi.Keterangan</td>
+            <td>@transaksi.Jumlah.ToString("N")</td>
+
+            <td>
+                <button @onclick="(() => Rubah(transaksi))" class="btn btn-success">Edit</button>
+                <button @onclick="(() => Hapus(transaksi))" class="btn btn-danger">Delete</button>
+            </td>
+        </RowTemplate>
+    </DetailGridComponent>
+    <button Class="btn btn-info" @onclick="@OnAddLine">Add Line</button>
+</div>
+
+@if (IsVisible)
+{
+    <ModalCashBankComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd"></ModalCashBankComponent>
+
+}
+
+@if (IsKurs)
+{
+    <ModalCashBankComponent Currency="kurs" SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd"></ModalCashBankComponent>
+}
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Bank Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private TransHView Transh = new TransHView() { TransDs = new List<TransDView>() };
+    private CbTransH TransAll = new CbTransH() { CbTransDs = new List<CbTransD>() };
+
+    private List<CbBank> banks;
+    private List<CbSrcCode> srccode;
+    private TransDView Transd = new TransDView();
+    private TransDView TransK = new TransDView();
+
+    public string kurs { get; set; } = "";
+
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public bool IsKurs { get; set; }
+    public bool IsEdit { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // Transh.Tanggal = DateTime.Now;
+        LoadBank();
+        LoadSrcCode();
+        LoadTrans();
+    }
+
+    #region ondialogbutton
+
+    private void OnVisibleClose()
+    {
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+    private void OnKurs(ChangeEventArgs args)
+    {
+        kurs = (from e in banks where e.KodeBank == args.Value.ToString() select e.Kurs).FirstOrDefault();
+    }
+    #endregion
+
+
+    private void HandleValidSubmit()
+    {
+        Transh.Kurs = kurs;
+        var newEdit = service.EditTransH(Transh);
+        if (newEdit != null)
+        {
+            var id = newEdit.CbTransHId.ToString().Trim();
+
+            navigationmanager.NavigateTo($"/PrintBuktiBayar/{id}");
+        }
+
+    }
+
+    private void OnDetailTrans(TransDView transD)
+    {
+        if (!IsEdit)
+        {
+            Transh.TransDs.Add(transD);
+        }
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+    }
+
+    private void OnAddLine()
+    {
+        if (!string.IsNullOrEmpty(kurs))
+        {
+            this.IsVisible = false;
+            this.IsKurs = true;
+        }
+        else
+        {
+            this.IsVisible = true;
+            this.IsKurs = false;
+        }
+
+        StateHasChanged();
+
+
+    }
+
+    #region loadall
+
+    void LoadBank()
+    {
+
+        banks = service.GetBank();
+
+    }
+
+    void LoadSrcCode()
+    {
+
+        srccode = service.GetSrcCode();
+
+    }
+
+    void LoadTrans()
+    {
+        TransAll = service.GetTrans(Id);
+        Transh.CbTransHId = Id;
+        Transh.DocNo = TransAll.DocNo;
+        Transh.Tanggal = TransAll.Tanggal;
+        Transh.Kurs = TransAll.Kurs;
+        Transh.KodeBank = TransAll.KodeBank;
+        kurs = TransAll.Kurs;
+        Transh.Keterangan = TransAll.Keterangan;
+        foreach (var item in TransAll.CbTransDs)
+        {
+            Transh.TransDs.Add(new TransDView
+            {
+                Bayar = item.Bayar,
+                KBayar = item.KBayar,
+                Keterangan = item.Keterangan,
+                Kurs = item.Kurs,
+                SrcCode = item.SrcCode,
+                Terima = item.Terima,
+                KTerima = item.KTerima,
+                KValue = item.KValue
+            });
+        }
+    }
+    #endregion
+
+    #region button detail
+    private void Rubah(TransDView transd)
+    {
+        Transd = new TransDView();
+        Transd = transd;
+        IsEdit = true;
+        OnAddLine();
+
+
+    }
+
+    private void Hapus(TransDView transd)
+    {
+
+        Transh.TransDs.Remove(transd);
+        //ShowOnClick();
+    }
+    #endregion
+
+
+
+
+
+}

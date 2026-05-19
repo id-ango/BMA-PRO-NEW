@@ -1,0 +1,386 @@
+@page "/ModuleJual/CekStockSalesOrder"
+@using eSoft.Order.Services
+@using eSoft.Order.View
+@using Accounting.Services
+@using System.IO
+
+@inject IOrderSalesServices service
+@inject IExcelServices serviceXL
+@inject IJSRuntime JS
+
+<div class="so-page-shell">
+<div class="container-fluid">
+    <h1>Cek Stock Sales Order</h1>
+    <p class="text-muted">Matrix ketersediaan stock untuk setiap Sales Order yang masih aktif</p>
+</div>
+
+<div class="container-fluid mb-3">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <span class="badge bg-success p-2">&#9632; Stock Tersedia</span>
+        </div>
+        <div class="col-auto">
+            <span class="badge bg-danger p-2">&#9632; Stock Kurang</span>
+        </div>
+        <div class="col-auto">
+            <span class="badge bg-secondary p-2">&#9632; Tidak Dipesan</span>
+        </div>
+        <div class="col-auto">
+            <span class="badge bg-warning text-dark p-2">&#9632; SO Lengkap (semua item ready)</span>
+        </div>
+        @if (Matrix != null && Matrix.Rows.Any())
+        {
+            <div class="col-auto ms-3">
+                <button class="btn btn-success" @onclick="DownloadExcel">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel me-1" viewBox="0 0 16 16">
+                        <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/>
+                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                    </svg>
+                    Download Excel
+                </button>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-info text-white" @onclick="ToggleSummary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bar-chart-line me-1" viewBox="0 0 16 16">
+                        <path d="M11 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h1V7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h1V2z"/>
+                    </svg>
+                    @(ShowSummary ? "Sembunyikan Summary" : "Lihat Summary Item")
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@if (Matrix != null && Matrix.Rows.Any())
+{
+    <div class="container-fluid mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label mb-1">Cari SO / Customer / No Prj / Keterangan</label>
+                <input class="form-control" @bind="SearchText" @bind:event="oninput" placeholder="Ketik untuk filter..." />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1">Status</label>
+                <select class="form-select" @bind="StatusFilter">
+                    <option value="Semua">Semua</option>
+                    <option value="Siap">Siap Proses</option>
+                    <option value="Menunggu">Menunggu</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1">Fokus Item</label>
+                <select class="form-select" @bind="SelectedItemCode">
+                    <option value="">Semua Item</option>
+                    @foreach (var item in Matrix.ItemHeaders)
+                    {
+                        <option value="@item.ItemCode">@item.ItemCode - @item.NamaItem</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-secondary" @onclick="ResetFilter">Reset Filter</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Matrix == null)
+{
+    <div class="container-fluid">
+        <p><em>Memuat data...</em></p>
+    </div>
+}
+else if (!Matrix.Rows.Any())
+{
+    <div class="container-fluid">
+        <div class="alert alert-info">Tidak ada Sales Order aktif saat ini.</div>
+    </div>
+}
+else
+{
+    <div class="container-fluid px-0 so-matrix-host">
+        <div class="so-matrix-wrapper">
+            <table class="table table-sm so-matrix-table" style="white-space: nowrap; font-size: 0.85rem; margin-bottom: 0; border-collapse: separate; border-spacing: 0;">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="so-sticky-header so-sticky-col-1">No SO</th>
+                        <th class="so-sticky-header so-sticky-col-2">Customer</th>
+                        <th class="so-sticky-header so-sticky-col-3">Tanggal</th>
+                        <th class="so-sticky-header so-sticky-col-4">No Prj</th>
+                        <th class="so-sticky-header so-sticky-col-5">Keterangan</th>
+                        <th class="so-sticky-header so-sticky-col-6 text-center">Status</th>
+                        @foreach (var item in VisibleHeaders)
+                        {
+                            <th class="so-sticky-header" style="min-width:130px; text-align:center;" title="@item.NamaItem">
+                                <div>@item.ItemCode</div>
+                                <div class="text-warning" style="font-size:0.75rem;">@item.NamaItem</div>
+                                <div class="badge bg-info text-dark" style="font-size:0.7rem;">
+                                    Stk Awal: @item.QtyStock.ToString("N0") @item.Satuan
+                                </div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in FilteredRows)
+                    {
+                        <tr style="background-color: @(row.IsComplete ? "#fff3cd" : "")">
+                            <td class="so-sticky-col-1" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:120px;">
+                                <strong>@row.NoLpb</strong>
+                            </td>
+                            <td class="so-sticky-col-2" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:140px;">
+                                @row.NamaCustomer
+                            </td>
+                            <td class="so-sticky-col-3" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:90px;">@row.Tanggal.ToString("dd/MM/yy")</td>
+                            <td class="so-sticky-col-4" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:80px;">@row.NoPrj</td>
+                            <td class="so-sticky-col-5" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:150px;">@row.Keterangan</td>
+                            <td class="so-sticky-col-6 text-center" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:80px;">
+                                @if (row.IsComplete)
+                                {
+                                    <span class="badge bg-warning text-dark">Siap Proses</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Menunggu</span>
+                                }
+                            </td>
+                            @foreach (var cell in GetVisibleCells(row))
+                            {
+                                @if (!cell.IsOrdered)
+                                {
+                                    <td style="text-align:center; background-color:#f8f9fa; color:#adb5bd;">-</td>
+                                }
+                                else if (cell.HasStock)
+                                {
+                                    <td style="text-align:center; background-color:#d1e7dd;" title="Order: @cell.QtyOrder | Sisa Stock Sebelum: @cell.QtyStockSisa | Sisa Setelah: @cell.QtyStockSetelah">
+                                        <span class="badge bg-success">Order: @cell.QtyOrder.ToString("N0")</span>
+                                        <div style="font-size:0.7rem; color:#198754;">Sisa: @cell.QtyStockSisa.ToString("N0") &rarr; @cell.QtyStockSetelah.ToString("N0")</div>
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td style="text-align:center; background-color:#f8d7da;" title="Order: @cell.QtyOrder | Sisa Stock Sebelum: @cell.QtyStockSisa | Kurang: @(cell.QtyOrder - cell.QtyStockSisa)">
+                                        <span class="badge bg-danger">Order: @cell.QtyOrder.ToString("N0")</span>
+                                        <div style="font-size:0.7rem; color:#dc3545;">Sisa: @cell.QtyStockSisa.ToString("N0") &nbsp;&#9888;&nbsp;Kurang: @((cell.QtyOrder - cell.QtyStockSisa).ToString("N0"))</div>
+                                    </td>
+                                }
+                            }
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="table-secondary">
+                    <tr>
+                        <td colspan="6" class="so-sticky-footer" style="font-weight:bold; background:#e9ecef;">
+                            Total Dipesan / Sisa Stock Akhir
+                        </td>
+                        @foreach (var item in VisibleHeaders)
+                        {
+                            var totalOrder = FilteredRows.SelectMany(r => r.Cells)
+                                .Where(c => c.ItemCode == item.ItemCode)
+                                .Sum(c => c.QtyOrder);
+                            var sisaAkhir = item.QtyStock - totalOrder;
+                            var kurang = sisaAkhir < 0;
+                            <td style="text-align:center; font-weight:bold;">
+                                <div style="color:#0d6efd;">Order: @totalOrder.ToString("N0")</div>
+                                <div style="font-size:0.8rem; color:@(kurang ? "#dc3545" : "#198754"); font-weight:bold;">
+                                    Sisa: @sisaAkhir.ToString("N0")
+                                </div>
+                            </td>
+                        }
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="container-fluid mt-3">
+        <div class="card">
+            <div class="card-header"><strong>Ringkasan</strong></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card text-white bg-primary mb-2">
+                            <div class="card-body p-2 text-center">
+                                <h5 class="card-title mb-0">@FilteredRows.Count</h5>
+                                <small>SO Tampil</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-dark bg-warning mb-2">
+                            <div class="card-body p-2 text-center">
+                                <h5 class="card-title mb-0">@FilteredRows.Count(r => r.IsComplete)</h5>
+                                <small>SO Siap Diproses</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-secondary mb-2">
+                            <div class="card-body p-2 text-center">
+                                <h5 class="card-title mb-0">@FilteredRows.Count(r => !r.IsComplete)</h5>
+                                <small>SO Menunggu Stock</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-info mb-2">
+                            <div class="card-body p-2 text-center">
+                                <h5 class="card-title mb-0">@VisibleHeaders.Count</h5>
+                                <small>Item Tampil</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (ShowSummary)
+    {
+        <div class="container-fluid mt-3 so-summary-host">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <strong>&#128202; Summary Kebutuhan Stock per Item</strong>
+                    <span class="ms-2 text-white-50" style="font-size:0.85rem;">Berdasarkan semua SO aktif (urutan FIFO)</span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-bordered table-sm mb-0" style="font-size:0.875rem;">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width:3%;">No</th>
+                                <th style="width:10%;">Kode Item</th>
+                                <th style="width:22%;">Nama Item</th>
+                                <th style="width:6%; text-align:center;">Satuan</th>
+                                <th style="width:10%; text-align:center;">Stock Tersedia</th>
+                                <th style="width:12%; text-align:center;">Total Dipesan (SO)</th>
+                                <th style="width:10%; text-align:center;">Sisa Stock</th>
+                                <th style="width:10%; text-align:center;">Kekurangan</th>
+                                <th style="width:17%; text-align:center;">Saran Pemesanan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int noUrut = 1; }
+                            @foreach (var item in VisibleHeaders)
+                            {
+                                var totalDipesan = FilteredRows.SelectMany(r => r.Cells)
+                                    .Where(c => c.ItemCode == item.ItemCode)
+                                    .Sum(c => c.QtyOrder);
+                                var sisa = item.QtyStock - totalDipesan;
+                                var kekurangan = sisa < 0 ? Math.Abs(sisa) : 0;
+                                var rowBg = kekurangan > 0 ? "#f8d7da" : "#d1e7dd";
+
+                                <tr style="background-color:@rowBg;">
+                                    <td>@noUrut</td>
+                                    <td><strong>@item.ItemCode</strong></td>
+                                    <td>@item.NamaItem</td>
+                                    <td style="text-align:center;">@item.Satuan</td>
+                                    <td style="text-align:center; font-weight:bold;">@item.QtyStock.ToString("N0")</td>
+                                    <td style="text-align:center;">@totalDipesan.ToString("N0")</td>
+                                    <td style="text-align:center; font-weight:bold; color:@(sisa < 0 ? "#dc3545" : "#198754");">
+                                        @sisa.ToString("N0")
+                                    </td>
+                                    <td style="text-align:center; font-weight:bold; color:@(kekurangan > 0 ? "#dc3545" : "#6c757d");">
+                                        @(kekurangan > 0 ? kekurangan.ToString("N0") : "-")
+                                    </td>
+                                    <td style="text-align:center;">
+                                        @if (kekurangan > 0)
+                                        {
+                                            <span class="badge bg-danger">&#9888; Perlu pesan min. @kekurangan.ToString("N0") @item.Satuan</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">&#10003; Cukup</span>
+                                        }
+                                    </td>
+                                </tr>
+                                noUrut++;
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-secondary">
+                                <td colspan="4" style="font-weight:bold;">Total</td>
+                                <td style="text-align:center; font-weight:bold;">
+                                    @VisibleHeaders.Sum(i => i.QtyStock).ToString("N0")
+                                </td>
+                                <td style="text-align:center; font-weight:bold;">
+                                    @VisibleHeaders.Sum(i => FilteredRows.SelectMany(r => r.Cells).Where(c => c.ItemCode == i.ItemCode).Sum(c => c.QtyOrder)).ToString("N0")
+                                </td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+</div>
+
+@code {
+    private SalesOrderStockMatrixView Matrix;
+    private bool ShowSummary = false;
+    private string SearchText = string.Empty;
+    private string StatusFilter = "Semua";
+    private string SelectedItemCode = string.Empty;
+
+    private List<SalesOrderItemHeader> VisibleHeaders =>
+        Matrix == null
+            ? new List<SalesOrderItemHeader>()
+            : string.IsNullOrWhiteSpace(SelectedItemCode)
+                ? Matrix.ItemHeaders
+                : Matrix.ItemHeaders.Where(x => x.ItemCode == SelectedItemCode).ToList();
+
+    private List<SalesOrderMatrixRow> FilteredRows =>
+        Matrix == null
+            ? new List<SalesOrderMatrixRow>()
+            : Matrix.Rows.Where(RowVisible).ToList();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Matrix = service.GetSalesOrderStockMatrix();
+    }
+
+    private void ToggleSummary() => ShowSummary = !ShowSummary;
+
+    private void ResetFilter()
+    {
+        SearchText = string.Empty;
+        StatusFilter = "Semua";
+        SelectedItemCode = string.Empty;
+    }
+
+    private bool RowVisible(SalesOrderMatrixRow row)
+    {
+        var matchSearch = string.IsNullOrWhiteSpace(SearchText)
+            || $"{row.NoLpb} {row.NamaCustomer} {row.NoPrj} {row.Keterangan}".Contains(SearchText, StringComparison.OrdinalIgnoreCase);
+
+        var matchStatus = StatusFilter switch
+        {
+            "Siap" => row.IsComplete,
+            "Menunggu" => !row.IsComplete,
+            _ => true
+        };
+
+        var matchItem = string.IsNullOrWhiteSpace(SelectedItemCode)
+            || row.Cells.Any(c => c.ItemCode == SelectedItemCode && c.IsOrdered);
+
+        return matchSearch && matchStatus && matchItem;
+    }
+
+    private IEnumerable<SalesOrderMatrixCell> GetVisibleCells(SalesOrderMatrixRow row)
+    {
+        var visibleCodes = VisibleHeaders.Select(x => x.ItemCode).ToHashSet();
+        return row.Cells.Where(c => visibleCodes.Contains(c.ItemCode));
+    }
+
+    private async Task DownloadExcel()
+    {
+        var data = serviceXL.CreateSalesOrderStockExcel(Matrix);
+        var stream = new MemoryStream(data);
+        var fileName = $"CekStockSO_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+        using var streamRef = new DotNetStreamReference(stream: stream);
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+}

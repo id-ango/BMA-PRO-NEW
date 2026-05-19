@@ -1,0 +1,223 @@
+﻿@page "/ModuleHutang/EditSupplier/{Id:int}"
+@using eSoft.Hutang.Model
+@using eSoft.Hutang.View
+@using eSoft.Hutang.Services
+
+@inject IPayableServices service
+@inject NavigationManager navigationmanager
+
+<h3>Edit Supplier</h3>
+
+<EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>
+            Supplier :
+            <InputText id="codeBank" class="form-control" @bind-Value="bank.Supplier" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Nama :
+            <InputText class="form-control" @bind-Value="bank.NamaSup" />
+        </label>
+    </div>
+    <div class="form-group">
+
+        <label>
+            Alamat :
+            <InputTextArea class="form-control" @bind-Value="bank.Alamat" />
+        </label>
+    </div>
+    <br />
+    <div class="form-group">
+
+        <label>
+            Kota :
+            <InputText class="form-control" @bind-Value="bank.Kota" />
+        </label>
+
+
+    </div>
+    <br />
+
+    <div class="form-group">
+        <label>
+            Telpon/HP :
+            <InputText class="form-control" @bind-Value="bank.Telpon" />
+        </label>
+    </div>
+    <br />
+    <div class="form-group">
+        <label>
+            Kontak Person :
+            <InputText class="form-control" @bind-Value="bank.Kontak" />
+        </label>
+    </div>
+    <br />
+    <div class="form-group">
+        <label>
+            Akun Set :
+            <InputSelect class="form-control" @bind-Value="bank.AcctSet" style="width:60%; display:inline">
+                <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                @foreach (var item in GlAccounts)
+                {
+                <option value="@item.AcctSet">@item.Description</option>
+                }
+            </InputSelect>
+            <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+        </label>
+    </div>
+
+    <div class="form-group">
+        <label>
+            Currency :
+            <InputText class="form-control" @bind-Value="bank.Kurs" />
+        </label>
+    </div>
+    <br />
+    <div class="form-check form-switch">
+
+        <InputCheckbox class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" @bind-Value="@bank.Pajak" />
+        <label class="form-check-label" for="flexSwitchCheckDefault">@(bank.Pajak ? "Tax" : "Non Tax")</label>
+
+    </div>
+
+
+    <br />
+    <div class="float-md-right">
+        <button class="btn-success" type="submit">Simpan</button>
+        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleHutang/SetupSupplier", false))">Batal</button>
+    </div>
+
+
+</EditForm>
+
+@if (DialogOpen)
+{
+<ModalDialogComponent Title="Alert" Text="Supplier Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+@if (SearchOpen)
+{
+
+<ModalSearchComponent OnClose="OnSearchClose" Items="GlAccounts" Context="cbBank" GetFilterableText="@(item =>$"{item.AcctSet} {item.Description} ")">
+    <TableHeader>
+        <th scope="col">Code</th>
+        <th scope="col">Description</th>
+
+        <th></th>
+    </TableHeader>
+    <RowTemplate>
+        <td>@cbBank.AcctSet</td>
+        <td>@cbBank.Description</td>
+
+        <td>
+            <button @onclick="() => BtnChoose(cbBank.AcctSet)" class="btn btn-success">Choose</button>
+
+        </td>
+    </RowTemplate>
+</ModalSearchComponent>
+
+
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    SupplierView bank = new SupplierView();
+    ApSuppl Bank = new ApSuppl();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    private List<ApAcct> GlAccounts;
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBank();
+        LoadGlAccounts();
+    }
+
+    void LoadBank()
+    {
+        Bank = service.GetSupplierId(Id);
+        bank.ApSupplId = Bank.ApSupplId;
+        bank.Supplier = Bank.Supplier;
+        bank.NamaSup = Bank.NamaSup;
+        bank.Alamat = Bank.Alamat;
+        bank.Kota = Bank.Kota;
+        bank.Telpon = Bank.Telpon;
+        bank.Kontak = Bank.Kontak;
+        bank.AcctSet = Bank.AcctSet;
+        bank.Kurs = Bank.Kurs;
+        bank.Pajak = Bank.Pajak;
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.Supplier;
+        DialogOpen = service.CekKdSupplier(Testing);
+        if (DialogOpen)
+        {
+            bank.Supplier = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private async Task HandleValidSubmit()
+    {
+        var newEdit = await service.EditSupplier(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleHutang/SetupSupplier", false);
+
+    }
+
+    void LoadGlAccounts()
+    {
+        GlAccounts = service.GetApAkunSet();
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (textSearch != null || textSearch != "")
+        {
+            bank.AcctSet = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+}

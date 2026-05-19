@@ -1,0 +1,262 @@
+﻿@page "/ModulePersediaan/AddCategory"
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.Services
+
+@inject IInventoryServices service
+@inject ILedgerServices serviceGl
+@inject NavigationManager navigationmanager
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Category Code</h3>
+</div>
+
+<div class="content px-4">
+    <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Source Code :
+                <InputText id="codeBank" class="form-control" @bind-Value="bank.CatCode" style="text-transform:uppercase" @onfocusout="cekKode" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Nama Source :
+                <InputText class="form-control" @bind-Value="bank.Description" />
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                COGS :
+                <InputSelect class="form-control" @bind-Value="bank.Cat1" style="width:75%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                    @foreach (var item in GlAccounts)
+                    {
+                        <option value="@item.GlAcct">@item.NamaLengkap</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(() => openSearch(1))">Cari</button>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Sales Revenue :
+                <InputSelect class="form-control" @bind-Value="bank.Cat2" style="width:75%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                    @foreach (var item in GlAccounts)
+                    {
+                        <option value="@item.GlAcct">@item.NamaLengkap</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(() => openSearch(2))">Cari</button>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Sales Return :
+                <InputSelect class="form-control" @bind-Value="bank.Cat3" style="width:75%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                    @foreach (var item in GlAccounts)
+                    {
+                        <option value="@item.GlAcct">@item.NamaLengkap</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(() => openSearch(3))">Cari</button>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                GL Account 4 :
+                <InputSelect class="form-control" @bind-Value="bank.Cat4" style="width:75%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                    @foreach (var item in GlAccounts)
+                    {
+                        <option value="@item.GlAcct">@item.NamaLengkap</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(() => openSearch(4))">Cari</button>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                GL Account 5 :
+                <InputSelect class="form-control" @bind-Value="bank.Cat5" style="width:75%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                    @foreach (var item in GlAccounts)
+                    {
+                        <option value="@item.GlAcct">@item.NamaLengkap</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(() => openSearch(5))">Cari</button>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                GL Account 6 :
+                <InputSelect class="form-control" @bind-Value="bank.Cat6" style="width:75%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                    @foreach (var item in GlAccounts)
+                    {
+                        <option value="@item.GlAcct">@item.NamaLengkap</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(() => openSearch(6))">Cari</button>
+            </label>
+        </div>
+        <br/>
+        <div class="container">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePersediaan/SetupCategory", false))">Batal</button>
+        </div>
+
+
+    </EditForm>
+</div>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Source Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="GlAccounts" Context="cbBank" GetFilterableText="@(item =>$"{item.GlAcct} {item.GlNama} ")">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Bank Name</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.GlAcct</td>
+            <td>@cbBank.GlNama</td>
+
+            <td>
+
+                <button @onclick="() => BtnChoose(cbBank.GlAcct,i)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    IcCatView bank = new IcCatView();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    private List<GlAccount> GlAccounts;
+    public bool SearchOpen { get; set; }
+    public int i = 1;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        bank.CatCode = "";
+        LoadGlAccounts();
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.CatCode;
+        DialogOpen = service.CekCategory(Testing);
+        if (DialogOpen)
+        {
+            bank.CatCode = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private void HandleValidSubmit()
+    {
+        var newEdit = service.AddIcCat(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModulePersediaan/SetupCategory", false);
+
+    }
+
+    void LoadGlAccounts()
+    {
+        GlAccounts = serviceGl.GetGlAccount();
+    }
+
+    private void openSearch(int i)
+    {
+        SearchOpen = !SearchOpen;
+        this.i = i;
+
+    }
+    private void BtnChoose(string textSearch, int i)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            switch (i)
+            {
+                case 1:
+                    bank.Cat1 = textSearch;
+                    break;
+                case 2:
+                    bank.Cat2 = textSearch;
+                    break;
+                case 3:
+                    bank.Cat3 = textSearch;
+                    break;
+                case 4:
+                    bank.Cat4 = textSearch;
+                    break;
+                case 5:
+                    bank.Cat5 = textSearch;
+                    break;
+                case 6:
+                    bank.Cat6 = textSearch;
+                    break;
+            }
+
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+}

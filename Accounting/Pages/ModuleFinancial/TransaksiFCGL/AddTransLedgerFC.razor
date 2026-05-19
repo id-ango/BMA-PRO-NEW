@@ -1,0 +1,262 @@
+﻿@page "/ModuleFinancial/AddTransLedgerFCGL"
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.Services
+@using eSoft.Ledger.View
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+
+@inject ILedgerServices serviceGL
+@inject IFinancialServices serviceFC
+@inject NavigationManager navigationmanager
+
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Transaksi Ledger</h3>
+</div>
+
+
+<div class="container">
+    <EditForm Model="@Transh" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+         <div class="form-group">
+            <label>
+                Perusahaan :
+                 <InputSelect class="form-control" @bind-Value="Transh.FcComKode" style="width:60%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select Company---&nbsp;&nbsp;</option>
+                    @foreach (var item in Companies)
+                    {
+                            <option value="@item.FcComKode">@item.FcNamaPerusahaan</option>
+                    }
+
+                </InputSelect>
+                @* <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Kode GL : <br/>
+                <InputSelect class="form-control" @bind-Value="Transh.KodeGl" style="width:60%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select Kode GL---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.KodeGl">[@item.KodeGl]&nbsp; @item.NamaGl</option>
+                    }
+
+                </InputSelect>
+             
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="Transh.Tanggal" />
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Keterangan :
+                <InputTextArea class="form-control" @bind-Value="Transh.GlMemo"  />
+            </label>
+        </div>
+
+        <br/>
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleFinancial/TransLedgerFCGL", false))">Batal</button>
+        </div>
+        <br />
+        <br />
+
+    </EditForm>
+</div>
+<div class="container">
+    <div class="row">
+        <div class=" col-sm  form-message">
+            <span>Saldo   : @Transh.Saldo.ToString("N")</span>
+        </div>
+       @* <div class="col-sm form-message">
+            <span> Kredit : @Transh.Kredit.ToString("N")</span>
+        </div>*@
+    </div>
+
+
+</div>
+<div class="container">
+    <DetailGridComponent Items="Transh.FcTransDs" Context="transaksi">
+        <TableHeader>
+            <th scope="col">Akun</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Jumlah</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi.GlAcct</td>
+            <td>@transaksi.Keterangan</td>
+            <td>@transaksi.Jumlah.ToString("N")</td>
+
+            <td>
+                <button @onclick="(() => Rubah(transaksi))" class="btn btn-success">Edit</button>
+                <button @onclick="(() => Hapus(transaksi))" class="btn btn-danger">Delete</button>
+            </td>
+        </RowTemplate>
+    </DetailGridComponent>
+    <button Class="btn btn-info" @onclick="@OnAddLine">Add Line</button>
+</div>
+
+@if (IsVisible)
+{
+    <ModalTransFCGLComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd"></ModalTransFCGLComponent>
+}
+
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Saldo Tidak Balance" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    FcTransHView Transh = new FcTransHView() { FcTransDs = new List<FcTransDView>() };
+    private List<GlCode> banks;
+    private List<GlAccount> srccode;
+    private FcTransDView Transd = new FcTransDView();
+    private FcTransDView TransK = new FcTransDView();
+  //  private string KodeCompany = "";
+    private List<FcCom> Companies;
+
+    public string kurs { get; set; } = "";
+
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public bool IsKurs { get; set; }
+    public bool IsEdit { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Transh.Tanggal = DateTime.Now;
+
+        LoadBank();
+        LoadSrcCode();
+    }
+
+    private void OnVisibleClose()
+    {
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+
+    }
+
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+
+    private void HandleValidSubmit()
+    {
+        //  Transh.Kurs = kurs;
+        DialogOpen = false;
+       
+
+        if (Transh.Saldo == 0)
+        {
+            
+            var newEdit = serviceFC.AddTransH(Transh);
+            if (newEdit != null)
+            {
+                //        var id = newEdit.CbTransHId.ToString().Trim();
+                //  navigationmanager.NavigateTo("/PrintBuktiBayar/{id", false);
+                navigationmanager.NavigateTo("/ModuleFinancial/TransLedgerFCGL", false);
+                //  navigationmanager.NavigateTo($"/PrintBuktiBayar/{id}");
+            }
+        } else
+        {
+            DialogOpen = true;
+        }
+
+    }
+
+    private void OnDetailTrans(FcTransDView transD)
+    {
+        if(!IsEdit)
+        {
+            Transh.FcTransDs.Add(transD);
+        }
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+    }
+
+
+    void LoadBank()
+    {
+
+        banks = serviceGL.GetGlCode();
+        Companies = serviceFC.GetFcCom();
+    }
+
+    void LoadSrcCode()
+    {
+
+        srccode = serviceGL.GetGlAccount();
+
+    }
+
+
+    private void Rubah(FcTransDView transd)
+    {
+        Transd = new FcTransDView();
+        Transd = transd;
+        IsEdit = true;
+        OnAddLine();
+
+    }
+
+    private void Hapus(FcTransDView transd)
+    {
+
+        Transh.FcTransDs.Remove(transd);
+        //ShowOnClick();
+    }
+
+    private void OnAddLine()
+    {
+       
+            this.IsVisible = true;
+            this.IsKurs = false;
+        
+
+
+        StateHasChanged();
+
+        //IsEdit = false;
+        //ShowOnClick();
+    }
+
+
+}

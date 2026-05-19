@@ -1,0 +1,296 @@
+﻿@page "/ModulePersediaan/AddTransMutasi"
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+
+
+@inject IInventoryServices service
+@inject NavigationManager navigationmanager
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Transaksi Adjustment</h3>
+</div>
+
+
+<div class="container">
+    <EditForm Model="@Transh" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="Transh.Tanggal" />
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
+                Keterangan :
+                <InputTextArea class="form-control" @bind-Value="Transh.Keterangan" />
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
+                Lokasi
+                <InputSelect class="form-control" @bind-Value="Transh.Lokasi" style="width:60%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select Lokasi---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.Lokasi">@item.NamaLokasi</option>
+                    }
+
+                </InputSelect>
+
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
+                Lokasi
+                <InputSelect class="form-control" @bind-Value="Transh.Lokasi2" style="width:60%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select Lokasi---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.Lokasi">@item.NamaLokasi</option>
+                    }
+
+                </InputSelect>
+
+            </label>
+        </div>
+        <br/>
+        <div class="container">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePersediaan/TransMutasi", false))">Batal</button>
+        </div>
+        <br />
+        <br />
+
+    </EditForm>
+</div>
+
+<div class="container">
+    <DetailGridComponent Items="Transh.IcTransDs" Context="transaksi">
+        <TableHeader>
+            <th scope="col">Item</th>
+            <th scope="col">Nama</th>
+            <th scope="col">Satuan</th>  
+            <th scope="col">Qty</th>
+       
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi.ItemCode</td>
+            <td>@transaksi.NamaItem</td>
+            <td>@transaksi.Satuan</td>
+            <td>@transaksi.QtyShp.ToString("N")</td>
+         
+
+            <td>
+                <button @onclick="(() => Rubah(transaksi))" class="btn btn-success">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+                        <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z" />
+                    </svg>
+                </button>
+                <button @onclick="(() => Hapus(transaksi))" class="btn btn-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+                    </svg>
+                </button>
+            </td>
+        </RowTemplate>
+    </DetailGridComponent>
+    <button Class="btn btn-info" @onclick="@OnAddLine">Add Line</button>
+</div>
+
+@if (IsVisible)
+{
+    <ModalMutasiComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd"></ModalMutasiComponent>
+}
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Transaksi Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+@*@if (SearchOpen)
+    {
+
+        <ModalSearchComponent OnClose="OnSearchClose" Items="banks" Context="cbBank" GetFilterableText="@(item =>$"{item.Supplier} {item.NamaSup} {item.Alamat} ")">
+            <TableHeader>
+                <th scope="col">Supplier</th>
+                <th scope="col">Nama</th>
+                <th scope="col">Alamat</th>
+                <th scope="col">Telpon</th>
+                <th></th>
+            </TableHeader>
+            <RowTemplate>
+                <td>@cbBank.Supplier</td>
+                <td>@cbBank.NamaSup</td>
+                <td>@cbBank.Alamat</td>
+                <td>@cbBank.Telpon</td>
+                <td>
+                    <button @onclick="() => BtnChoose(cbBank.Supplier)" class="btn btn-success">Choose</button>
+
+                </td>
+            </RowTemplate>
+        </ModalSearchComponent>
+
+
+    }*@
+
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+
+@code {
+    IcTransHView Transh = new IcTransHView() { IcTransDs = new List<IcTransDView>() };
+
+    private List<IcItem> srccode;
+    private List<IcLokasi> banks;
+    private IcTransDView Transd = new IcTransDView();
+    private IcTransDView TransK = new IcTransDView();
+
+    public string kurs { get; set; } = "";
+
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public bool IsKurs { get; set; }
+    public bool IsEdit { get; set; }
+    public bool SearchOpen { get; set; }
+ 
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Transh.Tanggal = DateTime.Now;
+
+        LoadBank();
+        LoadSrcCode();
+    }
+
+    private void OnVisibleClose()
+    {
+
+        IsVisible = false;
+        IsEdit = false;
+        StateHasChanged();
+
+    }
+
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private void HandleValidSubmit()
+    {
+
+        var newEdit = service.AddTransH(Transh);
+        if (newEdit != null)
+        {
+            var id = newEdit.IcTransHId.ToString().Trim();
+            //  navigationmanager.NavigateTo("/PrintBuktiBayar/{id", false);
+            navigationmanager.NavigateTo("/ModulePersediaan/TransMutasi", false);
+            //  navigationmanager.NavigateTo($"/PrintBuktiBayar/{id}");
+        }
+
+
+    }
+
+    private void OnDetailTrans(IcTransDView transD)
+    {
+        transD.NamaItem = service.GetIcItemProduk(transD.ItemCode).NamaItem;
+        transD.Satuan = service.GetIcItemProduk(transD.ItemCode).Satuan;
+
+        if (!IsEdit)
+        {
+
+            Transh.IcTransDs.Add(transD);
+        }
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+    }
+
+
+    void LoadBank()
+    {
+
+        banks = service.GetIcLokasi();
+
+    }
+
+    void LoadSrcCode()
+    {
+
+        srccode = service.GetIcItem();
+
+    }
+
+
+    private void Rubah(IcTransDView transd)
+    {
+        Transd = new IcTransDView();
+        Transd = transd;
+        IsEdit = true;
+        OnAddLine();
+
+    }
+
+    private void Hapus(IcTransDView transd)
+    {
+
+        Transh.IcTransDs.Remove(transd);
+        //ShowOnClick();
+    }
+
+    private void OnAddLine()
+    {
+
+        this.IsVisible = true;
+
+
+        StateHasChanged();
+
+        //IsEdit = false;
+        //ShowOnClick();
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            Transh.Lokasi = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+}

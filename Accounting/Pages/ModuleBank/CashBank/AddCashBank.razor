@@ -1,0 +1,197 @@
+﻿@page "/ModuleBank/AddCashBank"
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.Services
+@inject ILedgerServices   serviceGl
+@inject ICashBankServices service
+@inject NavigationManager navigationmanager
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add CashBank</h3>
+</div>
+
+<div class="content px-4">
+    <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Kode Bank :
+                <InputText id="codeBank" class="form-control" @bind-Value="bank.Kdbank" style="text-transform:uppercase" @onfocusout="cekKode" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Nama Bank :
+                <InputText class="form-control" @bind-Value="bank.Namabank" />
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                GL Account :
+                <InputSelect class="form-control" @bind-Value="bank.Acctset" style="width:60%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                    @foreach (var item in GlAccounts)
+                    {
+                        <option value="@item.GlAcct">@item.NamaLengkap</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Saldo Awal :
+                <InputNumber class="form-control" @bind-Value="bank.SldAwal" />
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Beginning Balance :
+                <InputNumber class="form-control" @bind-Value="bank.KSldAwal" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Tgl Saldo Awal :
+                <InputDate class="form-control" @bind-Value="bank.ClrDate" />
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Kurs :
+                <InputText class="form-control" @bind-Value="bank.Kurs" />
+            </label>
+        </div>
+        <br/>
+        <div class="form-check form-switch">
+
+            <InputCheckbox class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" @bind-Value="@bank.Pajak" />
+            <label class="form-check-label" for="flexSwitchCheckDefault">@(bank.Pajak ? "Non Tax" : "Tax")</label>
+
+        </div>
+        <br/>
+
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleBank/SetupCashBank", false))">Batal</button>
+        </div>
+
+    </EditForm>
+</div>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Bank Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="GlAccounts" Context="cbBank" GetFilterableText="@(item =>$"{item.GlAcct} {item.GlNama} ")">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Bank Name</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.GlAcct</td>
+            <td>@cbBank.GlNama</td>
+
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.GlAcct)" class="btn btn-success">Choose</button>
+               
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    BankView bank = new BankView();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    private List<GlAccount> GlAccounts;
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        bank.Kdbank = "";
+        bank.ClrDate = DateTime.Now;
+        LoadGlAccounts();
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.Kdbank;
+        DialogOpen = service.CekKdBank(Testing);
+        if (DialogOpen)
+        {
+            bank.Kdbank = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private void HandleValidSubmit()
+    {
+        var newEdit = service.AddBank(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleBank/SetupCashBank", false);
+
+    }
+
+    void LoadGlAccounts()
+    {
+        GlAccounts = serviceGl.GetGlAccount();
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (textSearch != null || textSearch != "")
+        {
+            bank.Acctset = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+    
+}

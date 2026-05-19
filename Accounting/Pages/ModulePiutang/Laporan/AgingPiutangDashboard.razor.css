@@ -1,0 +1,162 @@
+.ar-page-shell {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+}
+
+/* Scroll container untuk tab Overview, Alert, Collection */
+.ar-scroll-tab {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 100%;
+}
+
+.ar-table-host {
+    flex: 1 1 auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.ar-table-wrapper {
+    flex: 1 1 auto;
+    overflow: auto;
+    position: relative;
+}
+
+.ar-scroll-area {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding-bottom: 1rem;
+}
+
+/* Sticky header */
+.ar-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #343a40;
+    color: #fff;
+    border: 1px solid #495057;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.ar-table tbody td,
+.ar-table tfoot td {
+    border: 1px solid #dee2e6;
+    padding: 4px 8px;
+    vertical-align: middle;
+}
+
+/* Sticky columns */
+.ar-sticky-col-1 {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 150px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ar-sticky-col-2 {
+    position: sticky;
+    left: 150px;
+    z-index: 2;
+    min-width: 130px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-left: 2px solid #adb5bd;
+}
+
+/* Ensure th sticky overrides data cells for col 1 & 2 */
+.ar-table thead .ar-sticky-col-1,
+.ar-table thead .ar-sticky-col-2 {
+    z-index: 4;
+    background: #343a40;
+    color: #fff;
+}
+
+.ar-table tfoot .ar-sticky-col-1 {
+    z-index: 2;
+    position: sticky;
+    left: 0;
+}
+
+/* Row hover */
+.ar-table tbody tr:hover td {
+    filter: brightness(0.95);
+}
+
+/* Card header for customer tab */
+.card-header {
+    font-size: 0.88rem;
+}
+
+/* ── Info Bayar badges ───────────────────────────────────────── */
+.ar-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    margin: 1px 1px;
+    cursor: default;
+}
+
+/* Sudah cicilan */
+.ar-badge-cicilan {
+    background: #cfe2ff;
+    color: #084298;
+    border: 1px solid #9ec5fe;
+}
+
+/* Belum bayar sama sekali */
+.ar-badge-belum {
+    background: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+
+/* Persen sudah bayar */
+.ar-badge-bayar {
+    background: #d1e7dd;
+    color: #0a3622;
+    border: 1px solid #a3cfbb;
+}
+
+/* Terakhir bayar — baru (<= 30 hari) */
+.ar-badge-baru {
+    background: #d1e7dd;
+    color: #0a3622;
+    border: 1px solid #a3cfbb;
+}
+
+/* Terakhir bayar — sedang (31-60 hari) */
+.ar-badge-sedang {
+    background: #fff3cd;
+    color: #664d03;
+    border: 1px solid #ffda6a;
+}
+
+/* Terakhir bayar — lama (> 60 hari) */
+.ar-badge-lama {
+    background: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+
+/* Uang muka — ungu muda */
+.ar-badge-uangmuka {
+    background: #e0cffc;
+    color: #3d0a91;
+    border: 1px solid #c5a3ff;
+}

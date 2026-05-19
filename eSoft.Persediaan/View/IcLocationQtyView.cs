@@ -1,0 +1,18 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+
+namespace eSoft.Persediaan.View
+{
+    public class IcLocationQtyView
+    {
+        public string Lokasi { get; set; }
+        public string NamaLokasi { get; set; }
+        public Decimal Qty { get; set; }
+    }
+}

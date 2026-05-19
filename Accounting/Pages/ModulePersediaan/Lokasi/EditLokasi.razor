@@ -1,0 +1,111 @@
+﻿@page "/ModulePersediaan/EditLokasi/{Id:int}"
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+
+@inject IInventoryServices service
+@inject NavigationManager navigationmanager
+
+<h3>Edit Lokasi</h3>
+
+<EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>
+            Lokasi :
+            <InputText id="codeBank" class="form-control" @bind-Value="bank.Lokasi" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Name :
+            <InputText class="form-control" @bind-Value="bank.NamaLokasi" />
+        </label>
+    </div>
+
+
+    <br/>
+    <div class="container">
+        <button class="btn-success" type="submit">Simpan</button>
+        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePersediaan/SetupLokasi", false))">Batal</button>
+    </div>
+
+
+</EditForm>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Lokasi Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    IcLokasiView bank = new IcLokasiView();
+    IcLokasi Bank = new IcLokasi();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBank();
+      
+    }
+
+    void LoadBank()
+    {
+        Bank = service.GetIcLokasiId(Id);
+        bank.IcLokasiId = Bank.IcLokasiId;
+        bank.Lokasi = Bank.Lokasi;
+        bank.NamaLokasi = Bank.NamaLokasi;
+        
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.Lokasi;
+        DialogOpen = service.CekKdLokasi(Testing);
+        if (DialogOpen)
+        {
+            bank.Lokasi = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private async Task HandleValidSubmit()
+    {
+        var newEdit = await service.EditIcLokasi(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModulePersediaan/SetupLokasi", false);
+
+    }
+
+   
+}

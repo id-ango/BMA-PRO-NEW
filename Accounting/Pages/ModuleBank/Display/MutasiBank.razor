@@ -1,0 +1,176 @@
+﻿@page "/ModuleBank/MutasiBank"
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+
+@using eSoft.CashBank.Services
+
+@inject ICashBankServices cashBank
+
+@inject NavigationManager navigationmanager
+
+<div class="container">
+    <h1>Laporan Cash Bank</h1>
+</div>
+
+
+<div class="container">
+
+    <EditForm Model="@Banks" OnValidSubmit="@HandleValidSubmit" >
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+    
+        <div class="form-group">
+            <label>
+                Kode Bank :
+                <InputSelect class="form-control" @bind-Value="@kodeBank" style="width:80%; display:inline" @oninput="OnKurs">
+                    <option value="">&nbsp;&nbsp;---Select Bank---&nbsp;&nbsp;</option>
+                    @foreach (var item in Banks)
+                    {
+                        <option value="@item.KodeBank">[@item.KodeBank]&nbsp; @item.NmBank</option>
+                    }
+
+                </InputSelect>
+                &nbsp;@kurs
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="@TglStart" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="@TglEnd" />
+            </label>
+        </div>
+       
+
+        <br/>
+
+        <div class="float-md-right">
+            @*<button class="btn-success" type="submit">Mutasi</button>*@
+            <button class="btn-success" type="button" @onclick="OpenCetak">Mutasi</button>
+             <button class="btn-info" type="button" @onclick="PrintCetak">Cetak</button>
+        </div>
+        <br />
+        <br />
+
+    </EditForm>
+</div>
+
+<br />
+
+
+
+<div class="container">
+    <DataGridVerticalComponent Items="RekKoran" Context="cbBank" GetFilterableText="@(item => $"{item.Keterangan} {item.DocNo} ")">
+        <TableHeader>
+            <th scope="col" style="width:15%">Doc #</th>
+            <th scope="col" style="width: 15%">Tanggal</th>
+            <th scope="col" style="width: 40%">Keterangan</th>
+            <th scope="col" style="width: 15%">Mutasi</th>
+            <th scope="col" style="width: 15%">Saldo</th>
+           
+        </TableHeader>
+        <RowTemplate>
+            <td style="width:15%">@cbBank.DocNo</td>
+            <td style="width:15%">@cbBank.Tanggal.ToShortDateString()</td>
+            <td style="width:40%">@cbBank.Keterangan</td>
+            <td style="text-align: right; width: 15%">@cbBank.Saldo.ToString("N")</td>
+            <td style="text-align: right; width: 15%">@cbBank.Balance.ToString("N")</td>
+           
+        </RowTemplate>
+    </DataGridVerticalComponent>
+
+
+</div>
+
+
+
+@code {
+
+    private List<CbBank> Banks;
+    private List<CbBank> BankView = new List<CbBank>();
+    private List<RekeningView> RekKoran = new List<RekeningView>();
+
+    public string kurs { get; set; } = "";
+    private string kodeBank { get; set; } = "";
+
+    private DateTime TglStart = DateTime.Today;
+    private DateTime TglEnd = DateTime.Today;
+
+
+    public bool DeleteDialogOpen { get; set; }
+    public bool NullDialogOpen { get; set; }
+    public bool SearchOpen { get; set; }
+
+
+    public bool asChecked { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadGet();
+        //this.TglStart = DateTime.Today;
+        //this.TglEnd = DateTime.Now;
+        //StateHasChanged();
+    }
+
+    private void LoadGet()
+    {
+        Banks = cashBank.GetBank();
+    }
+
+
+
+
+    private void OpenCetak()
+    {
+        SearchOpen = !SearchOpen;
+
+        RekKoran = cashBank.CetakMutasi(TglStart, TglEnd, kodeBank);
+        StateHasChanged();
+
+    }
+
+     private void PrintCetak()
+    {
+      //  SearchOpen = !SearchOpen;
+
+     //   RekKoran = cashBank.CetakMutasi(TglStart, TglEnd, kodeBank);
+      string words = kodeBank+'+' +TglStart.ToString("yyyy-MM-dd")+'+'+TglEnd.ToString("yyyy-MM-dd");
+
+      
+          navigationmanager.NavigateTo($"/ModulePrinting/RekeningBank/{words}");
+        StateHasChanged();
+
+    }
+
+    private void OnKurs(ChangeEventArgs args)
+    {
+        kurs = (from e in Banks where e.KodeBank == args.Value.ToString() select e.Kurs).FirstOrDefault();
+    }
+
+  
+
+    private void HandleValidSubmit()
+    {
+        //Transh.Kurs = kurs;
+        //var newEdit = service.AddTransH(Transh);
+        //if (newEdit != null)
+        //{
+        //    var id = newEdit.CbTransHId.ToString().Trim();
+        //    //  navigationmanager.NavigateTo("/PrintBuktiBayar/{id", false);
+        //    //  navigationmanager.NavigateTo("/ModuleBank/TransBank", false);
+        //    navigationmanager.NavigateTo($"/PrintBuktiBayar/{id}");
+
+   //     SearchOpen = !SearchOpen;
+   //     RekKoran = cashBank.CetakMutasi(TglStart, TglEnd, kodeBank);
+       // totalPage = MaxPageNumber(RekKoran.Count());
+    }
+
+
+}
+

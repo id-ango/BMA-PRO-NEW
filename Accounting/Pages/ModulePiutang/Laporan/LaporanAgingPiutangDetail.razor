@@ -1,0 +1,70 @@
+﻿@page "/modulepiutang/laporanagingdetail"
+@using eSoft.Piutang.Services
+@using eSoft.Piutang.View
+@inject IReceivableServices ReceivableService
+
+<PageTitle>Aging Piutang Detail</PageTitle>
+
+<h3 class="mb-4">Detail Aging Piutang</h3>
+
+@if (agingDetails == null)
+{
+    <p>Loading...</p>
+}
+else if (!agingDetails.Any())
+{
+    <p><i>Tidak ada piutang yang belum lunas.</i></p>
+}
+else
+{
+    <table class="table table-bordered table-sm">
+        <thead class="table-light">
+            <tr>
+                <th>Dokumen</th>
+                <th>Customer</th>    
+                <th>Tanggal</th>
+                
+                <th>Jumlah</th>
+                <th>Sisa</th>
+                <th>Jumlah Cicilan</th>
+                <th>Detail Pembayaran</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in agingDetails)
+            {
+                <tr>
+                    <td>@row.Dokumen</td>
+                    <td>@row.NamaCust</td>
+                    <td>@row.Tanggal</td>
+                    <td class="text-end">@row.Total.ToString("N0")</td>
+                    <td class="text-end">@row.Sisa.ToString("N0")</td>
+                    <td class="text-center">@(row.CicilanList?.Count ?? 0)</td>
+                    <td>
+                        @if (row.CicilanList?.Any() == true)
+                        {
+                            <details>
+                                <summary>Lihat</summary>
+                                <ul class="ms-3 mt-2">
+                                    @foreach (var cicil in row.CicilanList)
+                                    {
+                                        <li>@cicil.Tanggal.Date: @cicil.Jumlah.ToString("N0")&nbsp; -&nbsp; @cicil.Bayar.ToString("N0") </li>
+                                    }
+                                </ul>
+                            </details>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ArAgingDetailView> agingDetails;
+
+    protected override void OnInitialized()
+    {
+        agingDetails = ReceivableService.GetAgingDetailView();
+    }
+}

@@ -1,0 +1,151 @@
+﻿@page "/ModuleAsset/AddItem"
+@using eSoft.Asset.Model
+@using eSoft.Asset.View
+@using eSoft.Asset.Services
+
+@inject IAssetServices service
+@inject NavigationManager navigationmanager
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Item</h3>
+</div>
+
+<div class="content px-4">
+    <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Item Code :
+                <InputText id="codeBank" class="form-control" @bind-Value="bank.ItemCode" style="text-transform:uppercase" @onfocusout="cekKode" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Item Name :
+                <InputText class="form-control" @bind-Value="bank.NamaItem" />
+            </label>
+
+        </div>
+        <div class="form-group">
+            <label>
+                Item Satuan :
+                <InputText class="form-control" @bind-Value="bank.Satuan" />
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Divisi :
+                <InputSelect class="form-control" @bind-Value="bank.Divisi">
+                    <option value="">&nbsp;&nbsp;---Select Divisi---&nbsp;&nbsp;</option>
+                    @foreach (var item in DivisiSet)
+                    {
+                        <option value="@item.Divisi">@item.NamaDiv</option>
+                    }
+
+                </InputSelect>
+                @*<button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+        <br />
+      
+        <br />
+       
+       
+        <div class="container">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger"type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleAsset/SetupItem", false))">Batal</button>
+        </div>
+
+    </EditForm>
+</div>
+<br/>
+<br/>
+
+
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Item Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+
+    AsItemView bank = new AsItemView();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    
+    private List<AsDivisi> DivisiSet;
+
+   
+ //   private string ErrorMessage;
+ //   private string filestream;
+
+   
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+     
+        LoadDivisi();
+   
+        //   bank.GlTipe = 1;
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.ItemCode;
+        DialogOpen = service.CekKdItem(Testing);
+        if (DialogOpen)
+        {
+            bank.ItemCode = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+    void LoadDivisi()
+    {
+        DivisiSet = service.GetAsDiv();
+    }
+
+   
+    private void HandleValidSubmit()
+    {
+        var newEdit = service.AddAsItem(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleAsset/SetupItem", false);
+
+    }
+
+    //private void OnRadioClose(StatusGl accepted)
+    //{
+    //    bank.GlStatus = accepted;
+
+    //    //System.Console.WriteLine(accepted);
+    //    // StateHasChanged();
+
+    //}
+}

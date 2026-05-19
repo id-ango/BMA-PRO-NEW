@@ -1,0 +1,41 @@
+﻿<div class="toast-container">
+    @if (IsVisible)
+    {
+        <div class="toast">
+            <div class="toast-header">
+                <strong class="mr-auto">Error</strong>
+                <button type="button" class="ml-2 mb-1 close" aria-label="Close" @onclick="HideToast">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="toast-body">
+                @ErrorMessage
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool IsVisible { get; set; }
+    private string ErrorMessage { get; set; }
+
+    public void ShowToast(string message)
+    {
+        IsVisible = true;
+        ErrorMessage = message;
+        StateHasChanged();
+
+        // Auto-hide the toast after a certain duration
+        Task.Delay(5000).ContinueWith(_ =>
+        {
+            HideToast();
+        });
+    }
+
+    private void HideToast()
+    {
+        IsVisible = false;
+        ErrorMessage = string.Empty;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,158 @@
+﻿@layout PrintLayout
+
+@page "/ModulePrinting/PrintNotaLedgerGL/{Id:int}"
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+
+@using eSoft.Fungsi.Function
+
+@inject IFinancialServices service
+@inject NavigationManager navigationmanager
+
+
+<div class="dontprint" style="display:none inline">
+    <br />
+    &emsp;<NavLink href="/ModuleFinancial/TransLedgerGL" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>&emsp;
+    <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+</div>
+
+<div id="page-wrap">
+
+    <textarea id="header">@Title</textarea>
+
+    <div id="identity">
+
+        <textarea id="address">
+            @TransAll.FcComKode
+        </textarea>
+
+        @*<div style="clear:both"></div>*@
+
+
+        <table id="meta">
+            <tr>
+                <td class="meta-head">Document #</td>
+                <td>@TransAll.DocNo</td>
+            </tr>
+            <tr>
+
+                <td class="meta-head">Date</td>
+                <td>@TransAll.Tanggal.ToShortDateString()</td>
+            </tr>
+         
+        </table>
+
+    </div>
+
+    <table id="items">
+
+        <tr>
+            <th>No</th>
+            <th>Akun</th>
+            <th>Description</th>
+            <th>Amount</th>
+
+        </tr>
+
+        @foreach (var item in TransAll.FcTransDs)
+        {
+            <tr class="item-row">
+                <td class="no">@(noUrut++)</td>
+                <td class="source">@item.GlAcct</td>
+                <td class="description"><textarea>@item.Keterangan</textarea></td>
+                <td class="jumlah">@item.Jumlah.ToString("N")</td>
+
+            </tr>
+        }
+
+        @if (TransAll.FcTransDs.Count < 6)
+        {
+            for (var x = TransAll.FcTransDs.Count; x < 6; x++)
+            {
+                <tr class="item-row">
+                    <td class="no"></td>
+                    <td class="source"></td>
+                    <td class="description"><textarea></textarea></td>
+                    <td class="jumlah"><textarea></textarea></td>
+
+                </tr>
+            }
+        }
+        <tr>
+            <td colspan="3" rowspan="2" class="description"><textarea class="keterangan">@TransAll.GlMemo</textarea></td>
+            <td class="total-line">Saldo</td>
+
+        </tr>
+        <tr>
+            <td class="total-value">@TransAll.Saldo.ToString("N")</td>
+        </tr>
+
+    </table>
+    @Fungsi.BilanganToText(TransAll.Saldo)
+
+
+
+    <table id="items">
+        <tr>
+            <th>Pembuat</th>
+            <th>Mengetahui</th>
+            <th>Accounting</th>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+
+</div>
+
+
+@code {
+    [Parameter] public string Title { get; set; } = "TRANSAKSI LEDGER";
+    [Parameter] public int Id { get; set; }
+
+    private FcTransHView Transh = new () { FcTransDs = new List<FcTransDView>() };
+    private FcTransH TransAll = new () { FcTransDs = new List<FcTransD>() };
+   
+    private FcTransDView Transd = new FcTransDView();
+    private FcTransDView TransK = new FcTransDView();
+    //   private List<TransDView> TransDs = new List<TransDView>();
+    private string enabled { get; set; }
+
+    public string kurs { get; set; } = "";
+    private int noUrut { get; set; } = 1;
+    private string vendor { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Transh.Tanggal = DateTime.Now;
+
+
+    
+        LoadTrans();
+    }
+
+
+
+   
+
+    void LoadTrans()
+    {
+        TransAll = service.GetTransGL(Id);
+       
+    }
+
+
+}

@@ -1,0 +1,199 @@
+﻿@page "/ModuleHutang/LaporanHutang"
+
+@using eSoft.Hutang.Model
+@using eSoft.Hutang.View
+@using eSoft.Hutang.Services
+
+@using eSoft.Pembelian.Model
+@using eSoft.Pembelian.View
+@using eSoft.Pembelian.Services
+@using Accounting.Services
+@using System.IO
+
+@inject IPayableServices   service
+@inject NavigationManager navigationmanager
+@inject IExcelServices serviceXL
+@inject IJSRuntime JS
+
+<h3>Laporan Hutang</h3>
+<div class="row">
+    <div class="col-4">
+        <EditForm Model="transh">
+            <div class="form-group">
+                <label>
+                    Dari Tanggal :
+                    <InputDate class="form-control" @bind-Value="Tanggal1" />
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    Sd Tanggal :
+                    <InputDate class="form-control" @bind-Value="Tanggal2" />
+                </label>
+            </div>
+
+        </EditForm>
+    </div>
+
+    <div class="col-4">
+        <br />
+        <button class="btn btn-primary" @onclick="@(() => proses1())">Kartu Hutang</button>
+        <br />
+        <button class="btn btn-primary" @onclick="@(() => proses2())">Display Uang Muka</button>
+        <br />
+    </div>
+</div>
+
+<div class="row">
+    <br />
+</div>
+
+@switch (Tampilan)
+{
+    case 1:
+        <div class="container">
+
+            <DataGridHutangComponent Items="TransItem" OnDetail="OpenDetail" OnDownload="DownloadFileFromStream"></DataGridHutangComponent>
+
+        </div>
+        @if (DetailOpen)
+        {
+
+            <ModalDetailJualComponent OnClose="OnSearchClose" Items="TransDetail" Context="transaksi2" GetFilterableText="@(item => $"{item.Supplier} {item.Dokumen} {item.Keterangan}")">
+                <TableHeader>
+                    <th scope="col">Dokumen</th>
+                    <th scope="col">Tanggal</th>
+                    <th scope="col">Keterangan</th>
+                    <th scope="col">Jumlah</th>
+                    <th scope="col">Bayar</th>
+                    <th scope="col">Sisa</th>
+
+                    <th></th>
+                </TableHeader>
+                <RowTemplate>
+                    <td>@transaksi2.Dokumen</td>
+                    <td>@transaksi2.Tanggal.ToShortDateString()</td>
+                    <td>@transaksi2.Keterangan</td>
+                    <td style="text-align:right">@transaksi2.Jumlah.ToString("N")</td>
+                    <td style="text-align:right">@transaksi2.Bayar.ToString("N")</td>
+                    <td style="text-align:right">@transaksi2.Sisa.ToString("N")</td>
+
+                </RowTemplate>
+            </ModalDetailJualComponent>
+
+
+        }
+
+        break;
+
+    case 2:
+        <div class="container">
+
+            <DataGridBayarDimukaComponent Items="TransDetailView" ></DataGridBayarDimukaComponent>
+
+        </div>
+
+        break;
+
+}
+
+@code {
+
+
+    public List<ApHutang> TransDetail;
+    public List<ApSuppl> TransItem = new List<ApSuppl>();
+    public List<ApHutangView> TransDetailView;
+
+    private string nCount { get; set; }
+    private string nOngkir { get; set; }
+    private string nJumlah { get; set; }
+    private string nPPn { get; set; }
+    public ApTransH transh = new ApTransH();
+
+
+    public int Tampilan { get; set; } = 1;
+
+    public bool DeleteDialogOpen { get; set; }
+    public bool NullDialogOpen { get; set; }
+    public bool DetailOpen { get; set; }
+    public bool DetailOpen2 { get; set; }
+    public bool DetailOpen3 { get; set; }
+
+    public DateTime Tanggal1 { get; set; }
+    public DateTime Tanggal2 { get; set; }
+
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Tanggal1 = DateTime.Today;
+        Tanggal2 = DateTime.Today;
+        //  proses1();
+
+    }
+
+
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        DetailOpen = false;
+        DetailOpen2 = false;
+        DetailOpen3 = false;
+        StateHasChanged();
+
+    }
+
+    private void proses1()
+    {
+        TransItem = service.GetSupplier();
+        Tampilan = 1;
+        //  nJumlah = TransHeader.Sum(x => x.Jumlah).ToString("N");
+        // StateHasChanged();
+    }
+
+    private void OpenDetail(ApSuppl xKdBank)
+    {
+
+        TransDetail = service.Detail1(xKdBank.Supplier);
+        DetailOpen = !DetailOpen;
+        //  navigationmanager.NavigateTo($"/ModuleJual/EditTransJual/{xKdBank}");
+        StateHasChanged();
+    }
+
+    private void proses2()
+    {
+        TransDetailView = service.GetBayarDimuka();
+        Tampilan = 2;
+        //  nJumlah = TransHeader.Sum(x => x.Jumlah).ToString("N");
+        // StateHasChanged();
+    }
+
+    //private void OpenPrint(int xKdBank)
+    //{
+    //    navigationmanager.NavigateTo($"/PrintSuratJalan/{xKdBank}");
+    //}
+    private Stream GetFileStream(ApSuppl xKdBank)
+    {
+        var TransD = service.Detail1(xKdBank.Supplier);
+
+         var randomBinaryData = serviceXL.CreateHutangWorksheet(TransD);
+
+       //    var randomBinaryData = new byte[50 * 1024];
+
+        var fileStream = new MemoryStream(randomBinaryData);
+
+        return fileStream;
+    }
+
+    private async Task DownloadFileFromStream(ApSuppl xKdBank)
+    {
+        var fileStream = GetFileStream(xKdBank);
+        var fileName = $"Kartu Hutang {xKdBank.NamaSup} {DateTime.Now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}.xlsx";
+
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+}

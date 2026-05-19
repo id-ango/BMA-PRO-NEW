@@ -1,0 +1,77 @@
+﻿@page "/ModuleJual/uploadpdf"
+@using eSoft.Penjualan.View
+
+<h3 class="text-center mb-4">Unggah File PDF</h3>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card custom-card">
+                <div class="card-header custom-header">
+                    <h4 class="text-center mb-0">Form Upload</h4>
+                </div>
+                <div class="card-body custom-body">
+                    <InputFile OnChange="HandleFileUpload" class="mb-3" />
+
+                    <button class="btn btn-primary custom-button" @onclick="SaveFile">Simpan File</button>
+
+                    <hr />
+
+                    <h4 class="text-center mb-3">Daftar File PDF</h4>
+
+                    <FileList Files="@fileList" @ref="fileListComponent" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+@code {
+    private IBrowserFile uploadedFile;
+    private List<FileModel> fileList;
+    private FileList fileListComponent; // Gunakan @ref untuk mendapatkan referensi komponen
+    private long maxFileSize = long.MaxValue;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+       
+    }
+    private void HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        uploadedFile = e.File;
+        
+    }
+
+    private async Task SaveFile()
+    {
+        if (uploadedFile != null)
+        {
+            var uniqueFileName = GetUniqueFileName(uploadedFile.Name);
+            var uploadFolder = Path.Combine("wwwroot", "PDFKontrak");
+            var filePath = Path.Combine(uploadFolder, uniqueFileName);
+
+            // Baca konten file PDF
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await uploadedFile.OpenReadStream(maxFileSize).CopyToAsync(fileStream);
+            }
+           
+            fileListComponent.Refresh();
+          
+        }
+        
+    }
+
+    private string GetUniqueFileName(string fileName)
+    {
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var fileExtension = Path.GetExtension(fileName);
+        var timestamp = DateTime.Now.ToString("yyyyMMddHHmmssfff");
+
+        return $"{fileNameWithoutExtension}_{timestamp}{fileExtension}";
+    }
+}

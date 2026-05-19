@@ -1,0 +1,271 @@
+﻿@page "/ModulePiutang/AddTransPiutang"
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+
+@inject IReceivableServices service
+@inject NavigationManager navigationmanager
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Transaksi Piutang</h3>
+</div>
+
+
+<div class="container">
+    <EditForm Model="@Transh" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="Transh.Tanggal" />
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Customer :
+                <InputSelect class="form-control" @bind-Value="Transh.Customer" style="width:60%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select Customer---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.Customer">[@item.Customer]&nbsp; @item.NamaCust</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Keterangan :
+                <InputTextArea class="form-control" @bind-Value="Transh.Keterangan" />
+            </label>
+        </div>
+        <br/>
+
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePiutang/TransPiutang", false))">Batal</button>
+        </div>
+        <br />
+        <br />
+
+    </EditForm>
+</div>
+<div class="container">
+    <div class="row">
+        <div class=" col-sm  form-message">
+            <span>Saldo   : @Transh.Jumlah.ToString("N")</span>
+        </div>
+
+    </div>
+
+
+</div>
+<div class="container">
+    <DetailGridComponent Items="Transh.ArTransDs" Context="transaksi">
+        <TableHeader>
+            <th scope="col">Source</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Jumlah</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi.DistCode</td>
+            <td>@transaksi.Keterangan</td>
+            <td>@transaksi.Jumlah.ToString("N")</td>
+
+            <td>
+                <button @onclick="(() => Rubah(transaksi))" class="btn btn-success">Edit</button>
+                <button @onclick="(() => Hapus(transaksi))" class="btn btn-danger">Delete</button>
+            </td>
+        </RowTemplate>
+    </DetailGridComponent>
+    <button Class="btn btn-info" @onclick="@OnAddLine">Add Line</button>
+</div>
+
+@if (IsVisible)
+{
+    <ModalPiutangComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd"></ModalPiutangComponent>
+}
+
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Bank Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="banks" Context="cbBank" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Alamat} ")">
+        <TableHeader>
+            <th scope="col">Customer</th>
+            <th scope="col">Nama</th>
+            <th scope="col">Alamat</th>
+            <th scope="col">Telpon</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.Customer</td>
+            <td>@cbBank.NamaCust</td>
+            <td>@cbBank.Alamat</td>
+            <td>@cbBank.Telpon</td>
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.Customer)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+@code {
+    ArTransHView Transh = new ArTransHView() { ArTransDs = new List<ArTransDView>() };
+
+    private List<ArDist> srccode;
+    private List<ArCust> banks;
+    private ArTransDView Transd = new ArTransDView();
+    private ArTransDView TransK = new ArTransDView();
+
+    public string kurs { get; set; } = "";
+
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public bool IsKurs { get; set; }
+    public bool IsEdit { get; set; }
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Transh.Tanggal = DateTime.Now;
+
+        LoadBank();
+        LoadSrcCode();
+    }
+
+    private void OnVisibleClose()
+    {
+
+        IsVisible = false;
+         IsEdit = false;
+        StateHasChanged();
+
+    }
+
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private void HandleValidSubmit()
+    {
+
+        var newEdit = service.AddTransH(Transh);
+        if (newEdit != null)
+        {
+            var id = newEdit.ArTransHId.ToString().Trim();
+            //  navigationmanager.NavigateTo("/PrintBuktiBayar/{id", false);
+           // navigationmanager.NavigateTo("/ModulePiutang/TransPiutang", false);
+              navigationmanager.NavigateTo($"/ModulePrinting/PrintNotaPiutang/{id}");
+        }
+
+
+    }
+
+    private void OnDetailTrans(ArTransDView transD)
+    {
+        if (!IsEdit)
+        {
+            Transh.ArTransDs.Add(transD);
+        }
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+    }
+
+
+    void LoadBank()
+    {
+
+        banks = service.GetCustomer();
+
+    }
+
+    void LoadSrcCode()
+    {
+
+        srccode = service.GetDist();
+
+    }
+
+
+    private void Rubah(ArTransDView transd)
+    {
+        Transd = new ArTransDView();
+        Transd = transd;
+        IsEdit = true;
+        OnAddLine();
+
+    }
+
+    private void Hapus(ArTransDView transd)
+    {
+
+        Transh.ArTransDs.Remove(transd);
+        //ShowOnClick();
+    }
+
+    private void OnAddLine()
+    {
+
+        this.IsVisible = true;
+
+
+        StateHasChanged();
+
+        //IsEdit = false;
+        //ShowOnClick();
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            Transh.Customer = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+    
+}

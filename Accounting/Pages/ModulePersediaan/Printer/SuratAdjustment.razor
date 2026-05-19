@@ -1,0 +1,201 @@
+﻿@layout PrintLayout
+
+@page "/ModulePrinting/PrintSuratAdjustment/{Id:int}"
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Piutang.Model
+
+@using eSoft.Fungsi.Function
+@using eSoft.Persediaan.Services
+
+@inject IInventoryServices service
+@inject NavigationManager navigationmanager
+
+
+<div class="dontprint" style="display:none inline">
+    <br />
+    &emsp;
+    @if(@TransAll.Pajak)
+    {
+        <NavLink href="/ModulePersediaan/TransAdjustment" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
+    } else
+    {
+        <NavLink href="/ModulePersediaan/TransAdjustment" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
+    }
+    &emsp;
+     <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+    &emsp;
+    @*<NavLink @onclick="() => OpenPrint(Id)" class="btn btn-primary btn-lg">&nbsp;Nota&nbsp;</NavLink>&emsp;*@
+</div>
+
+<div id="page-wrap">
+  <br/>
+    <textarea id="header" aria-label="Title">@Title</textarea>
+    <br/>
+     <span style="text-align:left;text-decoration:underline;font: bold 16px "Times New Roman", Sans-Serif">Lokasi.</span> 
+     <br />
+    <div >
+       
+
+        <textarea id="address">
+            
+            @lokasi
+        </textarea>
+
+        @*<div style="clear:both"></div>*@
+
+
+        <table id="meta">
+           @* <tr>
+                <td class="meta-head">Document #</td>
+                <td>@TransAll.NoLpb</td>
+            </tr>*@
+            <tr>
+
+                <td class="meta-head">Date</td>
+                <td>Surabaya, @TransAll.Tanggal.ToShortDateString()</td>
+            </tr>
+            <tr>
+                <td class="meta-head">Dokumen</td>
+                <td>@TransAll.NoFaktur</td>
+            </tr>
+
+        </table>
+
+    </div>
+
+    <table id="items">
+
+        <tr>
+            <th >Keterangan</th>
+            <th >Quantity</th>
+             <th >Total</th>
+         </tr>
+
+        @foreach (var item in TransAll.IcTransDs)
+        {
+            <tr class="item-row">
+
+                <td class="description">@item.NamaItem</td>
+                <td class="source">@($"{@item.QtyShp.ToString("F0")} {@item.Satuan}")</td>
+            <td class="jumlah">@($"{@item.Jumlah.ToString("N2")} ")</td>
+
+
+
+            </tr>
+        }
+
+        @if (TransAll.IcTransDs.Count < 6)
+        {
+            for (var x = TransAll.IcTransDs.Count; x < 6; x++)
+            {
+                <tr class="item-row">
+                    <td class="description"><textarea></textarea></td>                  
+                    <td class="source"></td>
+                    <td class="jumlah"></td>
+
+                </tr>
+            }
+        }
+        <tr>
+
+            <td colspan="3" rowspan="2" class="description"><textarea class="keterangan">@TransAll.Keterangan</textarea></td>
+
+        </tr>
+
+
+    </table>
+    <span class="judul2">&emsp;</span>
+
+
+    <table id="tandatangan">
+        <tr>
+            <th>Accounting</th>
+            <th>&emsp;</th>
+            <th>Gudang</th>
+        </tr>
+        <tr class="item-footer">
+            <td class="penerima">&nbsp;</td>
+            <td class="expedisi"></td>
+            <td class="penerima"></td>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="item-footer">
+            <td><textarea aria-label="penerima" style="text-align:center"></textarea></td>
+            <td></td>
+            <td><textarea aria-label="gudang" style="text-align:center"></textarea></td>
+        </tr>
+    </table> 
+
+
+</div>
+
+
+@code {
+    [Parameter] public string Title { get; set; } = "SURAT ADJUSTMENT";
+    [Parameter] public int Id { get; set; }
+    [Parameter] public int Cetak { get; set; }
+
+    private IcTransHView Transh = new IcTransHView() { IcTransDs = new List<IcTransDView>() };
+    private IcTransH TransAll = new IcTransH() { IcTransDs = new List<IcTransD>() };
+    private string lokasi;
+  //  private string lokasi2;
+    // private List<IcItem> srccode;
+    private IcTransDView Transd = new IcTransDView();
+    private IcTransDView TransK = new IcTransDView();
+    //   private List<TransDView> TransDs = new List<TransDView>();
+    private string enabled { get; set; }
+
+    public string kurs { get; set; } = "";
+    private int noUrut { get; set; } = 1;
+    public string Perusahaan { get; set; }
+    public string Alamat { get; set; }
+    public string KepadaYth { get; set; }
+
+    protected override void OnInitialized()
+    {
+
+        LoadTrans();
+
+
+    }
+
+
+    void LoadTrans()
+    {
+        TransAll = service.GetIcTrans(Id);
+        lokasi = (string.IsNullOrEmpty(TransAll.Lokasi) ? "" : service.GetIcLokasiKode(TransAll.Lokasi).NamaLokasi);
+     //   lokasi2 = service.GetIcLokasiKode(TransAll.Lokasi2).NamaLokasi;
+        KepadaYth =  lokasi + '\n' ;
+
+        if (TransAll.Pajak)
+        {
+            Perusahaan = "CV BMA TEKNIK";
+            Alamat = "Pucang Sewu VII No. 1B, Surabaya";
+
+        } else
+        {
+            Perusahaan = "PT. BMA TEKNIK INDONESIA";
+            Alamat = "Pucang Sewu VII No. 1B, Surabaya";
+
+        }
+        if(TransAll.Kode == "95")
+        {
+            Title = "SURAT RETUR";
+        }
+    }
+
+    private void OpenPrint(int xKdBank)
+    {
+        navigationmanager.NavigateTo($"/ModulePrinting/PrintNotaInvoice/{xKdBank}");
+    }
+}

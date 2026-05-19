@@ -1,0 +1,47 @@
+﻿@page "/ModuleMaintenance/ProsesPiutang"
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Identity;
+@using Accounting.Services;
+@using Accounting.Services.View;
+@using Accounting.Data;
+@using eSoft.Piutang.Services;
+
+@inject IReceivableServices service;
+@inject IJSRuntime JSRuntime
+
+
+<h3>Proses Receivable</h3>
+
+<button class="btn-success" @onclick="prosespiutang" style="display: flex; justify-content:space-between;">
+    <span>Proses</span>
+    <span style="display: @(isProcessing ? "inline" : "none");margin-left:5px; ">
+        <i class="fas fa-spinner fa-spin"></i>
+    </span>
+
+</button>
+
+@code {
+    private bool isProcessing = false;
+
+    private async void prosespiutang()
+    {
+        try
+        {
+            isProcessing = true;
+           
+            await service.ProsesPiutang();
+            // throw new Exception("INi adalah kesalahan yang dibuat scara sengaja");
+        } 
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Terjadi Kesalahan: " + ex.Message);
+        }
+        finally
+        {
+            isProcessing = false;
+            await JSRuntime.InvokeVoidAsync("alert", "Proses Sudah Selesai");
+            StateHasChanged();
+        }
+
+    }
+}

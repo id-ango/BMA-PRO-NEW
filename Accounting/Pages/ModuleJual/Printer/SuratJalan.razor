@@ -1,0 +1,246 @@
+﻿@layout PrintLayout
+
+@page "/ModulePrinting/PrintSuratJalan/{Id:int}"
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.View
+@using eSoft.Piutang.Model
+@using eSoft.Persediaan.Model
+@using eSoft.Fungsi.Function
+@using eSoft.Penjualan.Services
+@using eSoft.Piutang.Services
+@using Microsoft.AspNetCore.WebUtilities;
+
+@inject ISalesServices service
+@inject IReceivableServices serviceAR
+@inject NavigationManager navigationmanager
+
+
+<div class="dontprint" style="display:none inline">
+    <br />
+    &emsp;
+   
+    @if(string.IsNullOrEmpty(PreviousUri))
+    {
+        @if (@TransAll.Pajak)
+        {
+            <NavLink href="/ModuleJual/TransJual" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
+        }
+        else
+        {
+            <NavLink href="/ModuleJual/TransJualNon" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
+        }
+    }
+    else
+    {
+        <NavLink href="@PreviousUri" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
+    }
+
+   
+   
+       
+   
+    &emsp;
+     <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+    &emsp;<NavLink @onclick="() => OpenPrint(Id)" class="btn btn-primary btn-lg">&nbsp;Nota&nbsp;</NavLink>&emsp;
+</div>
+
+<div id="page-wrap">
+  <br/>
+    <textarea id="header" aria-label="Title">@Title</textarea>
+    <br/>
+     <span style="text-align:left;text-decoration:underline;font: bold 16px "Times New Roman", Sans-Serif">Kepada Yth</span> 
+     <br />
+    <div >
+       
+        <textarea id="address">
+            @*@TransAll.NamaCust           
+            @TransAll.AlamatKirim*@
+            @KepadaYth
+        </textarea>
+
+        @*<div style="clear:both"></div>*@
+
+
+        <table id="meta">
+           @* <tr>
+                <td class="meta-head">Document #</td>
+                <td>@TransAll.NoLpb</td>
+            </tr>*@
+            <tr>
+
+                <td class="meta-head">Date</td>
+                <td>Surabaya, @TransAll.Tanggal.ToShortDateString()</td>
+            </tr>
+            <tr>
+                <td class="meta-head">Telpon</td>
+                <td>@Telpon</td>
+            </tr>
+            
+        </table>
+
+    </div>
+
+    <table id="items">
+
+        <tr>
+            <th >Keterangan</th>
+            <th >Quantity</th>
+         </tr>
+
+        @foreach (var item in TransAll.OeTransDs)
+        {
+            <tr class="item-row">
+
+                <td class="description">@item.NamaItem</td>
+                <td class="source">@($"{@item.Qty.ToString("F0")} {@item.Satuan}")</td>
+            
+
+
+
+            </tr>
+        }
+
+        @if (TransAll.OeTransDs.Count < 6)
+        {
+            for (var x = TransAll.OeTransDs.Count; x < 6; x++)
+            {
+                <tr class="item-row">
+                    <td class="description"><textarea></textarea></td>                  
+                    <td class="source"></td>
+
+
+                </tr>
+            }
+        }
+        <tr>
+
+            <td colspan="2" rowspan="2" class="keterangan"><textarea class="keterangan">@TransAll.Keterangan</textarea></td>
+
+        </tr>
+
+
+    </table>
+    <span class="judul2">Catatan. Barang dikirim dalam keadaan baik &amp; utuh</span>
+
+
+    <table id="tandatangan">
+        <tr>
+            <th>Penerima</th>
+            <th>Expedisi</th>
+            <th>Gudang</th>
+        </tr>
+        <tr class="item-footer">
+            <td class="penerima">&nbsp;</td>
+            <td class="expedisi"></td>
+            <td class="penerima"></td>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="item-footer">
+            <td><textarea aria-label="penerima" style="text-align:center"></textarea></td>
+            <td></td>
+            <td><textarea aria-label="gudang" style="text-align:center"></textarea></td>
+        </tr>
+    </table> 
+
+
+</div>
+
+
+@code {
+    [Parameter] public string Title { get; set; } = "SURAT JALAN";
+    [Parameter] public int Id { get; set; }
+    [Parameter] public int Cetak { get; set; }
+
+
+    private OeTransHView Transh = new OeTransHView() { OeTransDs = new List<OeTransDView>() };
+    private OeTransH TransAll = new OeTransH() { OeTransDs = new List<OeTransD>() };
+    // private ArCust banks;
+    // private List<IcItem> srccode;
+    private OeTransDView Transd = new OeTransDView();
+    private OeTransDView TransK = new OeTransDView();
+    //   private List<TransDView> TransDs = new List<TransDView>();
+    private string enabled { get; set; }
+
+    public string kurs { get; set; } = "";
+    private int noUrut { get; set; } = 1;
+    public string Perusahaan { get; set; }
+    public string Alamat { get; set; }
+    public string KepadaYth { get; set; }
+    public string Telpon { get; set; }
+
+    public string PreviousUri{ get; set; } = string.Empty;
+    public string encodedPreviousUri { get; set; }
+
+    protected override void OnInitialized()
+    {
+        
+
+        var uri = new Uri(navigationmanager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        //   var query = QueryHelpers.ParseQuery(uri.Query);
+        //   var queryString = uri.Query;
+        //    Console.WriteLine(queryString);
+        //     var encodedPreviousUri = query["prevUri"];
+        if(query.Count != 0)
+        {
+            encodedPreviousUri = query.Get(0);
+            PreviousUri = Uri.UnescapeDataString(encodedPreviousUri);
+        }
+       
+
+      
+
+        //if(query.GetValues("prevUri"))
+        //{
+        //    PreviousUri = query["prevUri"];
+        //}
+        //else
+        //{
+        //    PreviousUri = string.Empty;
+        //}
+
+   //     var encodedPreviousUri = query["prevUri"];
+     //   PreviousUri = Uri.UnescapeDataString(encodedPreviousUri);
+
+      //  PreviousUri = navigationmanager.GetUriWithQueryParameter("prevUri",false);
+
+        LoadTrans();
+        KepadaYth = TransAll.NamaCust + '\n' + TransAll.AlamatKirim;
+        Telpon = serviceAR.GetCustomerCode(TransAll.Customer).Telpon;
+    }
+
+
+    void LoadTrans()
+    {
+        TransAll = service.GetOeTrans(Id);
+        if (TransAll.Pajak)
+        {
+            Perusahaan = "CV BMA TEKNIK";
+            Alamat = "Ruko Rungkut Megah Raya E-29, Surabaya";
+
+        } else
+        {
+            Perusahaan = "PT. BMA TEKNIK INDONESIA";
+            Alamat = "Ruko Rungkut Megah Raya E-29, Surabaya";
+
+        }
+        if(TransAll.Kode == "95")
+        {
+            Title = "SURAT RETUR";
+        }
+    }
+
+    private void OpenPrint(int xKdBank)
+    {
+        navigationmanager.NavigateTo($"/ModulePrinting/PrintNotaInvoice/{xKdBank}");
+    }
+}

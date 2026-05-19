@@ -1,0 +1,60 @@
+﻿.file-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 400px; /* Sesuaikan lebar modal */
+    width: 100%;
+    text-align: center;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    margin: 3px;
+}
+
+.btn-yes,
+.btn-cancel {
+    margin: 5px;
+}
+.btn-yes {
+    flex: 1; /* Tombol "Ya" mengambil sebagian besar ruang */
+    background-color: #28a745; /* Warna hijau */
+    color: white;
+    /*margin-right: 5px;*/ /* Jarak antara tombol "Ya" dan "Batal" */
+}
+
+.btn-cancel {
+    flex: 1; /* Tombol "Batal" mengambil sebagian besar ruang */
+    background-color: #007bff; /* Warna biru */
+    color: white;
+   /* margin-left: 5px;*/ /* Jarak antara tombol "Ya" dan "Batal" */
+}
+

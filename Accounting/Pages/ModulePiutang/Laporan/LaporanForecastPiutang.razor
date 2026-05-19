@@ -1,0 +1,379 @@
+@page "/ModulePiutang/LaporanForecastPiutang"
+
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.Services
+
+@inject IReceivableServices serviceAR
+@inject ISalesServices serviceSales
+@inject NavigationManager navigationmanager
+
+<h3>Laporan Forecast Piutang (Prediksi Pembayaran)</h3>
+
+<div class="row">
+    <div class="col-4">
+        <EditForm Model="filter">
+            <div class="form-group">
+                <label>
+                    Mulai Dari :
+                    <InputDate class="form-control" @bind-Value="TanggalMulai" />
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    Jumlah Bulan :
+                    <InputNumber class="form-control" @bind-Value="JumlahBulan" />
+                </label>
+            </div>
+            <button class="btn btn-primary" type="button" @onclick="LoadForecast">Tampilkan</button>
+        </EditForm>
+    </div>
+</div>
+
+<br />
+
+@if (Forecast != null && Forecast.Count > 0)
+{
+    <div class="container">
+        <table class="table table-bordered table-hover">
+            <thead class="table-primary">
+                <tr>
+                    <th>Bulan</th>
+                    <th style="text-align:center">Jumlah Dokumen</th>
+                    <th style="text-align:right">Total Tagihan</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    decimal grandTotal = 0;
+                }
+                @foreach (var item in Forecast)
+                {
+                    grandTotal += item.TotalTagihan;
+                    var rowClass = item.TotalTagihan > 0 ? "" : "table-secondary";
+                    <tr class="@rowClass">
+                        <td><strong>@item.NamaBulan</strong></td>
+                        <td style="text-align:center">@item.JumlahDokumen</td>
+                        <td style="text-align:right"><strong>@item.TotalTagihan.ToString("N")</strong></td>
+                        <td>
+                            @if (item.TotalTagihan > 0)
+                            {
+                                <button class="btn btn-sm btn-info" @onclick="() => ShowDetail(item)">Detail</button>
+                            }
+                        </td>
+                    </tr>
+                }
+                <tr class="table-success">
+                    <td><strong>GRAND TOTAL</strong></td>
+                    <td style="text-align:center">@Forecast.Sum(x => x.JumlahDokumen)</td>
+                    <td style="text-align:right"><strong>@grandTotal.ToString("N")</strong></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+}
+else if (Forecast != null)
+{
+    <div class="alert alert-info">Tidak ada piutang yang jatuh tempo dalam periode ini.</div>
+}
+
+@* SINGLE MODAL - isi berubah berdasarkan DetailView *@
+@if (DetailOpen && SelectedForecast != null)
+{
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display:block">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header alert-success">
+                    <h5 class="modal-title">
+                        @switch (DetailView)
+                        {
+                            case ViewMode.Dokumen:
+                                <span>Detail: @SelectedForecast.NamaBulan</span>
+                                break;
+                            case ViewMode.Item:
+                                <button class="btn btn-sm btn-secondary me-2" @onclick="BackToDokumen">
+                                    <span class="oi oi-arrow-left"></span>
+                                </button>
+                                <span>Item Dokumen: @SelectedDokumen</span>
+                                break;
+                            case ViewMode.Bayar:
+                                <button class="btn btn-sm btn-secondary me-2" @onclick="BackToDokumen">
+                                    <span class="oi oi-arrow-left"></span>
+                                </button>
+                                <span>Pembayaran: @SelectedDokumen</span>
+                                break;
+                        }
+                    </h5>
+                    <button type="button" class="close" @onclick="OnDetailClose">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" style="max-height:70vh; overflow-y:auto;">
+
+                    @switch (DetailView)
+                    {
+                        case ViewMode.Dokumen:
+                            <table class="table table-striped table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Dokumen</th>
+                                        <th>Customer</th>
+                                        <th>Jatuh Tempo</th>
+                                        <th style="text-align:right">Sisa</th>
+                                        <th>Keterangan</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var detail in SelectedForecast.Details
+                                        .Skip((CurrentPage - 1) * PageSize).Take(PageSize))
+                                    {
+                                        <tr>
+                                            <td>
+                                                @detail.Dokumen
+                                                <br />
+                                                <small class="text-muted">@detail.Tanggal.ToShortDateString()</small>
+                                            </td>
+                                            <td>
+                                                @detail.NamaCust
+                                                <br />
+                                                <small class="text-muted">[@detail.Customer]</small>
+                                                @if (!string.IsNullOrEmpty(detail.Salesman))
+                                                {
+                                                    <br />
+                                                    <span class="badge bg-info">@detail.Salesman</span>
+                                                }
+                                            </td>
+                                            <td>@detail.DueDate.ToShortDateString()</td>
+                                            <td style="text-align:right">
+                                                <strong>@detail.Sisa.ToString("N")</strong>
+                                                <br />
+                                                <small class="text-muted">dari @detail.Jumlah.ToString("N")</small>
+                                            </td>
+                                            <td><small>@detail.Keterangan</small></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary" @onclick="() => LoadItemDetail(detail.Dokumen)">
+                                                    <span class="oi oi-list"></span> Item
+                                                </button>
+                                                <button class="btn btn-sm btn-warning" @onclick="() => LoadBayarDetail(detail.Dokumen)">
+                                                    <span class="oi oi-dollar"></span> Bayar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+
+                            @* Pagination *@
+                            @if (TotalPages > 1)
+                            {
+                                <div class="d-flex justify-content-end align-items-center">
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="BtnPrev" disabled="@(CurrentPage <= 1)">Prev</button>
+                                    <span class="mx-2">
+                                        Page
+                                        <input type="number" min="1" max="@TotalPages" @bind-value="CurrentPage"
+                                               style="width:50px; display:inline" class="form-control form-control-sm d-inline" />
+                                        of @TotalPages
+                                    </span>
+                                    <button class="btn btn-outline-success btn-sm" @onclick="BtnNext" disabled="@(CurrentPage >= TotalPages)">Next</button>
+                                </div>
+                            }
+                            break;
+
+                        case ViewMode.Item:
+                            @if (ItemDetails != null && ItemDetails.Count > 0)
+                            {
+                                <table class="table table-striped table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Nama Item</th>
+                                            <th>Satuan</th>
+                                            <th style="text-align:right">Qty</th>
+                                            <th style="text-align:right">Harga</th>
+                                            <th style="text-align:right">Diskon</th>
+                                            <th style="text-align:right">Jumlah</th>
+                                            <th>Lokasi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in ItemDetails)
+                                        {
+                                            <tr>
+                                                <td>@item.ItemCode</td>
+                                                <td>@item.NamaItem</td>
+                                                <td>@item.Satuan</td>
+                                                <td style="text-align:right">@item.Qty.ToString("#,##0.##")</td>
+                                                <td style="text-align:right">@item.Harga.ToString("N")</td>
+                                                <td style="text-align:right">@item.Discount.ToString("N")</td>
+                                                <td style="text-align:right">@item.Jumlah.ToString("N")</td>
+                                                <td>@item.Lokasi</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-info">
+                                            <td colspan="6"><strong>Total</strong></td>
+                                            <td style="text-align:right"><strong>@ItemDetails.Sum(x => x.Jumlah).ToString("N")</strong></td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning">Tidak ada item untuk dokumen ini.</div>
+                            }
+                            break;
+
+                        case ViewMode.Bayar:
+                            @if (BayarDetails != null && BayarDetails.Count > 0)
+                            {
+                                <table class="table table-striped table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>No Bukti</th>
+                                            <th>Tanggal</th>
+                                            <th style="text-align:right">Jumlah</th>
+                                            <th style="text-align:right">Bayar</th>
+                                            <th style="text-align:right">Diskon</th>
+                                            <th style="text-align:right">Sisa</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var bayar in BayarDetails)
+                                        {
+                                            <tr>
+                                                <td>@bayar.Bukti</td>
+                                                <td>@bayar.Tanggal.ToShortDateString()</td>
+                                                <td style="text-align:right">@bayar.Jumlah.ToString("N")</td>
+                                                <td style="text-align:right">@bayar.Bayar.ToString("N")</td>
+                                                <td style="text-align:right">@bayar.Discount.ToString("N")</td>
+                                                <td style="text-align:right">@bayar.Sisa.ToString("N")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-info">
+                                            <td colspan="3"><strong>Total</strong></td>
+                                            <td style="text-align:right"><strong>@BayarDetails.Sum(x => x.Bayar).ToString("N")</strong></td>
+                                            <td style="text-align:right"><strong>@BayarDetails.Sum(x => x.Discount).ToString("N")</strong></td>
+                                            <td style="text-align:right"><strong>@BayarDetails.Sum(x => x.Sisa).ToString("N")</strong></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning">Belum ada pembayaran untuk dokumen ini.</div>
+                            }
+                            break;
+                    }
+
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private enum ViewMode { Dokumen, Item, Bayar }
+
+    private DateTime TanggalMulai { get; set; } = DateTime.Today;
+    private int JumlahBulan { get; set; } = 12;
+
+    private List<ArForecastPiutangView> Forecast = new();
+    private ArForecastPiutangView SelectedForecast;
+    private bool DetailOpen { get; set; }
+    private ViewMode DetailView { get; set; } = ViewMode.Dokumen;
+    private string SelectedDokumen { get; set; }
+    private List<OeTransD> ItemDetails { get; set; }
+    private List<ArTransD> BayarDetails { get; set; }
+
+    // Pagination (state tetap hidup karena modal tidak di-destroy)
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 10;
+    private int TotalPages
+    {
+        get
+        {
+            int totalItems = SelectedForecast?.Details?.Count ?? 0;
+            if (totalItems == 0) return 1;
+            return (int)Math.Ceiling((double)totalItems / PageSize);
+        }
+    }
+
+    private object filter = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadForecast();
+    }
+
+    private void LoadForecast()
+    {
+        Forecast = serviceAR.GetForecastPiutang(TanggalMulai, JumlahBulan);
+        StateHasChanged();
+    }
+
+    private void ShowDetail(ArForecastPiutangView item)
+    {
+        SelectedForecast = item;
+        DetailOpen = true;
+        DetailView = ViewMode.Dokumen;
+        CurrentPage = 1; // Reset hanya saat buka bulan baru
+    }
+
+    private void LoadItemDetail(string dokumen)
+    {
+        SelectedDokumen = dokumen;
+        ItemDetails = serviceSales.GetOeTransDByDokumen(dokumen);
+        DetailView = ViewMode.Item;
+        // CurrentPage TIDAK di-reset → stay di halaman yang sama
+        StateHasChanged();
+    }
+
+    private void LoadBayarDetail(string dokumen)
+    {
+        SelectedDokumen = dokumen;
+        BayarDetails = serviceAR.GetPembayaranByDokumen(dokumen);
+        DetailView = ViewMode.Bayar;
+        // CurrentPage TIDAK di-reset → stay di halaman yang sama
+        StateHasChanged();
+    }
+
+    private void BackToDokumen()
+    {
+        DetailView = ViewMode.Dokumen;
+        ItemDetails = null;
+        BayarDetails = null;
+        // CurrentPage TETAP → kembali ke halaman yang sama!
+        StateHasChanged();
+    }
+
+    private void OnDetailClose()
+    {
+        DetailOpen = false;
+        DetailView = ViewMode.Dokumen;
+        ItemDetails = null;
+        BayarDetails = null;
+        SelectedDokumen = null;
+        CurrentPage = 1;
+        StateHasChanged();
+    }
+
+    private void BtnPrev()
+    {
+        if (CurrentPage > 1) CurrentPage--;
+    }
+
+    private void BtnNext()
+    {
+        if (CurrentPage < TotalPages) CurrentPage++;
+    }
+}

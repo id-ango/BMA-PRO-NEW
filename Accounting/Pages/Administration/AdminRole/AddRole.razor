@@ -1,0 +1,120 @@
+﻿@page "/ModuleAdministration/AddRole"
+@using Accounting.Services
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Identity;
+
+@inject IAdministrationServices ServiceRole
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager navigationmanager
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Role</h3>
+</div>
+
+<div class="content px-4">
+    <EditForm Model="@bank"  OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        @*<div class="form-group">
+            <label>
+                Id Role :
+                <InputText id="codeBank" class="form-control" @bind-Value="bank.Id" style="text-transform:uppercase" @onfocusout="cekKode" />
+            </label>
+        </div>*@
+        <div class="form-group">
+            <label>
+                Name Role :
+                <InputText class="form-control" @bind-Value="bank.Name" @onfocusout="cekKode"  />
+            </label>
+        </div>
+        <br/>
+
+       
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleAdministration/SetupRole", false))">Batal</button>
+        </div>
+
+    </EditForm>
+</div>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Name Role Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+
+@code {
+    IdentityRole bank = new IdentityRole();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        bank.Name = " ";
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.Name.ToUpper();
+        DialogOpen = ServiceRole.CekNameRole(Testing);// RoleExistsAsync(Testing);
+        if (DialogOpen)
+        {
+            bank.Name = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private void HandleValidSubmit()
+    {
+        //  bank.Id = bank.Name;
+        //  bank.NormalizedName = bank.Name.Normalize();
+         var newEdit = ServiceRole.AddRoles(bank);
+        if (newEdit)
+        {
+          
+
+        }
+       
+        
+
+        navigationmanager.NavigateTo("/ModuleAdministration/SetupRole", false);
+
+    }
+
+   
+
+   
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+}

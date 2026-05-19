@@ -1,0 +1,66 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <!--<Nullable>enable</Nullable>-->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>aspnet-Accounting-C0DD8C5E-2FE3-4D23-B9F9-20334E339888</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="wwwroot\PDFKontrak\**" />
+    <Content Remove="wwwroot\PDFKontrak\**" />
+    <EmbeddedResource Remove="wwwroot\PDFKontrak\**" />
+    <None Remove="wwwroot\PDFKontrak\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Pages\ModuleBank\TransBank\EditAddTransBank.razor" />
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="6.0.36" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.36" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="6.0.36" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.36" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.36" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.36">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\eSoft.Asset\eSoft.Asset.csproj" />
+    <ProjectReference Include="..\eSoft.CashBank\eSoft.CashBank.csproj" />
+    <ProjectReference Include="..\eSoft.Company\eSoft.Company.csproj" />
+    <ProjectReference Include="..\eSoft.Financial\eSoft.Financial.csproj" />
+    <ProjectReference Include="..\eSoft.Fungsi\eSoft.Fungsi.csproj" />
+    <ProjectReference Include="..\eSoft.Hutang\eSoft.Hutang.csproj" />
+    <ProjectReference Include="..\eSoft.LaporanStock\eSoft.LaporanStock.csproj" />
+    <ProjectReference Include="..\eSoft.Ledger\eSoft.Ledger.csproj" />
+    <ProjectReference Include="..\eSoft.Order\eSoft.Order.csproj" />
+    <ProjectReference Include="..\eSoft.Pembelian\eSoft.Pembelian.csproj" />
+	  <ProjectReference Include="..\eSoft.Penjualan\eSoft.Penjualan.csproj" />
+    <ProjectReference Include="..\eSoft.Persediaan\eSoft.Persediaan.csproj" />
+    <ProjectReference Include="..\eSoft.Piutang\eSoft.Piutang.csproj" />
+    <ProjectReference Include="..\eSoft.TestRun\eSoft.TestRun.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Pages\ModuleAsset\Asset\SetupAsset.razor" />
+    <None Include="Pages\ModuleJual\OrderJual\AddTransSalesOrder.razor" />
+    <None Include="Pages\ModuleJual\OrderJual\EditTransOrderJual.razor" />
+    <None Include="Pages\ModuleJual\OrderJual\TransOrderJual.razor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Pages\ModuleJual\Laporan\LaporanJualPerCustomer.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
+  </ItemGroup>
+
+</Project>

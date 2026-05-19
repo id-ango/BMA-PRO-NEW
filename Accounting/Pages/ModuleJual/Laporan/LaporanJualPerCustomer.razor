@@ -1,0 +1,309 @@
+﻿@page "/ModuleJual/LaporanJualPerCustomer"
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.View
+@using eSoft.Penjualan.Services
+@using eSoft.Order.Model
+@using eSoft.Order.View
+@using eSoft.Order.Services
+
+@using eSoft.LaporanStock.Services
+@using Accounting.Services
+@using System.IO
+
+@inject ISalesServices service
+@inject IOrderPurchaseServices servicePO
+@inject IReceivableServices serviceAR
+@inject IInventoryServices serviceIC
+@inject ILaporanStockServices serviceLaporan
+@inject IExcelServices serviceXL
+@inject IJSRuntime JS
+
+@inject NavigationManager navigationmanager
+
+
+<div class="container">
+    <h1>
+        Laporan Penjualan/Tahun
+        <input type="number" min="2022" @bind-value="@Tahun" />
+    </h1>
+</div>
+
+
+<div class="container">
+    <label>
+        <input type="checkbox" checked=@asChecked
+               @onchange="EventArgs => { CheckboxAll(EventArgs.Value); }" />
+        Selected All
+    </label>
+
+    <br />
+    <br />
+
+
+
+
+
+    @foreach (var bank in Banks)
+    {
+        var Text = bank.NamaDiv;
+        var Value = bank.Divisi.ToString();
+        bool Checked = false;
+        if (selectedList.Contains(Value))
+        {
+            Checked = true;
+        }
+
+
+        <div class="col">
+            <label>
+                <input type="checkbox" checked="@Checked"
+                       @onchange="EventArgs => { CheckboxClicked(Value, EventArgs.Value); }" />
+
+                @bank.NamaDiv
+            </label>
+
+            <br />
+        </div>
+
+    }
+    @OutputValue
+    <br />
+    @Tahun
+</div>
+
+<br />
+<br />
+<div class="col-4">
+    <br />
+    <button class="btn btn-success" @onclick="@(() => DownloadFileFromStream())">Download Customer/Division</button>
+    @* <button class="btn btn-primary" @onclick="@(() => proses2())">Display Penjualan Belum Laku</button>
+    <button class="btn btn-primary" @onclick="@(() => proses3())">Display Penjualan/Tahun</button>
+    <button class="btn btn-primary" @onclick="@(() => proses4())">Display Per Divisi</button> *@
+    <br />
+
+</div>
+
+<div class="container">
+
+    @if (SearchOpen)
+    {
+        <DataGridJualPertahunComponent Items="RekKoran" Tahun="Tahun"></DataGridJualPertahunComponent>
+    }
+
+    @if (DivisiOpen)
+    {
+        <DataGridJualDivisiPertahunComponent Items="RekKoran" Tahun="Tahun"></DataGridJualDivisiPertahunComponent>
+    }
+
+    @if (DetailOpen)
+    {
+        <DataGridJualBeliPertahunComponent Items="RekKoran"></DataGridJualBeliPertahunComponent>
+    }
+
+
+</div>
+
+
+
+
+@code {
+
+    private List<IcDiv> Banks;
+    private List<IcDiv> BankView = new List<IcDiv>();
+    private List<OePerTahun> RekKoran = new List<OePerTahun>();
+    //   private List<CbTransD> TransDetail = new List<CbTransD>();
+
+
+    private List<string> selectedList = new List<string>();
+    private string OutputValue { get; set; }
+
+    private DateTime TglStart = DateTime.Today;
+    private DateTime TglEnd = DateTime.Today;
+    private int Tahun = DateTime.Today.Year;
+
+    public bool DeleteDialogOpen { get; set; }
+    public bool NullDialogOpen { get; set; }
+    public bool SearchOpen { get; set; }
+    public bool DivisiOpen { get; set; }
+    public bool DetailOpen { get; set; }
+    Dictionary<string, DateTime> TglStarts = new Dictionary<string, DateTime>();
+    Dictionary<string, DateTime> TglEnds = new Dictionary<string, DateTime>();
+
+    public bool asChecked { get; set; }
+
+    public decimal totalJumlah { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadGet();
+
+    }
+
+    private void LoadGet()
+    {
+        Banks = serviceIC.GetIcDiv();
+
+    }
+
+
+    
+
+    private void proses1()
+    {
+        serviceLaporan.CustomerPerDivision( selectedList);
+        //  RekKoran = serviceLaporan.DivisiPertahun(Tahun, selectedList);
+        SearchOpen = true;
+        DetailOpen = false;
+        DivisiOpen = false;
+    }
+
+    private Stream GetFileStream()
+    {
+        var randomBinaryData = serviceLaporan.CustomerPerDivision(selectedList);
+
+       
+
+        //   var randomBinaryData = new byte[50 * 1024];
+        var fileStream = new MemoryStream(randomBinaryData);
+
+        return fileStream;
+    }
+
+    private async Task DownloadFileFromStream()
+    {
+        var fileStream = GetFileStream();
+        var fileName = $"CustomerperDivision{DateTime.Now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}.xlsx";
+
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+
+    // private void proses2()
+    // {
+    //     RekKoran = serviceLaporan.ItemTidakLakuPertahun(Tahun, selectedList);
+    //     SearchOpen = true;
+    //     DetailOpen = false;
+    //     DivisiOpen = false;
+    // }
+
+    // private void proses3()
+    // {
+    //     RekKoran = serviceLaporan.PenjualanperTahun(Tahun);
+    //     SearchOpen = false;
+    //     DetailOpen = true;
+    //     DivisiOpen = false;
+    // }
+
+    // private void proses4()
+    // {
+    //     // RekKoran = serviceLaporan.ItemPertahun(Tahun,selectedList);
+    //     RekKoran = serviceLaporan.DivisiPertahun(Tahun, selectedList);
+    //     SearchOpen = false;
+    //     DetailOpen = false;
+    //     DivisiOpen = true;
+    // }
+
+    public void Dispose()
+    {
+
+    }
+
+    private void OnDetailClose(bool accepted)
+    {
+
+        DetailOpen = false;
+        StateHasChanged();
+
+    }
+
+
+    private void CheckboxAll(object aChecked)
+    {
+        if ((bool)aChecked)
+        {
+            //foreach (var bank in Banks)
+            //{
+            //    selectedList.Remove(bank.KodeBank);
+            //    TglStarts.Remove(bank.KodeBank);
+            //    TglEnds.Remove(bank.KodeBank);
+            //};
+
+            selectedList.Clear();
+            TglStarts.Clear();
+            TglEnds.Clear();
+
+
+            foreach (var bank in Banks)
+            {
+                selectedList.Add(bank.Divisi);
+                TglStarts.Add(bank.Divisi, DateTime.Today);
+                TglEnds.Add(bank.Divisi, DateTime.Today);
+            }
+        }
+        else
+        {
+            foreach (var bank in Banks)
+            {
+                selectedList.Remove(bank.Divisi);
+                TglStarts.Remove(bank.Divisi);
+                TglEnds.Remove(bank.Divisi);
+            }
+        }
+        OutputValue = string.Join(",", selectedList.ToArray());
+
+        BankView = (from e in Banks where selectedList.Contains(e.Divisi) select e).ToList();
+
+        //    totalJumlah = BankView.Sum(x => x.Saldo);
+
+        StateHasChanged();
+    }
+
+    private void CheckboxClicked(string aSelectedId, object aChecked)
+    {
+        if ((bool)aChecked)
+        {
+            if (!selectedList.Contains(aSelectedId))
+            {
+                selectedList.Add(aSelectedId);
+                TglStarts.Add(aSelectedId, DateTime.Today);
+                TglEnds.Add(aSelectedId, DateTime.Today);
+            }
+        }
+        else
+        {
+            if (selectedList.Contains(aSelectedId))
+            {
+                selectedList.Remove(aSelectedId);
+                TglStarts.Remove(aSelectedId);
+                TglEnds.Remove(aSelectedId);
+
+
+            }
+        }
+
+        OutputValue = string.Join(",", selectedList.ToArray());
+
+        BankView = (from e in Banks where selectedList.Contains(e.Divisi) select e).ToList();
+
+        //    totalJumlah = BankView.Sum(x => x.Saldo);
+
+        StateHasChanged();
+
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+}

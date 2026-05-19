@@ -1,0 +1,96 @@
+/* Wrapper: scroll ada DI SINI, bukan di page */
+.so-page-shell {
+    height: calc(100vh - 5.5rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.so-matrix-host {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+}
+
+.so-matrix-wrapper {
+    overflow-x: auto;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    background: #fff;
+}
+
+/* WAJIB: batalkan border-collapse Bootstrap agar sticky bisa kerja */
+.so-matrix-table {
+    border-collapse: separate !important;
+    border-spacing: 0;
+    width: max-content;
+    min-width: 100%;
+}
+
+/* Ganti border Bootstrap yang hilang karena separate */
+.so-matrix-table th,
+.so-matrix-table td {
+    padding: 0.5rem;
+    border-right: 1px solid #dee2e6 !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    background-clip: padding-box;
+}
+
+.so-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #212529 !important;
+    color: #fff;
+}
+
+.so-sticky-col-1,
+.so-sticky-col-2,
+.so-sticky-col-3,
+.so-sticky-col-4,
+.so-sticky-col-5,
+.so-sticky-col-6 {
+    position: sticky;
+    z-index: 10;
+}
+
+.so-sticky-col-1 { left: 0; }
+.so-sticky-col-2 { left: 120px; }
+.so-sticky-col-3 { left: 260px; }
+.so-sticky-col-4 { left: 350px; }
+.so-sticky-col-5 { left: 430px; }
+.so-sticky-col-6 { left: 580px; }
+
+thead .so-sticky-col-1,
+thead .so-sticky-col-2,
+thead .so-sticky-col-3,
+thead .so-sticky-col-4,
+thead .so-sticky-col-5,
+thead .so-sticky-col-6 {
+    z-index: 30;
+}
+
+.so-sticky-footer {
+    position: sticky;
+    left: 0;
+    z-index: 11;
+}
+
+.so-summary-host {
+    max-height: 28vh;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+/* tfoot */
+.so-matrix-table tfoot td {
+    background: #e9ecef;
+}

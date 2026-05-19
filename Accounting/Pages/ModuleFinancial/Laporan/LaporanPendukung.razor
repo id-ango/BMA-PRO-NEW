@@ -1,0 +1,174 @@
+﻿@page "/ModuleFinancial/LaporanPendukung"
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.View
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+
+
+@using System.ComponentModel.DataAnnotations
+
+@using eSoft.Ledger.Services
+
+@inject IFinancialServices serviceFC
+@inject ILedgerServices serviceGL
+
+@inject NavigationManager navigationmanager
+
+
+
+<div class="container">
+    <h1>
+        Laporan Pendukung Tahun
+        <input type="number" min="2021" @bind-value="@Tahun" />
+    </h1>
+
+    <h3>
+        Perusahaan
+        <select @bind="@company" >
+            @foreach (var item in Perusahaan)
+            {
+                <option value="@item.FcComKode">@item.FcNamaPerusahaan</option>
+            }
+
+        </select>
+    </h3>
+  
+    <h3>
+        Bulan &nbsp;
+        <select @bind="@BulanAwal">
+            @foreach (var item in dictBulan)
+            {
+                <option value="@item.Key" selected="@(item.Key == DateTime.Today.Month ? true : false)">@item.Value</option>
+            }
+
+        </select> 
+        &nbsp;
+        Sampai dengan bulan &nbsp;
+        <select @bind="@Bulan" >
+            @foreach (var item in dictBulan)
+            {
+                <option value="@item.Key" selected="@(item.Key == DateTime.Today.Month ? true : false)">@item.Value</option>
+            }
+
+        </select>
+    </h3>
+    <h3>
+        Kode
+        <select @bind="@glAkun">
+            @foreach (var item in listGLAkun)
+            {
+                <option value="@item.GlAcct">@item.GlNama</option>
+            }
+
+        </select>
+    </h3>
+    <br />
+
+    Bulan:  @Bulan BulanAwal : @BulanAwal
+    Cetak:  @glAkun
+    Tahun:  @Tahun
+    Company": @company
+
+    <p><button class="btn btn-success btn-small" @onclick="prosesFinancial">Buku Besar</button></p>
+    <br />
+</div>
+
+
+<div class="container">
+    <DataGridVerticalComponent Items="transFinancial" Context="transaksi" GetFilterableText="@(item =>$"{item.Keterangan}")">
+        <TableHeader>
+            <th scope="col" style="width:5%">Akun</th>
+            <th scope="col" style="width:5%">Tanggal</th>
+            <th scope="col" style="width:5%">Dokumen</th>
+            <th scope="col" style="width:25%">Keterangan</th>
+            <th scope="col" style="width:20%">Debet</th>
+            <th scope="col" style="width:20%">Kredit</th>
+            <th scope="col" style="width:20%">Balance</th>
+           
+
+
+        </TableHeader>
+        <RowTemplate>
+            <td style="width:5%;">
+                @transaksi.GlAcct
+
+            </td>
+            <td style="width:5%;">
+                @(string.IsNullOrEmpty(transaksi.Tanggal.ToShortDateString()) ? " " : transaksi.Tanggal.ToShortDateString())
+
+            </td>
+            <td style="width:5%;">
+                @transaksi.DocNo
+
+            </td>
+            <td style="width:25%; ">
+                @transaksi.Keterangan
+
+
+            </td>
+            <td style="width:20%; ">@transaksi.Debit.ToString("#,###.##;;' '")</td>
+            <td style="width:20%; ">@transaksi.Credit.ToString("#,###.##;;' '")</td>
+            <td style="width:20%; ">@transaksi.Balance.ToString("#,###.##;;' '")</td>
+
+            
+
+
+
+        </RowTemplate>
+    </DataGridVerticalComponent>
+
+
+</div>
+@code {
+    private int Tahun = 2022;
+    private Dictionary<int, string> dictBulan = new();
+
+    private int BulanAwal = DateTime.Now.Month;
+    private int Bulan = DateTime.Now.Month;
+
+    private List<FcPrintTP> cetakTP = new();
+    private string glAkun = "";
+    private List<FcLedgerView> transFinancial = new();
+    private List<FcCom> Perusahaan = new();
+    private string company = "";
+    private List<GlAccount> listGLAkun = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBulan();
+        LoadCetak();
+    }
+
+    private void LoadBulan()
+    {
+        dictBulan.Add(1, "Januari");
+        dictBulan.Add(2, "Pebruari");
+        dictBulan.Add(3, "Maret");
+        dictBulan.Add(4, "April");
+        dictBulan.Add(5, "Mei");
+        dictBulan.Add(6, "Juni");
+        dictBulan.Add(7, "Juli");
+        dictBulan.Add(8, "Agustus");
+        dictBulan.Add(9, "September");
+        dictBulan.Add(10, "Oktober");
+        dictBulan.Add(11, "Nopember");
+        dictBulan.Add(12, "Desember");
+
+    }
+
+    private void LoadCetak()
+    {
+        cetakTP = serviceFC.GetPrintTP();
+        Perusahaan = serviceFC.GetFcCom();
+        listGLAkun = serviceGL.GetGlAccount();
+
+    }
+
+    private void prosesFinancial()
+    {
+        transFinancial = serviceFC.printBukuBesar(glAkun, company,BulanAwal, Bulan, Tahun);
+        StateHasChanged();
+    }
+}

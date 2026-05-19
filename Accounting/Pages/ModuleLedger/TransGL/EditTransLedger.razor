@@ -1,0 +1,276 @@
+﻿@page "/ModuleLedger/EditTransLedger/{Id:int}"
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.Services
+@using eSoft.Ledger.View
+
+
+
+@inject ILedgerServices service
+@inject NavigationManager navigationmanager
+
+
+
+
+<div class="container">
+    <EditForm Model="@Transh" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Kode :
+                <InputText class="form-control" @bind-Value="Transh.DocNo" style="text-transform:uppercase" disabled="disabled" />
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+               Kode GL : <br/>
+                <InputSelect class="form-control" @bind-Value="Transh.KodeGl" style="width:60%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select Kode GL---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.KodeGl">[@item.KodeGl]&nbsp; @item.NamaGl</option>
+                    }
+
+                </InputSelect>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="Transh.Tanggal" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Keterangan :
+                <InputTextArea class="form-control" @bind-Value="Transh.GlMemo" style="width:150%" />
+            </label>
+        </div>
+
+        <br/>
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleLedger/TransLedger", false))">Batal</button>
+        </div>
+        <br />
+        <br />
+
+    </EditForm>
+</div>
+<div class="container">
+    <div class="row">
+        <div class=" col-sm  form-message">
+            <span>Saldo   : @Transh.Saldo.ToString("N")</span>
+        </div>
+        @*<div class="col-sm form-message">
+            <span> Balance : @Transh.KSaldo.ToString("N")</span>
+        </div>*@
+    </div>
+
+
+</div>
+<div class="container">
+    <DetailGridComponent Items="Transh.GlTransDs" Context="transaksi">
+         <TableHeader>
+            <th scope="col">Akun</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Jumlah</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi.GlAcct</td>
+            <td>@transaksi.Keterangan</td>
+            <td>@transaksi.Jumlah.ToString("N")</td>
+
+            <td>
+                <button @onclick="(() => Rubah(transaksi))" class="btn btn-success">Edit</button>
+                <button @onclick="(() => Hapus(transaksi))" class="btn btn-danger">Delete</button>
+            </td>
+        </RowTemplate>
+    </DetailGridComponent>
+    <button Class="btn btn-info" @onclick="@OnAddLine">Add Line</button>
+</div>
+
+@if (IsVisible)
+{
+   <ModalTransGLComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd"></ModalTransGLComponent>
+
+}
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Saldo Tidak Balance" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private GlTransHView Transh = new GlTransHView() { GlTransDs = new List<GlTransDView>() };
+    private GlTransH TransAll = new GlTransH() { GlTransDs = new List<GlTransD>() };
+
+      private List<GlCode> banks;
+    private List<GlAccount> srccode;
+    private GlTransDView Transd = new GlTransDView();
+    private GlTransDView TransK = new GlTransDView();
+
+    public string kurs { get; set; } = "";
+
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public bool IsKurs { get; set; }
+    public bool IsEdit { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // Transh.Tanggal = DateTime.Now;
+        LoadBank();
+        LoadSrcCode();
+        LoadTrans();
+    }
+
+    #region ondialogbutton
+
+    private void OnVisibleClose()
+    {
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+ 
+    #endregion
+
+
+    private void HandleValidSubmit()
+    {
+        Transh.Kurs = kurs;
+        var newEdit = service.EditTransH(Transh);
+        if (newEdit != null)
+        {
+            var id = newEdit.GlTransHId.ToString().Trim();
+              navigationmanager.NavigateTo("/ModuleLedger/TransLedger", false);
+          //  navigationmanager.NavigateTo($"/PrintBuktiBayar/{id}");
+        }
+
+    }
+
+    private void OnDetailTrans(GlTransDView transD)
+    {
+        if (!IsEdit)
+        {
+            Transh.GlTransDs.Add(transD);
+        }
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+    }
+
+    private void OnAddLine()
+    {
+        if (!string.IsNullOrEmpty(kurs))
+        {
+            this.IsVisible = false;
+            this.IsKurs = true;
+        }
+        else
+        {
+            this.IsVisible = true;
+            this.IsKurs = false;
+        }
+
+        StateHasChanged();
+
+
+    }
+
+    #region loadall
+
+    void LoadBank()
+    {
+
+        banks = service.GetGlCode();
+
+    }
+
+    void LoadSrcCode()
+    {
+
+        srccode = service.GetGlAccount();
+
+    }
+
+    void LoadTrans()
+    {
+        TransAll = service.GetTrans(Id);
+        Transh.GlTransHId = Id;
+        Transh.DocNo = TransAll.DocNo;
+        Transh.Tanggal = TransAll.Tanggal;
+      //  Transh.Kurs = TransAll.Kurs;
+        Transh.KodeGl = TransAll.KodeGl;
+        kurs = TransAll.Kurs;
+        Transh.GlMemo = TransAll.GlMemo;
+        foreach (var item in TransAll.GlTransDs)
+        {
+            Transh.GlTransDs.Add(new GlTransDView
+            {
+                Debet = item.Debet,
+              
+                Keterangan = item.Keterangan,
+               
+                GlAcct = item.GlAcct,
+                Kredit = item.Kredit,
+             
+            });
+        }
+    }
+    #endregion
+
+    #region button detail
+    private void Rubah(GlTransDView transd)
+    {
+        Transd = new GlTransDView();
+        Transd = transd;
+        IsEdit = true;
+        OnAddLine();
+
+
+    }
+
+    private void Hapus(GlTransDView transd)
+    {
+
+        Transh.GlTransDs.Remove(transd);
+        //ShowOnClick();
+    }
+    #endregion
+
+
+
+
+
+}

@@ -1,0 +1,136 @@
+﻿@page "/ModulePersediaan/RubahItemDivisi"
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+@using Accounting.Components.CashBank
+
+@inject IInventoryServices Services
+@implements IDisposable
+@inject NavigationManager navigationmanager
+
+<div class="container">
+    <h1>Rubah Item Divisi</h1>
+</div>
+
+
+
+
+
+<div class="container">
+    <DataGridComponent Items="Banks" Context="cbBank" GetFilterableText="@(item =>$"{item.NamaItem} {item.ItemCode} {item.Satuan}" )">
+        <TableHeader>
+            <th scope="col">Item</th>
+            <th scope="col">Name</th>
+            <th scope="col">Satuan</th>
+            <th scope="col">Qty</th>
+            <th scope="col">USD</th>
+            <th scope="col">Hrg Net</th>
+            <th scope="col">Divisi</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.ItemCode</td>
+            <td>@cbBank.NamaItem</td>
+            <td>@cbBank.Satuan</td>
+            <td>@cbBank.Qty.ToString("N")</td>
+            <td>@cbBank.HrgUsd.ToString("N")</td>
+            <td>@cbBank.HrgNetto.ToString("N")</td>
+            <td>
+
+                
+                <select @bind="@cbBank.Divisi">
+                    <option value="">---Select Divisi---</option>
+                    @foreach (var item in DivisiSet)
+                    {
+                        <option value="@item.Divisi" selected="@Equals(cbBank?.Divisi, item.Divisi)">@item.NamaDiv</option>
+                    }
+                </select>
+
+
+            </td>
+            <td>
+               
+                <button @onclick="() => OpenDeleteDialog(cbBank)" class="btn btn-success">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+                        <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z" />
+                    </svg>
+                </button>
+
+            </td>
+        </RowTemplate>
+    </DataGridComponent>
+
+
+</div>
+
+@if (DeleteDialogOpen)
+{
+    <ModalDialogComponent Title="Are you sure?" Text="Do you want to edit this divisi?" OnClose="OnDeleteDialogClose"></ModalDialogComponent>
+}
+
+
+
+@code {
+
+    private List<IcItem> Banks;
+    private IcItem _bankToDelete;
+
+    private List<IcDiv> DivisiSet;
+
+   
+    public bool DeleteDialogOpen { get; set; }
+ 
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadDivisi();
+        LoadGet();
+
+    }
+
+    private void LoadGet()
+    {
+        Banks = Services.GetIcItem(false);
+    }
+
+    private void OnDeleteDialogClose(bool accepted)
+    {
+        if (accepted)
+        {
+            Services.RubahDivisiItem(_bankToDelete.IcItemId, _bankToDelete.Divisi);
+          
+            _bankToDelete = null;
+        }
+
+        DeleteDialogOpen = false;
+        LoadGet();
+        StateHasChanged();
+
+    }
+
+    
+
+   
+    private void OpenDeleteDialog(IcItem bank)
+    {
+        
+            DeleteDialogOpen = true;
+       
+
+        _bankToDelete = bank;
+    //    StateHasChanged();
+    }
+
+    
+
+
+    void LoadDivisi()
+    {
+        DivisiSet = Services.GetIcDiv();
+    }
+
+    public void Dispose()
+    {
+
+    }
+}

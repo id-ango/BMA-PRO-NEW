@@ -1,0 +1,222 @@
+﻿@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.View
+@using eSoft.Ledger.Services
+
+<div class="modal fade show" role="dialog" style="display:block">
+    <div class="modal-dialog" role="treegrid">
+        <div class="modal-content">
+
+            <div class="modal-header alert-success)">
+
+                <h5 class="modal-title">Add Detail Cetak</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="@ModalOk">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@Detail">
+                    <div class="form-group">
+                        <label>
+                            No Baris:
+                            <InputText id="codeBank" class="form-control" @bind-Value="Detail.NoBaris" style="text-transform:uppercase" @onfocusout="cekKode" disabled="@isEdit" />
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            Keterangan
+                            <InputTextArea class="form-control" @bind-Value="@Detail.Keterangan"></InputTextArea>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <InputSelect class="form-control" @bind-Value="selectedList" style="width:80%; height:250px;">
+                            <option value="">&nbsp;&nbsp;---Select Source Bank---&nbsp;&nbsp;</option>
+                            @foreach (var item in SrcCode)
+                            {
+                                <option value="@item.GlAcct">@item.GlNama</option>
+                            }
+
+                        </InputSelect>
+                        <br />
+                        <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                        <button @onclick="() => BtnClear()" class="btn btn-success">Clear</button>
+
+                    </div>
+
+                    <br/>
+                    <br/>
+
+                    <div class="form-group">
+                        <label>
+                            Rumus :
+                            <InputTextArea class="form-control" @bind-Value="@Detail.RumusBaris"></InputTextArea>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display:inline">
+                            Detail :
+                            <InputCheckbox @bind-Value="Detail.CetakDetil" />                         
+                        </label>
+                        <label style="display:inline">
+                            Tebal :
+                            <InputCheckbox @bind-Value="Detail.CetakTebal" />
+                        </label>
+                        <label style="display:inline">
+                            Garis 1 :
+                            <InputCheckbox @bind-Value="Detail.CetakGaris1" />
+                        </label>
+                    </div>
+                
+                    <div class="form-group">
+                        <label style="display:inline">
+                            Garis 2 :
+                            <InputCheckbox @bind-Value="Detail.CetakGaris2" />
+                        </label>
+                        <label style="display:inline">
+                            Negatif :
+                            <InputCheckbox @bind-Value="Detail.CetakNegatif" />
+                        </label>
+                        <label style="display:inline">
+                            Hide :
+                            <InputCheckbox @bind-Value="Detail.CetakHide" />
+                        </label>
+                    </div>
+                   
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+
+                @*<button type="button" class="btn btn-primary" @onclick="@ModalOk">OK</button>*@
+                <button type="submit" class="btn btn-primary" @onclick="@SaveDetail">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="SrcCode" Context="cbBank" GetFilterableText="@(item =>$"{item.GlAcct} {item.GlNama} ")">
+        <TableHeader>
+            <th scope="col">Akun</th>
+            <th scope="col">Nama Akun</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.GlAcct</td>
+            <td>@cbBank.GlNama</td>
+
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.GlAcct)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+@code {
+
+    [Parameter]
+    public string Currency { get; set; }
+
+    [Parameter]
+    public List<GlAccount> SrcCode { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<FcPrintGl> OnDetail { get; set; }
+
+    [Parameter]
+    public FcPrintGl DetailRubah { get; set; }
+
+    [Parameter]
+    public bool isEdit { get; set; }
+
+
+    public FcPrintGl Detail = new();
+
+    public bool SearchOpen { get; set; }
+    private string[] selectedList = new string[] { };
+    public List<string> list = new List<string>();
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+
+            list.Add(textSearch);
+            selectedList = list.ToArray();
+
+            //  string.Join(textSearch,selectedList);
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void BtnClear()
+    {
+        list.Clear();
+        selectedList = list.ToArray();
+
+        StateHasChanged();
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (isEdit)
+        {
+            Detail = DetailRubah;
+            selectedList = DetailRubah.NoRek1.Split("-").ToArray();
+        }
+
+    }
+
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+
+    private Task SaveDetail()
+    {
+        Detail.NoRek1 = string.Join("-", selectedList);
+        Detail.FcComKode = "";
+        Detail.KodeCetak = "";
+        Detail.NoRek2 = "";
+
+
+
+        return OnDetail.InvokeAsync(Detail);
+
+    }
+
+
+
+
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+    private void cekKode()
+    {
+        //Testing = bank.SrcCode;
+        //DialogOpen = service.CekSrcCode(Testing);
+        //if (DialogOpen)
+        //{
+        //    bank.SrcCode = "";
+        //}
+        StateHasChanged();
+    }
+}

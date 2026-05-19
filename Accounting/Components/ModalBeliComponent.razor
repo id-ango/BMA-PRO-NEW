@@ -1,0 +1,255 @@
+﻿@using eSoft.Pembelian.Model
+@using eSoft.Pembelian.View
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+
+<div class="modal" role="dialog" style="display:block">
+    <div class="modal-dialog modal-lg" role="treegrid">
+        <div class="modal-content">
+
+            <div class="modal-header alert-success)">
+
+
+                <h5 class="modal-title">Detail Transaksi</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="@ModalOk">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@Detail">
+                    <table>
+                        <tr>
+                            <td >
+                                <div class="form-group">
+                                    <label>
+                                        Item
+                                        <InputSelect class="form-control" @bind-Value="Detail.ItemCode" style="width:75%; display:inline" @oninput="OnChangeItem">
+                                            <option value="">&nbsp;&nbsp;---Select Item Code---&nbsp;&nbsp;</option>
+                                            @foreach (var item in SrcCode)
+                                            {
+                                                <option value="@item.ItemCode">@item.NamaItem</option>
+                                            }
+                                        
+                                        </InputSelect>
+                                        <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                                    </label>
+                                </div>
+                            </td>
+                            </tr>
+                        <tr>
+                            <td colspan="2">
+                                <div class="form-group">
+                                    <label>
+                                        Nama Item
+                                        <InputText class="form-control" @bind-Value="@Detail.NamaItem"></InputText>
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="form-group">
+                                    <label>
+                                        Qty
+                                        <InputNumber class="form-control" @bind-Value="@Detail.Qty" @onfocusout="UbahJumlah"></InputNumber>
+                                    </label>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <label>
+                                        Harga
+                                        <InputNumber class="form-control" @bind-Value="@Detail.Harga" @onfocusout="UbahJumlah"></InputNumber>
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="form-group">
+                                    <label>
+                                        Persen Diskon
+                                        <InputNumber class="form-control" @bind-Value="@Detail.Persen" @onchange="rubahDiskon"></InputNumber>
+                                    </label>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <label>
+                                        Diskon
+                                        <InputNumber class="form-control" @bind-Value="@Detail.Discount" @onfocusout="UbahJumlah"></InputNumber>
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="form-group">
+                                    <label>
+                                        Jumlah :
+                                        <InputNumber class="form-control" @bind-Value="@Detail.Jumlah"  />
+                                    </label>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <label>
+                                        Lokasi
+                                        <InputSelect class="form-control" @bind-Value="Detail.Lokasi" style="width:80%; display:inline">
+                                            <option value="">&nbsp;&nbsp;---Select Lokasi---&nbsp;&nbsp;</option>
+                                            @foreach (var item in Location)
+                                            {
+                                                <option value="@item.Lokasi">@item.NamaLokasi</option>
+                                            }
+
+                                        </InputSelect>
+
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    
+ 
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+
+                @*<button type="button" class="btn btn-primary" @onclick="@ModalOk">OK</button>*@
+                <button type="submit" class="btn btn-primary" @onclick="@SaveDetail">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="SrcCode" Context="cbBank" GetFilterableText="@(item =>$"{item.ItemCode} {item.NamaItem} ")">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Name</th>
+            <th scope="col">Satuan</th>
+            <th scope="col">Qty</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.ItemCode</td>
+            <td>@cbBank.NamaItem</td>
+            <td>@cbBank.Satuan</td>
+            <td>@cbBank.Qty</td>
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.ItemCode)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+@code{
+
+    [Parameter]
+    public string Currency { get; set; }
+
+    [Parameter]
+    public List<IcItem> SrcCode { get; set; }
+
+    [Parameter]
+    public List<IcLokasi> Location { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<IrTransDView> OnDetail { get; set; }
+
+    [Parameter]
+    public IrTransDView DetailRubah { get; set; }
+
+    [Parameter]
+    public bool isEdit { get; set; }
+
+    public IrTransDView Detail = new IrTransDView();
+
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (isEdit)
+        {
+            Detail = DetailRubah;
+        }
+    }
+
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+
+    private Task SaveDetail()
+    {
+        return OnDetail.InvokeAsync(Detail);
+
+    }
+
+    private void UbahJumlah()
+    {
+       
+        Detail.Jumlah = (Detail.Qty * Detail.Harga)-Detail.Discount;
+
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            Detail.ItemCode = textSearch;
+            var itemcode = (from e in SrcCode where e.ItemCode == Detail.ItemCode select e).FirstOrDefault();
+            Detail.NamaItem = itemcode.NamaItem;
+            Detail.Satuan = itemcode.Satuan;
+            Detail.Harga = itemcode.Harga;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+
+    public void OnChangeItem(ChangeEventArgs args)
+    {
+
+        var itemcode = (from e in SrcCode where e.ItemCode == args.Value.ToString() select e).FirstOrDefault();
+        Detail.NamaItem = itemcode.NamaItem;
+        Detail.Satuan = itemcode.Satuan;
+        Detail.Harga = itemcode.Harga;
+        //if (Detail.Lokasi == null)
+        //{
+        //    Transd.Lokasi = Transh.Lokasi;
+        //}
+        //this.ItemId = itemData.IcItemId;
+        //Transd.NamaItem = serviceInv.GetIcItemId(this.ItemId).NamaItem;
+
+    }
+
+    private void rubahDiskon()
+    {
+
+        var price = Detail.Qty * Detail.Harga;
+        var Discount = price * Detail.Persen / 100;
+        Detail.Discount = Discount;
+    }
+
+   
+
+}

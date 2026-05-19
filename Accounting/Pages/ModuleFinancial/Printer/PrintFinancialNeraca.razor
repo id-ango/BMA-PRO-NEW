@@ -1,0 +1,163 @@
+﻿@layout PrintLayout
+
+@page "/ModulePrinting/PrintFinancialNeraca/{query}"
+
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.View
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+@using eSoft.Ledger.Services
+
+
+
+@inject IFinancialServices serviceFC
+@inject ILedgerServices serviceGL
+
+
+@inject NavigationManager navigationmanager
+
+<div class="dontprint" style="display:none inline">
+    <br />
+    &emsp;
+
+    <NavLink href="/ModuleFinancial/LaporanFinancial" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
+
+    &emsp;
+    <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+    &emsp;
+</div>
+
+@*<table width="100%" border="0" cellspacing="0" cellpadding="0">
+
+    <thead>
+
+        <tr>
+            <td colspan="3">&nbsp;</td>
+        </tr>
+
+
+        <tr>
+            <td colspan="3" style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:15px;" align="center">
+                @Title
+            </td>
+        </tr>
+
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+
+            </td>
+        </tr>
+
+    </tbody>
+</table>*@
+<br/>
+
+<h1 style="text-align:center">@Title</h1>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="4">
+
+    <thead>
+        <tr>
+            <td colspan="3" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px;" align="right">
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px;" align="right">
+            </td>
+        </tr>
+        <tr>
+
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-left:1px solid #333; border-right:1px solid #333;" width="40%" height="32" align="center">Keterangan</td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="20%" align="center">Jumlah</td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="20%" align="center">Saldo</td>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var transaksi in transFinancial)
+        {
+
+            <tr>
+                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  border-left:1px solid #333;  background-color:@(transaksi.CetakDetil == true ? "yellow" : (transaksi.CetakTebal == true ? "#B5D3E7" : (transaksi.CetakGaris2 == true ? "#DCDCDC" : ""))) " align="left">
+                    @(transaksi.Spasi != 0 ? $"---  {transaksi.Keterangan}" : transaksi.Keterangan)
+                </td>
+                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  background-color:@(transaksi.CetakDetil == true ? "yellow" : (transaksi.CetakTebal == true ? "#B5D3E7" : (transaksi.CetakGaris2 == true ? "#DCDCDC" : "")))  " align="right">
+                    @(transaksi.CetakNegatif ? (-1 * transaksi.JumTran1).ToString("#,###.##;;' '") : transaksi.JumTran1.ToString("#,###.##;;' '"))
+                </td>
+                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;   border-right:1px solid #333;  background-color:@(transaksi.CetakDetil == true ? "yellow" : (transaksi.CetakTebal == true ? "#B5D3E7" : (transaksi.CetakGaris2 == true ? "#DCDCDC" : ""))) " align="right">
+                    @(transaksi.CetakNegatif ? (-1 * transaksi.JumRekap1).ToString("#,###.##;;' '") : transaksi.JumRekap1.ToString("#,###.##;;' '"))
+                </td>
+            </tr>
+        }
+
+
+
+        <tr>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  border-left:1px solid #333; " align="center">&emsp;</td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;   border-right:1px solid #333;" align="center"></td>
+        </tr>
+
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="3" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px;" align="right">
+            </td>
+        </tr>
+    </tfoot>
+
+</table>
+
+
+
+
+
+@code {
+
+    [Parameter] public string query { get; set; }
+
+    private int Tahun = 2022;
+    private Dictionary<int, string> dictBulan = new();
+    private int Bulan = DateTime.Now.Month;
+    private List<FcPrintTP> cetakTP = new();
+    private string kodeCetak = "";
+    private List<FcPrintGLView> transFinancial = new();
+    private List<FcCom> Perusahaan = new();
+    private string company = "";
+
+    private string Title = "NERACA";
+
+  //  private int No = 0;
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        loadStock();
+
+    }
+
+    protected override void OnParametersSet()
+    {
+        //the param will be set now
+        var test = query;
+    }
+
+    private void loadStock()
+    {
+        string[] words = query.Split('+');
+
+
+        kodeCetak = words[0];
+        company = words[1];
+        Bulan = int.Parse(words[2]);
+        Tahun = int.Parse(words[3]);
+
+        Title = serviceFC.GetPrintTPKode(kodeCetak).NamaCetak;
+        transFinancial = serviceFC.printNeraca(kodeCetak, company, Bulan, Tahun);
+        StateHasChanged();
+
+    }
+
+
+}

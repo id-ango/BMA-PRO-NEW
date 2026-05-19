@@ -1,0 +1,186 @@
+﻿@page "/ModulePiutang/LaporanPiutang"
+
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.View
+@using eSoft.Penjualan.Services
+
+@inject IReceivableServices   service
+@inject NavigationManager navigationmanager
+
+<h3>Laporan Piutang</h3>
+<div class="row">
+    <div class="col-4">
+        <EditForm Model="transh">
+            <div class="form-group">
+                <label>
+                    Dari Tanggal :
+                    <InputDate class="form-control" @bind-Value="Tanggal1" />
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    Sd Tanggal :
+                    <InputDate class="form-control" @bind-Value="Tanggal2" />
+                </label>
+            </div>
+
+        </EditForm>
+    </div>
+
+    <div class="col-4">
+        <br />
+        <button class="btn btn-primary" @onclick="@(() => proses1())">Kartu Piutang</button>
+        <br />
+        <button class="btn btn-primary" @onclick="@(() => proses2())">Display Uang Muka</button>
+        <br />
+    </div>
+</div>
+
+<div class="row">
+    <br />
+</div>
+
+@switch (Tampilan)
+{
+    case 1:
+        <div class="container">
+
+            <DataGridPiutangComponent Items="TransItem" OnDetail="OpenDetail"></DataGridPiutangComponent>
+
+        </div>
+        @if (DetailOpen)
+        {
+
+            <ModalDetailJualComponent OnClose="OnSearchClose" Items="TransDetail" Context="transaksi2" GetFilterableText="@(item => $"{item.Customer} {item.Dokumen} ")">
+                <TableHeader>
+                    <th scope="col">Dokumen</th>
+                    <th scope="col">Tanggal</th>
+                    <th scope="col">Keterangan</th>
+                    <th scope="col">Jumlah</th>
+                    <th scope="col">Bayar</th>
+                    <th scope="col">Sisa</th>
+                   
+
+                    <th></th>
+                </TableHeader>
+                <RowTemplate>
+                    <td>@transaksi2.Dokumen</td>
+                    <td>@transaksi2.Tanggal.ToShortDateString()</td>
+                    <td>@transaksi2.Keterangan
+                        <br />
+                        @if (!string.IsNullOrWhiteSpace(transaksi2.Remarks))
+                        {
+                            <span class="remarks">@transaksi2.Remarks</span>
+                        }
+                        else
+                        {
+                            @transaksi2.Remarks
+                        }
+                    </td>
+                    <td style="text-align:right">@transaksi2.Jumlah.ToString("N")</td>
+                    <td style="text-align:right">@transaksi2.Bayar.ToString("N")</td>
+                    <td style="text-align:right">@transaksi2.Sisa.ToString("N")</td>
+                    
+
+                </RowTemplate>
+            </ModalDetailJualComponent>
+
+
+        }
+
+        break;
+
+    case 2:
+        <div class="container">
+
+            <DataGridUangMukaComponent Items="TransDetailView" ></DataGridUangMukaComponent>
+
+        </div>
+
+        break;
+
+}
+
+@code {
+
+
+    public List<ArPiutng> TransDetail;
+    public List<ArCust> TransItem = new List<ArCust>();
+    public List<ArPiutngView> TransDetailView;
+
+    private string nCount { get; set; }
+    private string nOngkir { get; set; }
+    private string nJumlah { get; set; }
+    private string nPPn { get; set; }
+    public ArTransH transh = new ArTransH();
+
+
+    public int Tampilan { get; set; } = 1;
+
+    public bool DeleteDialogOpen { get; set; }
+    public bool NullDialogOpen { get; set; }
+    public bool DetailOpen { get; set; }
+    public bool DetailOpen2 { get; set; }
+    public bool DetailOpen3 { get; set; }
+
+    public DateTime Tanggal1 { get; set; }
+    public DateTime Tanggal2 { get; set; }
+
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Tanggal1 = DateTime.Today;
+        Tanggal2 = DateTime.Today;
+        //  proses1();
+
+    }
+
+
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        DetailOpen = false;
+        DetailOpen2 = false;
+        DetailOpen3 = false;
+        StateHasChanged();
+
+    }
+
+    private void proses1()
+    {
+        TransItem = service.GetCustomer();
+        Tampilan = 1;
+        //  nJumlah = TransHeader.Sum(x => x.Jumlah).ToString("N");
+        // StateHasChanged();
+    }
+
+    private void OpenDetail(ArCust xKdBank)
+    {
+
+        TransDetail = service.Detail1(xKdBank.Customer);
+        DetailOpen = !DetailOpen;
+        //  navigationmanager.NavigateTo($"/ModuleJual/EditTransJual/{xKdBank}");
+        StateHasChanged();
+    }
+
+    private void proses2()
+    {
+        TransDetailView = service.GetUangMuka();
+        Tampilan = 2;
+        //  nJumlah = TransHeader.Sum(x => x.Jumlah).ToString("N");
+        // StateHasChanged();
+    }
+
+    //private void OpenPrint(int xKdBank)
+    //{
+    //    navigationmanager.NavigateTo($"/PrintSuratJalan/{xKdBank}");
+    //}
+
+}

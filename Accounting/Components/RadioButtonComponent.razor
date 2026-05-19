@@ -1,0 +1,22 @@
+﻿@typeparam TEnum
+@using System.Collections.Generic
+@using System.Linq
+
+<InputRadioGroup @bind-Value="StatusValue"  >
+    @foreach (var status in (TEnum[])Enum.GetValues(typeof(TEnum)))
+    {
+        <InputRadio Value="status" />
+        @status
+        <br />
+
+    }
+</InputRadioGroup>
+
+@code {
+
+    [Parameter]
+    public TEnum StatusValue { get; set; }
+
+   
+
+}

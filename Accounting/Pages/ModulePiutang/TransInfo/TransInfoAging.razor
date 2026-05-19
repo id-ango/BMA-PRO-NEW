@@ -1,0 +1,102 @@
+﻿@page "/ModulePiutang/TransinfoAging"
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+
+@inject IReceivableServices cashBank
+@implements IDisposable
+@inject NavigationManager navigationmanager
+@inject IJSRuntime JS
+
+<div class="container">
+    <h1>Transaksi Remarks Aging Receivable</h1>
+</div>
+
+
+
+<br />
+
+ <div id="snackbar">Remarks Sudah Tersimpan..</div>
+
+
+<div class="container">
+    <DataGridComponent Items="Transaksi" Context="transaksi" GetFilterableText="@(item =>$"{item.Dokumen} {item.Keterangan} {item.NamaCust}")">
+        <TableHeader>
+            <th scope="col">Doc #</th>
+            <th scope="col">Customer</th>
+            <th scope="col">Tanggal</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Saldo</th>
+             <th scope="col">Remarks</th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi.Dokumen</td>
+            <td>@transaksi.NamaCust</td>
+            <td>@transaksi.Tanggal.ToShortDateString()</td>
+            <td>@transaksi.Keterangan</td>
+            <td>@transaksi.Sisa.ToString("N")</td>
+            <td>
+                 @*<input type="text" @bind-value="@Remarks[transaksi.Dokumen]" onfocus="EventArgs => { SimpanRemarks(transaksi.Dokumen,EventArgs.Value); }"  />*@
+                 <input type="text" value="@Remarks[transaksi.Dokumen]"
+                   @onchange="EventArgs => { SimpanRemarks(transaksi.Dokumen,EventArgs.Value); }"  />
+                                             
+                
+            </td>
+        </RowTemplate>
+    </DataGridComponent>
+
+    @* onchange="SimpanRemarks(transaksi.Dokumen,transaksi.Remarks)"*@
+</div>
+
+
+
+@code {
+
+    private List<ArAgingView> Transaksi;
+    Dictionary<string, string> Remarks = new Dictionary<string, string>();
+
+    public bool Tampilan { get; set; }
+    public bool DeleteDialogOpen { get; set; }
+    public bool NullDialogOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadGet();
+        Tampilan = false;
+    }
+
+    private void LoadGet()
+    {
+        Transaksi = cashBank.GetRemarksSchedule();
+        foreach(var item in Transaksi)
+        {
+            Remarks.Add(item.Dokumen, (string)item.Remarks);
+
+        }
+
+    }
+
+
+
+    private void SimpanRemarks(string dokumen,object remarks)
+    {
+        var info = (string)remarks;
+
+        cashBank.SimpanRemarks(dokumen, info);
+        Remarks[dokumen] = info;
+        //   LoadGet();
+     
+         JS.InvokeVoidAsync("mySnackBar");
+        StateHasChanged();
+      
+    }
+
+
+ 
+
+    public void Dispose()
+    {
+       
+    }
+}

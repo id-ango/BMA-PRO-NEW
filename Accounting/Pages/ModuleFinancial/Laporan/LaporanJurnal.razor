@@ -1,0 +1,263 @@
+﻿@page "/ModuleFinancial/LaporanJurnal"
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.View
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+@using Accounting.Services
+
+@using System.ComponentModel.DataAnnotations
+
+@using eSoft.Ledger.Services
+
+@inject IJSRuntime JS
+@inject IExcelServices serviceXL
+@inject IFinancialServices serviceFC
+@inject ILedgerServices serviceGL
+
+@inject NavigationManager navigationmanager
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Laporan Jurnal</h3>
+</div>
+
+
+<div class="container">
+    <EditForm Model="@tarikData">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        @* <div class="form-group">
+            <label>
+                Tahun Proses :
+                <InputNumber class="form-control" @bind-Value="tarikData.Tahun" />
+            </label>
+        </div> *@
+        <br />
+        <div class="form-group">
+            <label>
+                Perusahaan :
+                <InputSelect class="form-control" @bind-Value="tarikData.KodeCompany">
+                    <option value="">&nbsp;&nbsp;---Select Company---&nbsp;&nbsp;</option>
+                    @foreach (var item in Companies)
+                    {
+                        <option value="@item.FcComKode">@item.FcNamaPerusahaan</option>
+                    }
+
+                </InputSelect>
+                @* <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
+                Dari Tanggal :
+                <InputDate class="form-control" @bind-Value="Tanggal1" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Sd Tanggal :
+                <InputDate class="form-control" @bind-Value="Tanggal2" />
+            </label>
+        </div>
+        <br />
+        @* <button class="btn-success" type="submit">Simpan</button>*@
+        <button class="btn-success" type="button" @onclick="OpenProses1">Jurnal</button>
+        @* <button class="btn-info" type="button" @onclick="OpenProses2">Proses Tax</button>
+        <button class="btn-warning" type="button" @onclick="@(() => DownloadFileFromStream())">Download to Excel</button> *@
+    </EditForm>
+
+    <br />
+</div>
+
+<div class="container">
+    <DataGridVerticalComponent Items="transaksiFC" Context="cbBank" GetFilterableText="@(item => $"{item.GlMemo} {item.DocNo} ")" TotalJumlah=@nJumlah>
+        <TableHeader>
+            <th scope="col" style="width:15%">Doc #</th>
+            <th scope="col" style="width: 15%">Tanggal</th>
+            <th scope="col" style="width: 5%">Code</th>
+            <th scope="col" style="width: 5%">KodeGL</th>
+            <th scope="col" style="width: 40%">Keterangan</th>
+            <th scope="col" style="width: 10%">Mutasi</th>
+
+
+        </TableHeader>
+        <RowTemplate>
+            <td style="width:15%">@cbBank.DocNo</td>
+            <td style="width:15%">@cbBank.Tanggal.ToShortDateString()</td>
+            <td style="width:5%">@cbBank.FcComKode</td>
+            <td style="width:5%">@cbBank.KodeGl</td>
+            <td style="width:40%">@cbBank.GlMemo</td>
+            <td style="text-align: right; width: 10%">@cbBank.Debet.ToString("N")</td>
+            <td style="text-align: right; width: 10%">@cbBank.Saldo.ToString("N")</td>
+            <td style="width:10%;">
+
+
+                <button @onclick="() => CicilanBeli(cbBank.FcTransHId)" class="btn btn-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bag-plus" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 7.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V12a.5.5 0 0 1-1 0v-1.5H6a.5.5 0 0 1 0-1h1.5V8a.5.5 0 0 1 .5-.5z" />
+                        <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1zm3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4h-3.5zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z" />
+                    </svg>
+                </button>
+            </td>
+        </RowTemplate>
+    </DataGridVerticalComponent>
+
+
+</div>
+
+@if (dispCicilan)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="transaksiFD" Context="transaksi2">
+        <TableHeader>
+            <th scope="col">GlAkun</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Debet</th>
+            <th scope="col">Kredit</th>
+
+
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>
+                @transaksi2.GlAcct
+
+            </td>
+
+            <td>
+                @transaksi2.Keterangan
+                <br />
+
+                <span class="badge bg-success">@transaksi2.GlDept</span>
+
+
+            </td>
+            <td style="text-align:right">@transaksi2.Debet.ToString("N")</td>
+            <td style="text-align:right">@transaksi2.Kredit.ToString("N")</td>
+
+
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+@code {
+    private List<FcCom> Companies;
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public decimal nJumlah { get; set; }
+
+    public bool SearchOpen { get; set; }
+    private bool dispCicilan { get; set; }
+
+    private modelTest tarikData = new modelTest();
+    private List<FcTransH> transaksiFC = new();
+    private List<FcTransD> transaksiFD = new();
+    public DateTime Tanggal1 { get; set; }
+    public DateTime Tanggal2 { get; set; }
+
+    public class modelTest
+    {
+        [Range(2021, int.MaxValue, ErrorMessage = "Minimum number 2021")]
+        public int Tahun { get; set; } = DateTime.Today.Year;
+        public string KodeCompany { get; set; }
+    }
+
+    protected override void OnInitialized()
+    {
+        Tanggal1 = DateTime.Today;
+        Tanggal2 = DateTime.Today;
+
+        base.OnInitialized();
+        LoadCompany();
+
+    }
+
+
+
+    void LoadCompany()
+    {
+        Companies = serviceFC.GetFcCom();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        dispCicilan = false;
+        StateHasChanged();
+
+    }
+    private void OpenProses1()
+    {
+        transaksiFC = serviceFC.printJurnal(tarikData.Tahun, tarikData.KodeCompany,Tanggal1,Tanggal2).ToList();
+        nJumlah = transaksiFC.Sum(x => x.Saldo);
+    }
+
+    
+    private void CicilanBeli(int headerID)
+    {
+        transaksiFD = serviceFC.JurnalDetail(headerID).ToList();
+        dispCicilan = true;
+
+    }
+
+    private Stream GetFileStream()
+    {
+        List<FcTransDxls> transDetail = new List<FcTransDxls>();
+
+        if (transaksiFC != null)
+        {
+
+            try
+            {
+                foreach (var header in transaksiFC.Where(x => x.Tanggal >= Tanggal1 && x.Tanggal <= Tanggal2).ToList())
+                {
+                    if (header != null)
+                    {
+                        foreach (var detail in header.FcTransDs)
+                        {
+                            transDetail.Add(
+                            new FcTransDxls()
+                                {
+                                    DocNo = header.DocNo,
+                                    Tanggal = header.Tanggal,
+                                    KodeGl = header.KodeGl,
+                                    GlAcct = detail.GlAcct,
+                                    Keterangan = header.GlMemo,
+                                    Debet = detail.Debet,
+                                    Kredit = detail.Kredit,
+                                    Jumlah = detail.Debet - detail.Kredit
+                                }
+                            );
+                        }
+                    }
+                }
+
+
+            }
+            catch
+            {
+
+            };
+        }
+
+        var randomBinaryData = serviceXL.CreateLedgerExport(transDetail);
+
+        //   var randomBinaryData = new byte[50 * 1024];
+        var fileStream = new MemoryStream(randomBinaryData);
+
+        return fileStream;
+    }
+    private async Task DownloadFileFromStream()
+    {
+        var fileStream = GetFileStream();
+        var fileName = $"Ledger{DateTime.Now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}.xlsx";
+
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+}

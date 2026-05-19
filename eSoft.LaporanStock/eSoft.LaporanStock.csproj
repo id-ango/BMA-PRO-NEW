@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.36" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\eSoft.Order\eSoft.Order.csproj" />
+    <ProjectReference Include="..\eSoft.Pembelian\eSoft.Pembelian.csproj" />
+    <ProjectReference Include="..\eSoft.Penjualan\eSoft.Penjualan.csproj" />
+  </ItemGroup>
+
+</Project>

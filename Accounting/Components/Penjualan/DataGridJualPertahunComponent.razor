@@ -1,0 +1,225 @@
+﻿@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.View
+@using eSoft.Penjualan.Services
+
+@using System.Collections.Generic
+@using System.Linq
+@inject ISalesServices service
+
+<div class="bg-light justify-content-between">
+    @nJumlah
+    <p align="right">
+        <input class="mr-sm-2" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
+        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="searchFind">Search</button>
+    </p>
+</div>
+<table class="table table-striped table-hover">
+
+    <thead>
+        <tr>
+            <th scope="col" style="width:20%">Item</th>
+            <th scope="col" style="width:5%">Stock</th>
+            <th scope="col" style="width:5%">Order</th>
+            <th scope="col" style="width:5%"></th>
+            <th scope="col" style="width:5%">Jan</th>
+            <th scope="col" style="width:5%">Peb</th>
+            <th scope="col" style="width:5%">Mar</th>
+            <th scope="col" style="width:5%">Apr</th>
+            <th scope="col" style="width:5%">Mei</th>
+            <th scope="col" style="width:5%">Jun</th>
+            <th scope="col" style="width:5%">Jul</th>
+            <th scope="col" style="width:5%">Agt</th>
+            <th scope="col" style="width:5%">Sep</th>
+            <th scope="col" style="width:5%">Okt</th>
+            <th scope="col" style="width:5%">Nov</th>
+            <th scope="col" style="width:5%">Des</th>
+            <th scope="col" style="width:5%">Total</th>
+            <th></th>
+        </tr>
+    </thead>
+</table>
+<div style="display:block;position:relative;height:430px;overflow:auto ">
+    <table class="table table-striped table-hover">
+
+        @*<thead>
+
+        <tr>@TableHeader</tr>
+        </thead>*@
+        <tbody>
+            @foreach (var transaksi in result)
+            {
+                <tr>
+                    <td rowspan="4" style="width:25%">
+                        @transaksi.NamaItem
+                        <br />
+                        <span class="badge bg-primary">@transaksi.ItemCode</span>
+                    </td>
+                    <td rowspan="4" style="text-align:right;vertical-align:middle; width:5% ; background-color:lightgreen "><strong>@transaksi.BulanTotal.ToString("N") </strong></td>
+                    <td rowspan="4" style="text-align:right;vertical-align:middle; width:5% ; background-color:lightblue "><strong>@transaksi.TotalOrder.ToString("N") </strong></td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow "><strong>BELI</strong></td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan01.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan02.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan03.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan04.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan05.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan06.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan07.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan08.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan09.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan10.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan11.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow ">@transaksi.BeliBulan12.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:yellow  "><strong>@transaksi.TotalBeli.ToString("N")</strong></td>
+                </tr>
+                <tr></tr>
+                <tr>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue ">
+                        <a class="btn btn-primary" role="button" @onclick="() =>{ proses2(transaksi.ItemCode,Tahun); } "><strong>JUAL</strong></a>
+                        
+                    </td>
+                   
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan01.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan02.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan03.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan04.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan05.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan06.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan07.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan08.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan09.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan10.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan11.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue">@transaksi.Bulan12.ToString("N")</td>
+                    <td style="text-align:right ; width:5% ; background-color:aliceblue"><strong>@transaksi.TotalJual.ToString("N")</strong></td>
+                </tr>
+                <tr></tr>
+            }
+        </tbody>
+
+    </table>
+</div>
+
+
+@if (DetailOpen2)
+{
+
+    <ModalDetailJualComponent OnClose="OnSearchClose" Items="TransDetail2" Context="transaksi3" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Lokasi} {item.AlamatKirim} {item.NoLpb}")">
+        <TableHeader>
+            <th scope="col">Customer</th>
+
+            <th scope="col">Dokumen</th>
+
+            <th scope="col">Qty</th>
+            <th scope="col">Harga</th>
+            <th scope="col">Disc%</th>
+            <th scope="col">Jumlah</th>
+            <th scope="col">Lokasi</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+
+            <td>
+                @transaksi3.NamaCust
+                <br />
+                <span class="badge bg-primary">@transaksi3.Customer</span>
+            </td>
+
+            <td>
+                @transaksi3.NoLpb
+                <br />
+                <span class="badge bg-primary">@transaksi3.Tanggal.ToShortDateString()</span>
+                <br />
+                <span style="word-wrap: break-word; width:50px;" >@transaksi3.Keterangan</span>
+            </td>
+            @*<td>@transaksi3.AlamatKirim</td>*@
+            <td style="text-align:right">@transaksi3.Qty.ToString("N")</td>
+            <td style="text-align:right">@transaksi3.Harga.ToString("N")</td>
+            <td style="text-align:right">@transaksi3.Persen.ToString("N")</td>
+            <td style="text-align:right">@transaksi3.Jumlah.ToString("N")</td>
+            <td>@transaksi3.Lokasi</td>
+        </RowTemplate>
+    </ModalDetailJualComponent>
+
+
+}
+
+
+@code {
+
+    [Parameter]
+    public List<OePerTahun> Items { get; set; }
+
+    [Parameter]
+    public int Tahun { get; set; }
+
+    private string nJumlah { get; set; }
+
+    private List<OePerTahun> result = new List<OePerTahun>();
+    private List<OePerTahun> result2 = new List<OePerTahun>();
+    public List<OeTrans> TransDetail2;
+    private string searchText;
+    public bool DetailOpen2 { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+    }
+    private void OnSearchClose(bool accepted)
+    {
+
+
+        DetailOpen2 = false;
+
+        StateHasChanged();
+
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        result2 = Items;
+        searchFind();
+        StateHasChanged();
+    }
+
+    private void searchFind()
+    {
+        result2 = Items;
+
+        if (!string.IsNullOrEmpty(searchText))
+        {
+
+
+            //   result = result.Where(x => x.NamaCust || x.AlamatKirim).ToList();
+            result2 = (from t in result2
+                       where
+       ((t.ItemCode?.Contains(searchText, StringComparison.InvariantCultureIgnoreCase) ?? false) ||
+     (t.NamaItem?.Contains(searchText, StringComparison.InvariantCultureIgnoreCase) ?? false))
+                       select t).ToList();
+
+
+
+        }
+        if (result2.Count != 0)
+            result = result2;
+        else
+            result = Items;
+
+        // nJumlah = result.Sum(x => x.Jumlah).ToString("N");
+    }
+
+    private void proses2(string itemCode, int tahun)
+    {
+        DateTime Tanggal1 = new DateTime(tahun, 1, 1);
+        DateTime Tanggal2 = new DateTime(tahun,12,31);
+
+        TransDetail2 = service.Detail2(itemCode, Tanggal1, Tanggal2);
+        DetailOpen2 = !DetailOpen2;
+        //  navigationmanager.NavigateTo($"/ModuleJual/EditTransJual/{xKdBank}");
+        StateHasChanged();
+    }
+
+}

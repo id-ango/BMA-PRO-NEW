@@ -1,0 +1,105 @@
+﻿@page "/ModulePersediaan/EditDivisi/{Id:int}"
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+
+@inject IInventoryServices service
+@inject NavigationManager navigationmanager
+
+<h3>Edit Divisi</h3>
+
+<EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>
+            Divisi :
+            <InputText id="codeBank" class="form-control" @bind-Value="bank.Divisi" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Name :
+            <InputText class="form-control" @bind-Value="bank.NamaDiv" />
+        </label>
+    </div>
+
+    <br />
+
+    <div class="container">
+        <button class="btn-success" type="submit">Simpan</button>
+        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePersediaan/SetupDivisi", false))">Batal</button>
+    </div>
+
+
+</EditForm>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Lokasi Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    IcDivView bank = new IcDivView();
+    IcDiv Bank = new IcDiv();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBank();
+
+    }
+
+    void LoadBank()
+    {
+        Bank = service.GetIcDivId(Id);
+        bank.IcDivId = Bank.IcDivId;
+        bank.Divisi = Bank.Divisi;
+        bank.NamaDiv = Bank.NamaDiv;
+
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.Divisi;
+        DialogOpen = service.CekKdDivisi(Testing);
+        if (DialogOpen)
+        {
+            bank.Divisi = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private async Task HandleValidSubmit()
+    {
+        var newEdit = await service.EditIcDiv(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModulePersediaan/SetupDivisi", false);
+
+    }
+
+
+}

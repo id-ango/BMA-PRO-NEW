@@ -1,0 +1,357 @@
+﻿@page "/ModuleBank/LaporanCashBank"
+@using Accounting.Components.CashBank
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+
+@using eSoft.CashBank.Services
+
+@inject ICashBankServices cashBank
+@implements IDisposable
+@inject NavigationManager navigationmanager
+
+@attribute [Authorize(Roles = "Admin, Finance")]
+
+<div class="container">
+    <h1>Laporan Cash Bank <small> <button class="btn btn-success btn-small"  @onclick="prosesstock">Refresh</button></small> </h1>
+    
+    <br/>
+</div>
+
+
+<div class="container">
+    <label>
+        <input type="checkbox" checked=@asChecked
+               @onchange="EventArgs => { CheckboxAll(EventArgs.Value); }" />
+        Selected All
+    </label>
+
+    <br />
+    <br />
+
+
+    @foreach (var bank in Banks)
+    {
+        var Text = bank.NmBank;
+        var Value = bank.KodeBank.ToString();
+        bool Checked = false;
+        if (selectedList.Contains(Value))
+        {
+            Checked = true;
+        }
+
+
+        <label>
+            <input type="checkbox" checked="@Checked"
+               @onchange="EventArgs => { CheckboxClicked(Value, EventArgs.Value); }" />
+
+            @bank.NmBank
+        </label>
+
+
+        <br />
+    }
+    @OutputValue
+</div>
+
+<br />
+<br />
+
+
+<div class="container">
+   
+    <DataGridComponent Items="BankView" Context="cbBank" GetFilterableText="@(item =>$"{item.KodeBank} {item.NmBank} {item.Kurs}")" TotalJumlah=@totalJumlah PageSize="25">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Bank Name</th>
+            <th scope="col">Saldo</th>
+            <th scope="col">Balance</th>
+            <th scope="col">Currency</th>
+            <th scope="col">Date Trx</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.KodeBank</td>
+            <td>@cbBank.NmBank</td>
+            <td>@cbBank.Saldo.ToString("N")</td>
+            <td>@cbBank.KSaldo.ToString("N")</td>
+            <td>@cbBank.Kurs</td>
+            <td>
+                <input type="date" @bind-value="@TglStarts[cbBank.KodeBank]" />
+                <input type="date" @bind-value="@TglEnds[cbBank.KodeBank]" />
+            </td>
+            <td>
+
+                <button @onclick="() => OpenCetak(TglStarts[cbBank.KodeBank],TglEnds[cbBank.KodeBank],cbBank.KodeBank)" class="btn btn-success">Mutasi</button>
+
+            </td>
+        </RowTemplate>
+    </DataGridComponent>
+
+
+</div>
+
+@if (DeleteDialogOpen)
+{
+    <ModalDialogComponent Title="Are you sure?" Text="Do you want to delete this entry?" OnClose="OnDeleteDialogClose"></ModalDialogComponent>
+}
+
+@if (NullDialogOpen)
+{
+    <ModalDialogComponent Title="MESSAGE" Text="Saldo is not Zero" TombolSave="false" OnClose="OnDeleteNullClose"></ModalDialogComponent>
+}
+
+@if (SearchOpen)
+{
+
+    <DataGridComponent Items="RekKoran" Context="cbBank" GetFilterableText="@(item =>$"{item.Keterangan} {item.DocNo} ")">
+        <TableHeader>
+            <th scope="col">Doc #</th>
+            <th scope="col">Tanggal</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Mutasi</th>
+            <th scope="col">Saldo</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.DocNo</td>
+            <td>@cbBank.Tanggal.ToShortDateString()</td>
+            <td>@cbBank.Keterangan</td>
+            <td>@cbBank.Saldo.ToString("N")</td>
+            <td>@cbBank.Balance.ToString("N")</td>
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.CbTransHId)" class="btn btn-success">Detail</button>
+
+            </td>
+        </RowTemplate>
+    </DataGridComponent>
+
+}
+
+@if (DetailOpen)
+{
+    <div class="container">
+        <ModalSearchComponent Items="TransDetail" Context="transaksi" OnClose="OnDetailClose" GetFilterableText="@(item =>$"{item.SrcCode} {item.Keterangan} ")">
+            <TableHeader>
+                <th scope="col">Source</th>
+                <th scope="col">Keterangan</th>
+                <th scope="col">Jumlah</th>
+
+                <th></th>
+            </TableHeader>
+            <RowTemplate>
+                <td>@transaksi.SrcCode</td>
+                <td>@transaksi.Keterangan</td>
+                <td>@transaksi.Jumlah.ToString("N")</td>
+
+
+            </RowTemplate>
+        </ModalSearchComponent>
+
+    </div>
+}
+
+
+@code {
+
+    private List<CbBank> Banks;
+    private List<CbBank> BankView = new List<CbBank>();
+    private List<RekeningView> RekKoran = new List<RekeningView>();
+    private List<CbTransD> TransDetail = new List<CbTransD>();
+
+    private CbBank _bankToDelete;
+    private List<string> selectedList = new List<string>();
+    private string OutputValue { get; set; }
+
+    private DateTime TglStart = DateTime.Today;
+    private DateTime TglEnd = DateTime.Today;
+
+    public bool DeleteDialogOpen { get; set; }
+    public bool NullDialogOpen { get; set; }
+    public bool SearchOpen { get; set; }
+    public bool DetailOpen { get; set; }
+    Dictionary<string, DateTime> TglStarts = new Dictionary<string, DateTime>();
+    Dictionary<string, DateTime> TglEnds = new Dictionary<string, DateTime>();
+
+    public bool asChecked { get; set; }
+
+    public decimal totalJumlah { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadGet();
+
+    }
+
+    private void LoadGet()
+    {
+        Banks = cashBank.GetBank();
+        StateHasChanged();
+
+    }
+
+
+    private async Task OnDeleteDialogClose(bool accepted)
+    {
+        if (accepted)
+        {
+            await cashBank.DelBank(_bankToDelete.CbBankId);
+            _bankToDelete = null;
+        }
+
+        DeleteDialogOpen = false;
+        LoadGet();
+
+        StateHasChanged();
+
+    }
+
+    private void OnDeleteNullClose(bool accepted)
+    {
+
+        DeleteDialogOpen = false;
+        NullDialogOpen = false;
+        LoadGet();
+        StateHasChanged();
+
+    }
+    private void OpenDeleteDialog(CbBank bank)
+    {
+        if (bank.Saldo != 0)
+        {
+            NullDialogOpen = true;
+        }
+        else
+        {
+            DeleteDialogOpen = true;
+        }
+
+
+        _bankToDelete = bank;
+        StateHasChanged();
+    }
+
+    private void OpenCetak(DateTime Tanggal1, DateTime Tanggal2, string KodeBank)
+    {
+        RekKoran = cashBank.CetakMutasi(Tanggal1, Tanggal2, KodeBank);
+        SearchOpen = (SearchOpen == false ? true : true);
+    }
+
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
+
+    private void OnDetailClose(bool accepted)
+    {
+
+        DetailOpen = false;
+        StateHasChanged();
+
+    }
+
+
+    private void CheckboxAll(object aChecked)
+    {
+        LoadGet();
+
+        if ((bool)aChecked)
+        {
+            //foreach (var bank in Banks)
+            //{
+            //    selectedList.Remove(bank.KodeBank);
+            //    TglStarts.Remove(bank.KodeBank);
+            //    TglEnds.Remove(bank.KodeBank);
+            //};
+
+            selectedList.Clear();
+            TglStarts.Clear();
+            TglEnds.Clear();
+
+
+            foreach (var bank in Banks)
+            {
+                selectedList.Add(bank.KodeBank);
+                TglStarts.Add(bank.KodeBank, DateTime.Today);
+                TglEnds.Add(bank.KodeBank, DateTime.Today);
+            }
+        }
+        else
+        {
+            foreach (var bank in Banks)
+            {
+                selectedList.Remove(bank.KodeBank);
+                TglStarts.Remove(bank.KodeBank);
+                TglEnds.Remove(bank.KodeBank);
+            }
+        }
+        OutputValue = string.Join(",", selectedList.ToArray());
+
+
+
+        BankView = (from e in Banks where selectedList.Contains(e.KodeBank) select e).ToList();
+
+        totalJumlah = BankView.Sum(x => x.Saldo);
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void CheckboxClicked(string aSelectedId, object aChecked)
+    {
+        LoadGet();
+        SearchOpen = false;
+
+        if ((bool)aChecked)
+        {
+            if (!selectedList.Contains(aSelectedId))
+            {
+                selectedList.Add(aSelectedId);
+                TglStarts.Add(aSelectedId, DateTime.Today);
+                TglEnds.Add(aSelectedId, DateTime.Today);
+            }
+        }
+        else
+        {
+            if (selectedList.Contains(aSelectedId))
+            {
+                selectedList.Remove(aSelectedId);
+                TglStarts.Remove(aSelectedId);
+                TglEnds.Remove(aSelectedId);
+
+
+            }
+        }
+
+        OutputValue = string.Join(",", selectedList.ToArray());
+
+
+
+        BankView = (from e in Banks where selectedList.Contains(e.KodeBank) select e).ToList();
+
+        totalJumlah = BankView.Sum(x => x.Saldo);
+
+        StateHasChanged();
+
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+    private void BtnChoose(int id)
+    {
+        TransDetail = cashBank.GetTransDdetail(id);
+        DetailOpen = !DetailOpen;
+    }
+
+    private void prosesstock()
+    {
+        cashBank.prosesCashBank();
+        totalJumlah = BankView.Sum(x => x.Saldo);
+    }
+        }

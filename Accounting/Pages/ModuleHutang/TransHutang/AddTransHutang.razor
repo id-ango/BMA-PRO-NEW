@@ -1,0 +1,319 @@
+﻿@page "/ModuleHutang/AddTransHutang"
+@using eSoft.Hutang.Model
+@using eSoft.Hutang.View
+@using eSoft.Hutang.Services
+
+@inject IPayableServices service
+@inject NavigationManager navigationmanager
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Transaksi Hutang</h3>
+</div>
+
+
+<div class="container">
+    <EditForm Model="@Transh" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label>
+                Tanggal :
+                <InputDate class="form-control" @bind-Value="Transh.Tanggal" />
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
+                Supplier :
+                <InputSelect class="form-control" @bind-Value="Transh.Supplier" style="width:60%; display:inline" @oninput="OnChangeCustomer">
+                    <option value="">&nbsp;&nbsp;---Select Supplier---&nbsp;&nbsp;</option>
+                    @foreach (var item in banks)
+                    {
+                        <option value="@item.Supplier">[@item.Supplier]&nbsp; @item.NamaSup</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                &nbsp;@kursSupplier
+            </label>
+        </div>
+        <br />
+
+        @if (!string.IsNullOrEmpty(this.kursSupplier))
+        {
+            <div class="form-group">
+                <label>
+                    Kurs :
+                    <InputNumber class="form-control" @bind-Value="Transh.Kurs" />
+                </label>
+            </div>
+            <br />
+        }
+
+        <div class="form-group">
+            <label>
+                Keterangan :
+                <InputTextArea class="form-control" @bind-Value="Transh.Keterangan" />
+            </label>
+        </div>
+
+        <br />
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleHutang/TransHutang", false))">Batal</button>
+        </div>
+        <br />
+        <br />
+
+    </EditForm>
+</div>
+<div class="container">
+    @if (!string.IsNullOrEmpty(this.kursSupplier))
+    {
+        <div class="row">
+            <div class=" col-sm  form-message">
+                <span>Saldo   : @Transh.JumNilai.ToString("N")</span>
+            </div>
+            <div class="col-sm form-message">
+                <span> Balance : @Transh.Jumlah.ToString("N")</span>
+            </div>
+        </div>
+
+    }
+    else
+    {
+        <div class="row">
+            <div class=" col-sm  form-message">
+                <span>Saldo   : @Transh.Jumlah.ToString("N")</span>
+            </div>
+            <div class="col-sm form-message">
+                <span> Balance : @Transh.JumNilai.ToString("N")</span>
+            </div>
+        </div>
+
+    }
+</div>
+<div class="container">
+    <DetailGridComponent Items="Transh.ApTransDs" Context="transaksi">
+        <TableHeader>
+            <th scope="col">Source</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Jumlah</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi.DistCode</td>
+            <td>@transaksi.Keterangan</td>
+            <td>@transaksi.Jumlah.ToString("N")</td>
+
+            <td>
+                <button @onclick="(() => Rubah(transaksi))" class="btn btn-success">Edit</button>
+                <button @onclick="(() => Hapus(transaksi))" class="btn btn-danger">Delete</button>
+            </td>
+        </RowTemplate>
+    </DetailGridComponent>
+    <button Class="btn btn-info" @onclick="@OnAddLine">Add Line</button>
+</div>
+
+@if (IsVisible)
+{
+    <ModalHutangComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd"></ModalHutangComponent>
+}
+
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Bank Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="banks" Context="cbBank" GetFilterableText="@(item =>$"{item.Supplier} {item.NamaSup} {item.Alamat} ")">
+        <TableHeader>
+            <th scope="col">Supplier</th>
+            <th scope="col">Nama</th>
+            <th scope="col">Alamat</th>
+            <th scope="col">Telpon</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.Supplier</td>
+            <td>@cbBank.NamaSup</td>
+            <td>@cbBank.Alamat</td>
+            <td>@cbBank.Telpon</td>
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.Supplier)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    ApTransHView Transh = new ApTransHView() { ApTransDs = new List<ApTransDView>() };
+
+    private List<ApDist> srccode;
+    private List<ApSuppl> banks;
+    private ApTransDView Transd = new ApTransDView();
+    private ApTransDView TransK = new ApTransDView();
+
+    public string kursSupplier { get; set; } = "";
+
+    public string kurs { get; set; } = "";
+    private int dblclick = 1;
+
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    public bool IsVisible { get; set; }
+    public bool IsKurs { get; set; }
+    public bool IsEdit { get; set; }
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Transh.Tanggal = DateTime.Now;
+
+        LoadBank();
+        LoadSrcCode();
+    }
+
+    private void OnVisibleClose()
+    {
+
+        IsVisible = false;
+        IsEdit = false;
+        StateHasChanged();
+
+    }
+
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private void HandleValidSubmit()
+    {
+        if(dblclick != 1) return;
+
+            dblclick++;
+
+        var newEdit = service.AddTransH(Transh);
+        if (newEdit != null)
+        {
+            var id = newEdit.ApTransHId.ToString().Trim();
+            //  navigationmanager.NavigateTo("/PrintBuktiBayar/{id", false);
+          //  navigationmanager.NavigateTo("/ModuleHutang/TransHutang", false);
+            //  navigationmanager.NavigateTo($"/PrintBuktiBayar/{id}");
+             navigationmanager.NavigateTo($"/ModulePrinting/PrintNotaHutang/{id}");
+        }
+
+
+    }
+
+    private void OnDetailTrans(ApTransDView transD)
+    {
+        if (!IsEdit)
+        {
+            Transh.ApTransDs.Add(transD);
+        }
+
+        IsVisible = false;
+        IsKurs = false;
+        IsEdit = false;
+        StateHasChanged();
+    }
+
+
+    void LoadBank()
+    {
+
+        banks = service.GetSupplier();
+
+    }
+
+    void LoadSrcCode()
+    {
+
+        srccode = service.GetDist();
+
+    }
+
+
+    private void Rubah(ApTransDView transd)
+    {
+        Transd = new ApTransDView();
+        Transd = transd;
+        IsEdit = true;
+        OnAddLine();
+
+    }
+
+    private void Hapus(ApTransDView transd)
+    {
+
+        Transh.ApTransDs.Remove(transd);
+        //ShowOnClick();
+    }
+
+    private void OnAddLine()
+    {
+
+        this.IsVisible = true;
+
+
+        StateHasChanged();
+
+        //IsEdit = false;
+        //ShowOnClick();
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            Transh.Supplier = textSearch;
+            kursSupplier = (from e in banks where e.Supplier == textSearch select e.Kurs).FirstOrDefault();
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    public void OnChangeCustomer(ChangeEventArgs args)
+    {
+        //  var itemData = JsonConvert.DeserializeObject<ArCust>(args.ItemData != null ? args.ItemData.ToString() : "");
+
+        //   var transaksi = service.GetPiutangSisa(args.Value.ToString());
+        kursSupplier = (from e in banks where e.Supplier == args.Value.ToString() select e.Kurs).FirstOrDefault();
+
+
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+}

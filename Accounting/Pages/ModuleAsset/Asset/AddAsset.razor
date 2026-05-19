@@ -1,0 +1,293 @@
+﻿@page "/ModuleAsset/AddAsset"
+@using eSoft.Asset.Model
+@using eSoft.Asset.View
+@using eSoft.Asset.Services
+
+@inject IAssetServices service
+@inject NavigationManager navigationmanager
+@*@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable*@
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Asset</h3>
+</div>
+
+<div class="content px-4">
+    <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Kode Barcode :
+                <InputText id="barCode" class="form-control" @bind-Value="bank.KodeBarcodeAssets" style="text-transform:uppercase"  />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Item Code :
+                <InputSelect class="form-control" @bind-Value="bank.AsItemCode">
+                    <option value="">&nbsp;&nbsp;---Select item code---&nbsp;&nbsp;</option>
+                    @foreach (var item in ItemSet)
+                    {
+                        <option value="@item.ItemCode">@item.NamaItem</option>
+                    }
+
+                </InputSelect>
+                @*<button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Asset Name :
+                <InputText class="form-control" @bind-Value="bank.NamaBarang" />
+            </label>
+
+        </div>
+        <br/>
+
+     
+      
+        <br />
+        <div class="form-group">
+            <label>
+                Category Set :
+                <InputSelect class="form-control" @bind-Value="bank.Acctset">
+                    <option value="">&nbsp;&nbsp;---Select Account Set---&nbsp;&nbsp;</option>
+                    @foreach (var item in AkunSet)
+                    {
+                        <option value="@item.AcctSet">@item.Description</option>
+                    }
+
+                </InputSelect>
+                @*<button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+        <br />
+
+        <div class="form-group">
+            <label>
+                Category Set :
+                <InputSelect class="form-control" @bind-Value="bank.DistCode">
+                    <option value="">&nbsp;&nbsp;---Select Distribution Code---&nbsp;&nbsp;</option>
+                    @foreach (var item in CategorySet)
+                    {
+                        <option value="@item.DistCode">@item.Description</option>
+                    }
+
+                </InputSelect>
+                @*<button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+        <br />
+         <div class="form-group">
+            <label>
+               Nilai Asset :
+                <InputNumber class="form-control" @bind-Value="bank.Nilai" />
+            </label>
+
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Tanggal Beli/Datang :
+                <InputDate class="form-control" @bind-Value="bank.TglBeli" />
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Disusutkan Dalam Bulan :
+                <InputNumber class="form-control" @bind-Value="bank.Termin"  />
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Nilai Penyusutan :
+                <InputNumber class="form-control" @bind-Value="bank.Penyusutan" />
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Jumlah Asset (Pcs) :
+                <InputNumber class="form-control" @bind-Value="bank.Qty" />
+            </label>
+
+        </div>
+        <br/>
+        <div class="container">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger"type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleAsset/SetupAsset", false))">Batal</button>
+        </div>
+
+    </EditForm>
+</div>
+<br/>
+<br/>
+
+@*<div @ref="fileDropContainer" class="file-drop-zone @HoverClass" @ondragenter="OnDragEnter" @ondragleave="OnDragLeave" @ondragover="OnDragEnter">
+    <InputFile OnChange="@OnChange" @ref="inputFile" multiple />
+</div>
+<div class="error-message-container">
+    <p>@ErrorMessage</p>
+</div>
+<button class="btn-warning" type="button" @onclick="@(() => imageSources = "")">Delete Image</button>
+
+<div class="image-container">
+  
+        <img src="@imageSources" />
+  
+</div>*@
+
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Item Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+
+    AsAssetsView bank = new ();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+
+    private List<AsAcctset> AkunSet;
+    private List<AsDistSet> CategorySet;
+
+    private List<AsItem> ItemSet;
+
+    //ElementReference fileDropContainer;
+    //InputFile inputFile;
+
+    //IJSObjectReference _filePasteModule;
+    //IJSObjectReference _filePasteFunctionReference;
+
+    //private string HoverClass;
+    //private string imageSources;
+    //private const int maxAllowedFiles = 1;
+   // private string ErrorMessage;
+    //   private string filestream;
+
+    //protected override async Task OnAfterRenderAsync(bool firstRender)
+    //{
+    //    if (firstRender)
+    //    {
+    //        _filePasteModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/filePaste.js");
+
+    //        _filePasteFunctionReference = await _filePasteModule.InvokeAsync<IJSObjectReference>("initializeFilePaste", fileDropContainer, inputFile.Element);
+    //    }
+    //}
+
+    //void OnDragEnter(DragEventArgs e) => HoverClass = "hover";
+
+    //void OnDragLeave(DragEventArgs e) => HoverClass = string.Empty;
+
+    //async Task OnChange(InputFileChangeEventArgs e)
+    //{
+    //    // imageSources.Clear();
+    //    imageSources = string.Empty;
+    //    ErrorMessage = string.Empty;
+
+    //    if (e.FileCount > maxAllowedFiles)
+    //    {
+    //        ErrorMessage = $"Only {maxAllowedFiles} files can be uploaded";
+    //        return;
+    //    }
+
+    //    foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+    //    {
+    //        using var stream = file.OpenReadStream();
+    //        using var ms = new MemoryStream();
+
+    //        await stream.CopyToAsync(ms);
+    //        //   imageSources.Add($"data:{file.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}");
+    //        imageSources = $"data:{file.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+
+    //        bank.Merek = imageSources;
+    //    }
+
+    //    HoverClass = string.Empty;
+    //}
+
+    //public async ValueTask DisposeAsync()
+    //{
+    //    if (_filePasteFunctionReference != null)
+    //    {
+    //        await _filePasteFunctionReference.InvokeVoidAsync("dispose");
+    //        await _filePasteFunctionReference.DisposeAsync();
+    //    }
+
+    //    if (_filePasteModule != null)
+    //    {
+    //        await _filePasteModule.DisposeAsync();
+    //    }
+    //}
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        bank.TglBeli = DateTime.Now;
+        bank.TglJual = DateTime.Now;
+
+        LoadAkun();
+        LoadItem();
+        LoadKategory();
+        //   bank.GlTipe = 1;
+
+    }
+
+   
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+     void LoadItem()
+    {
+        ItemSet = service.GetAsItem();
+    }
+
+    
+
+    void LoadAkun()
+    {
+        AkunSet = service.GetAsAkunSet();
+    }
+    void LoadKategory()
+    {
+        CategorySet = service.GetDist();
+    }
+
+    private void HandleValidSubmit()
+    {
+        var newEdit = service.AddAsAsset(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleAsset/SetupAsset", false);
+
+    }
+
+    //private void OnRadioClose(StatusGl accepted)
+    //{
+    //    bank.GlStatus = accepted;
+
+    //    //System.Console.WriteLine(accepted);
+    //    // StateHasChanged();
+
+    //}
+}

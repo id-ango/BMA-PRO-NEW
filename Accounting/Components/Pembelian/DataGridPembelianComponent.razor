@@ -1,0 +1,141 @@
+﻿@using eSoft.Pembelian.Model
+@using eSoft.Pembelian.View
+
+@using System.Collections.Generic
+@using System.Linq
+
+
+<div class="bg-light justify-content-between">
+    @nJumlah
+    <p align="right">
+        <input class="mr-sm-2" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
+        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="searchFind">Search</button>
+    </p>
+</div>
+<table class="table table-striped table-hover">
+
+    <thead>
+        <tr>
+            <th scope="col">No Bukti</th>
+            <th scope="col">Supplier</th>
+            <th scope="col">Tanggal</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Jumlah</th>
+            <th scope="col">PPN</th>
+            <th scope="col">Ongkir</th>
+            <th scope="col">Total</th>
+            <th></th>
+        </tr>
+    </thead>
+</table>
+<div style="display:block;position:relative;height:430px;overflow:auto ">
+    <table class="table table-striped table-hover">
+
+        @*<thead>
+
+                <tr>@TableHeader</tr>
+            </thead>*@
+        <tbody>
+            @foreach (var transaksi in result)
+            {
+                <tr style=@(transaksi.Kode == "83" ? "background-color:lightblue" : "")>
+                    <td>@transaksi.NoLpb</td>
+                    <td>@transaksi.NamaSup</td>
+                    <td>@transaksi.Tanggal.ToShortDateString()</td>
+                    <td>@transaksi.Keterangan</td>
+                    <td style="text-align:right">
+                        @transaksi.TtlJumlah.ToString("N")
+                        <br/>
+                        @if(transaksi.Kurs != 0)
+                        {
+                       
+                        <b style="color:red">@transaksi.Nilai.ToString("N")</b>
+
+                        }
+                    </td>
+                    <td style="text-align:right">@transaksi.Ppn.ToString("N")</td>
+                    <td style="text-align:right">@transaksi.Ongkos.ToString("N")</td>
+                    <td style="text-align:right">@transaksi.Jumlah.ToString("N")</td>
+
+                    <td>
+                        <button @onclick="() => BtnDetail(transaksi)" class="btn btn-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-down-square" viewBox="0 0 16 16">
+                                <path d="M3.626 6.832A.5.5 0 0 1 4 6h8a.5.5 0 0 1 .374.832l-4 4.5a.5.5 0 0 1-.748 0l-4-4.5z" />
+                                <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 0a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2z" />
+                            </svg>
+                        </button>
+
+                        @*<button @onclick="() => OpenPrint(transaksi.OeTransHId)" class="btn btn-danger">Print</button>*@
+                    </td>
+                </tr>
+            }
+        </tbody>
+
+    </table>
+</div>
+
+@code {
+
+    [Parameter]
+    public List<IrTransH> Items { get; set; }
+
+    [Parameter]
+    public EventCallback<IrTransH> OnDetail { get; set; }
+
+    private string nJumlah { get; set; }
+
+    private List<IrTransH> result = new List<IrTransH>();
+    private List<IrTransH> result2 = new List<IrTransH>();
+
+    private string searchText;
+
+
+    private Task BtnDetail(IrTransH xKode)
+    {
+        return OnDetail.InvokeAsync(xKode);
+
+    }
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        result2 = Items;
+        searchFind();
+        StateHasChanged();
+    }
+
+    private void searchFind()
+    {
+        result2 = Items;
+
+        if (!string.IsNullOrEmpty(searchText))
+        {
+
+
+            //   result = result.Where(x => x.NamaCust || x.AlamatKirim).ToList();
+            result2 = (from t in result2
+                       where
+   ((t.NamaSup?.Contains(searchText, StringComparison.InvariantCultureIgnoreCase) ?? false) ||
+     (t.Keterangan?.Contains(searchText, StringComparison.InvariantCultureIgnoreCase) ?? false) ||
+     (t.NoLpb?.Contains(searchText, StringComparison.InvariantCultureIgnoreCase) ?? false))
+                       select t).ToList();
+
+
+
+        }
+        if (result2.Count != 0)
+            result = result2;
+        else
+            result = Items;
+
+        nJumlah = result.Sum(x => x.Jumlah).ToString("N");
+    }
+
+
+
+}

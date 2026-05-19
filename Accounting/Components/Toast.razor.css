@@ -1,0 +1,47 @@
+﻿/* Komponen Toast */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.toast {
+    padding: 10px 20px;
+    background-color: #f8f8f8;
+    color: #333;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+    .toast.error {
+        background-color: #f44336;
+        color: #fff;
+    }
+
+    .toast.success {
+        background-color: #4caf50;
+        color: #fff;
+    }
+
+    .toast.warning {
+        background-color: #ff9800;
+        color: #fff;
+    }
+
+    .toast.info {
+        background-color: #2196f3;
+        color: #fff;
+    }
+
+.toast-header {
+    font-weight: bold;
+}
+
+.toast-content {
+    margin-top: 5px;
+}
+
+.toast.hidden {
+    display: none;
+}

@@ -1,0 +1,53 @@
+﻿@typeparam TItem
+@using System.Collections.Generic
+@using System.Linq
+
+  <input  type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
+<select class="form-control"  style="width:60%; display:inline">
+  @*  <option value="">&nbsp;&nbsp;---Select Kurir---&nbsp;&nbsp;</option>*@
+    
+                       @* <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="searchFind">Search</button>*@
+    @foreach (var item in Items)
+    {
+        @OptionTemplate(item)
+    }
+
+</select>
+
+@code {
+     [Parameter]
+    public RenderFragment<TItem> OptionTemplate { get; set; }
+
+     [Parameter]
+     public Func<TItem, string> GetFilterableText { get; set; }
+
+      private static readonly Func<TItem, string> DefaultGetFilterableText = item => (item?.ToString() ?? "");
+
+
+       [Parameter]
+    public RenderFragment<TItem> BindTemplate { get; set; }
+
+     private string searchText;
+
+    [Parameter]
+    public IEnumerable<TItem> Items { get; set; }
+
+     private void searchFind()
+    {
+            
+
+        Func<TItem, string> filterFunc = GetFilterableText ?? DefaultGetFilterableText;
+        IEnumerable<TItem> result = (Items ?? Array.Empty<TItem>());
+        if (!string.IsNullOrEmpty(searchText))
+        {
+            result = result.
+            Where(x =>
+            (GetFilterableText(x) ?? "")
+            .Contains(searchText, StringComparison.InvariantCultureIgnoreCase));
+        }
+        Items = result;
+        
+    
+       
+    }
+}

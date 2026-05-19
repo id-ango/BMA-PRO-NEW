@@ -1,0 +1,188 @@
+﻿@typeparam TItem
+@using System.Collections.Generic
+@using System.Linq
+
+
+<div class="bg-light justify-content-between">
+    @if (TotalEnabled)
+        @TotalJumlah.ToString("N")
+
+
+
+        @if (SearchEnabled)
+    {
+        <p align="right">
+            <input class="mr-sm-2" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
+            <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="searchFind">Search</button>
+        </p>
+    }
+    else
+    {
+        <p>
+            &emsp;
+        </p>
+    }
+</div>
+
+<table class="table table-striped table-hover">
+    <thead>
+
+        <tr>@TableHeader</tr>
+    </thead>
+    <tbody>
+        @foreach (var item in GetPageItems())
+        {
+            <tr>@RowTemplate(item)</tr>
+        }
+    </tbody>
+
+</table>
+<div class="bg-light justify-content-between">
+    <p align="right">
+
+        <button class="btn btn-outline-danger my-2 my-sm-0" type="button" @onclick="BtnPrevPage">Prev</button>
+        @*<span style="font-size:14px; cursor:pointer" @onclick="BtnPrevPage"><b>&lt; Previous</b></span>*@
+        <span style="font-size:12px;">
+            &nbsp; &nbsp; Page
+            <input type="number" max="@TotalPage" min="1" @bind-value="@currentPageNumber" />
+            of @TotalPage &nbsp; &nbsp;
+        </span>
+        @*<span style="font-size:14px; cursor:pointer"  @onclick="BtnNextPage"><b>Next &gt;</b></span>*@
+        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="BtnNextPage">Next</button>
+
+    </p>
+
+</div>
+@code {
+
+    [Parameter]
+    public RenderFragment TableHeader { get; set; }
+
+    [Parameter]
+    public RenderFragment<TItem> RowTemplate { get; set; }
+
+    [Parameter]
+    public IEnumerable<TItem> Items { get; set; }
+
+    [Parameter]
+    public decimal TotalJumlah { get; set; } = 0;
+
+    [Parameter]
+    public Func<TItem, string> GetFilterableText { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 20;
+
+    [Parameter]
+    public bool TotalEnabled { get; set; } = true;
+
+    [Parameter]
+    public bool SearchEnabled { get; set; } = true;
+
+
+    private string searchText;
+
+    private int currentPageNumber { get; set; } = 1;
+
+    private int TotalPage { get; set; }
+
+    private bool Enabled { get; set; } = true;
+
+    private static readonly Func<TItem, string> DefaultGetFilterableText = item => (item?.ToString() ?? "");
+
+    private IEnumerable<TItem> searchResult = null;
+
+    //private void searchFind()
+    //{
+    //    Func<TItem, string> filterFunc = GetFilterableText ?? DefaultGetFilterableText;
+    //    IEnumerable<TItem> result = (Items ?? Array.Empty<TItem>());
+    //    if (!string.IsNullOrEmpty(searchText))
+    //    {
+    //        result = result.
+    //        Where(x =>
+    //        (GetFilterableText(x) ?? "")
+    //        .Contains(searchText, StringComparison.InvariantCultureIgnoreCase));
+    //    }
+    //    Items = result;
+
+    //    TotalPage = MaxPageNumber(Items.Count());
+    //}
+
+    private void searchFind()
+{
+    Func<TItem, string> filterFunc = GetFilterableText ?? DefaultGetFilterableText;
+    IEnumerable<TItem> result = (Items ?? Array.Empty<TItem>());
+    if (!string.IsNullOrEmpty(searchText))
+    {
+        result = result.Where(x => filterFunc(x).Contains(searchText, StringComparison.InvariantCultureIgnoreCase));
+    }
+    searchResult = result;
+    TotalPage = MaxPageNumber(searchResult.Count());
+    currentPageNumber = 1;
+}
+
+
+    private int NumOfItemToSkip(int pageNumber)
+    {
+        if (Enabled)
+        {
+            return (pageNumber - 1) * PageSize;
+        }
+        return 0;
+    }
+
+    private int NumOfItemToTake(int totalItemsCount)
+    {
+        if (Enabled)
+        {
+            return PageSize;
+        }
+        return totalItemsCount;
+    }
+
+
+    private void BtnPrevPage()
+    {
+        currentPageNumber = currentPageNumber - 1;
+        if (currentPageNumber <= 0)
+            currentPageNumber = 1;
+    }
+
+    private void BtnNextPage()
+    {
+        // TotalPage = MaxPageNumber(Items.Count());
+        currentPageNumber = currentPageNumber + 1;
+        if (currentPageNumber > TotalPage)
+            currentPageNumber = TotalPage;
+    }
+
+    protected override void OnInitialized()
+    {
+
+        TotalPage = MaxPageNumber(Items.Count());
+    }
+
+    private int MaxPageNumber(int totalItemCount)
+    {
+        int maxPageNumber;
+        double numberOfPages = (double)totalItemCount / (double)PageSize;
+        if (numberOfPages == Math.Floor(numberOfPages))
+            maxPageNumber = (int)numberOfPages;
+        else
+            maxPageNumber = (int)numberOfPages + 1;
+
+        return maxPageNumber;
+    }
+
+    private IEnumerable<TItem> GetPageItems()
+    {
+        if (searchResult == null)
+        {
+            return Items.Skip(NumOfItemToSkip(currentPageNumber)).Take(NumOfItemToTake(Items.Count()));
+        }
+        else
+        {
+            return searchResult.Skip(NumOfItemToSkip(currentPageNumber)).Take(NumOfItemToTake(searchResult.Count()));
+        }
+    }
+}

@@ -1,0 +1,336 @@
+﻿@page "/ModulePersediaan/AddItem"
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+
+@inject IInventoryServices service
+@inject NavigationManager navigationmanager
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Item</h3>
+</div>
+
+<div class="content px-4">
+    <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Item Code :
+                <InputText id="codeBank" class="form-control" @bind-Value="bank.ItemCode" style="text-transform:uppercase" @onfocusout="cekKode" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Item Name :
+                <InputText class="form-control" @bind-Value="bank.NamaItem" />
+            </label>
+
+        </div>
+        <div class="form-group">
+            <label>
+                Item Satuan :
+                <InputText class="form-control" @bind-Value="bank.Satuan" />
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Divisi :
+                <InputSelect class="form-control" @bind-Value="bank.Divisi">
+                    <option value="">&nbsp;&nbsp;---Select Divisi---&nbsp;&nbsp;</option>
+                    @foreach (var item in DivisiSet)
+                    {
+                        <option value="@item.Divisi">@item.NamaDiv</option>
+                    }
+
+                </InputSelect>
+                @*<button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+        <br />
+        <div class="form-group" style="border: 2px solid; padding: 3px 3px">
+            <label>
+                Tipe Produk :
+                <br />
+                @*<RadioButtonComponent TEnum="StatusGl" ></RadioButtonComponent>*@
+
+
+
+            </label>
+            <div class="container">
+                <InputRadioGroup @bind-Value="bank.JnsBrng">
+                    @foreach (var jenisbarang in (jnsBrng[])Enum.GetValues(typeof(jnsBrng)))
+                    {
+                        <InputRadio Value="jenisbarang" />
+                        @jenisbarang
+                        <br />
+
+                    }
+
+                </InputRadioGroup>
+            </div>
+        </div>
+
+        <br />
+        <div style="border:1px solid;padding: 3px 3px">
+            <div class="form-group">
+                <label>
+                    Cost Method :
+                    <br />
+                    @*<RadioButtonComponent TEnum="StatusGl" ></RadioButtonComponent>*@
+
+                </label>
+                <div class="container">
+                    <InputRadioGroup @bind-Value="bank.CostMethod">
+                        @foreach (var costing in (costMethod[])Enum.GetValues(typeof(costMethod)))
+                        {
+                            <InputRadio Value="costing" />
+                            @costing
+                            <br />
+
+                        }
+
+                    </InputRadioGroup>
+                </div>
+            </div>
+            @if (bank.CostMethod == costMethod.Standard_Cost)
+            {
+                <div class="form-group">
+                    <label>
+                        Standard Cost :
+                        <InputNumber class="form-control" @bind-Value="bank.StdPrice" />
+                    </label>
+                </div>
+            }
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Account Set :
+                <InputSelect class="form-control" @bind-Value="bank.AcctSet">
+                    <option value="">&nbsp;&nbsp;---Select Account Set---&nbsp;&nbsp;</option>
+                    @foreach (var item in AkunSet)
+                    {
+                        <option value="@item.AcctSet">@item.Description</option>
+                    }
+
+                </InputSelect>
+                @*<button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Category Set :
+                <InputSelect class="form-control" @bind-Value="bank.Category">
+                    <option value="">&nbsp;&nbsp;---Select Category Set---&nbsp;&nbsp;</option>
+                    @foreach (var item in CategorySet)
+                    {
+                        <option value="@item.CatCode">@item.Description</option>
+                    }
+
+                </InputSelect>
+                @*<button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+        <br />
+         <div class="form-group">
+            <label>
+                Qty Awal :
+                <InputNumber class="form-control" @bind-Value="bank.SaldoAwal" />
+            </label>
+
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                Cost Awal :
+                <InputNumber class="form-control" @bind-Value="bank.CostAwal" />
+            </label>
+
+        </div>
+        <br/>
+        <div class="container">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger"type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePersediaan/SetupItem", false))">Batal</button>
+        </div>
+
+    </EditForm>
+</div>
+<br/>
+<br/>
+
+<div @ref="fileDropContainer" class="file-drop-zone @HoverClass" @ondragenter="OnDragEnter" @ondragleave="OnDragLeave" @ondragover="OnDragEnter">
+    <InputFile OnChange="@OnChange" @ref="inputFile" multiple />
+</div>
+<div class="error-message-container">
+    <p>@ErrorMessage</p>
+</div>
+<button class="btn-warning" type="button" @onclick="@(() => imageSources = "")">Delete Image</button>
+
+<div class="image-container">
+   @* @foreach(var imageSource in imageSources)
+    {*@
+        <img src="@imageSources" />
+    @*}*@
+</div>
+
+
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Item Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+
+    IcItemView bank = new IcItemView();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    private costMethod JnsCost { get; set; }
+    private jnsBrng JnsBarang { get; set; }
+    private List<IcAcct> AkunSet;
+    private List<IcCat> CategorySet;
+    private List<IcDiv> DivisiSet;
+
+    ElementReference fileDropContainer;
+    InputFile inputFile;
+
+    IJSObjectReference _filePasteModule;
+    IJSObjectReference _filePasteFunctionReference;
+
+    private string HoverClass;
+    private string imageSources;
+    private const int maxAllowedFiles = 1;
+    private string ErrorMessage;
+ //   private string filestream;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _filePasteModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/filePaste.js");
+
+            _filePasteFunctionReference = await _filePasteModule.InvokeAsync<IJSObjectReference>("initializeFilePaste", fileDropContainer, inputFile.Element);
+        }
+    }
+
+    void OnDragEnter(DragEventArgs e) => HoverClass = "hover";
+
+    void OnDragLeave(DragEventArgs e) => HoverClass = string.Empty;
+
+    async Task OnChange(InputFileChangeEventArgs e)
+    {
+        // imageSources.Clear();
+        imageSources = string.Empty;
+        ErrorMessage = string.Empty;
+
+        if (e.FileCount > maxAllowedFiles)
+        {
+            ErrorMessage = $"Only {maxAllowedFiles} files can be uploaded";
+            return;
+        }
+
+        foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            using var stream = file.OpenReadStream();
+            using var ms = new MemoryStream();
+
+            await stream.CopyToAsync(ms);
+            //   imageSources.Add($"data:{file.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}");
+            imageSources = $"data:{file.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+
+            bank.Foto = imageSources;
+        }
+
+        HoverClass = string.Empty;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_filePasteFunctionReference != null)
+        {
+            await _filePasteFunctionReference.InvokeVoidAsync("dispose");
+            await _filePasteFunctionReference.DisposeAsync();
+        }
+
+        if (_filePasteModule != null)
+        {
+            await _filePasteModule.DisposeAsync();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadAkun();
+        LoadDivisi();
+        LoadKategory();
+        //   bank.GlTipe = 1;
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.ItemCode;
+        DialogOpen = service.CekKdItem(Testing);
+        if (DialogOpen)
+        {
+            bank.ItemCode = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+    void LoadDivisi()
+    {
+        DivisiSet = service.GetIcDiv();
+    }
+
+    void LoadAkun()
+    {
+        AkunSet = service.GetIcAcct();
+    }
+    void LoadKategory()
+    {
+        CategorySet = service.GetIcCat();
+    }
+
+    private void HandleValidSubmit()
+    {
+        var newEdit = service.AddIcItem(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModulePersediaan/SetupItem", false);
+
+    }
+
+    //private void OnRadioClose(StatusGl accepted)
+    //{
+    //    bank.GlStatus = accepted;
+
+    //    //System.Console.WriteLine(accepted);
+    //    // StateHasChanged();
+
+    //}
+}

@@ -1,0 +1,159 @@
+﻿@layout PrintLayout
+@page "/ModulePrinting/NotaCheckingPrice/"
+
+@using eSoft.Penjualan.View
+@using eSoft.Persediaan.View
+@using System.Text.Json
+@inject NavigationManager navigationmanager
+
+<div class="print-actions dontprint">
+    <br />
+    <button class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</button>
+</div>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+    }
+
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .header {
+        border-bottom: 2px solid #333;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+    .info {
+        margin-top: 10px;
+        font-size: 18px;
+    }
+
+    table.detail-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        page-break-inside: auto;
+    }
+
+    .detail-table th, .detail-table td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    .detail-table th {
+        background-color: #f9f9f9;
+    }
+
+    .summary {
+        margin-top: 30px;
+        font-size: 16px;
+    }
+
+        .summary h3 {
+            margin-bottom: 10px;
+        }
+
+    .highlight {
+        color: red;
+    }
+
+    
+        thead
+
+    {
+        display: table-header-group;
+    }
+
+    .dontprint {
+        display: none !important;
+    }
+
+    
+</style>
+
+<div class="container">
+    <div class="header">
+        <h1>@Transh?.Keterangan</h1>
+        <div class="info">
+            <strong>Harga Jual:</strong> @Transh?.HargaJual.ToString("N")
+        </div>
+    </div>
+
+    <table class="detail-table">
+        <thead>
+            <tr>
+                <th>Item Code</th>
+                <th>Nama Item</th>
+                <th>Qty</th>
+                <th>Satuan</th>
+                <th>Valas</th>
+                <th>Harga Pokok</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Transh?.IcPriceDs != null && Transh.IcPriceDs.Any())
+            {
+                foreach (var detail in Transh.IcPriceDs)
+                {
+                    <tr>
+                        <td>@detail.ItemCode</td>
+                        <td>@detail.NamaItem</td>
+                        <td>@detail.Qty</td>
+                        <td>@detail.Satuan</td>
+                        <td>@detail.CurrencyCode @detail.HargaBeli.ToString("N")</td>
+                        <td>@detail.HargaPokok.ToString("N")</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="6" style="text-align:center;">Data belum tersedia</td></tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="summary">
+        <p><strong>Total HPP:</strong> @Transh?.Harga.ToString("N")</p>
+        <p><strong>Total Biaya (PPnMasukan + PPh + Expedisi):</strong> @Transh?.TambahanBiaya.ToString("N")</p>
+        <p><strong>Total HPP + Biaya:</strong> @Transh?.TotalCost.ToString("N")</p>
+        <br />
+        <h3>Keuntungan: <span class="highlight">@Transh?.Keuntungan.ToString("N")</span></h3>
+        <h3>Markup: <span class="highlight">@Transh?.MarkUp.ToString("N") %</span></h3>
+        <h3>Gross Profit: <span class="highlight">@Transh?.GProfit.ToString("N") %</span></h3>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "SURAT JALAN";
+    [Parameter] public int Id { get; set; }
+    [Parameter] public int Cetak { get; set; }
+
+    private IcPriceHView Transh = new IcPriceHView { IcPriceDs = new List<IcPriceDView>() };
+    public string PreviousUri { get; set; } = string.Empty;
+    public string encodedPreviousUri { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(navigationmanager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+
+        if (query.Count != 0)
+        {
+            encodedPreviousUri = query.Get(0);
+            var json = Uri.UnescapeDataString(encodedPreviousUri);
+            Transh = JsonSerializer.Deserialize<IcPriceHView>(json);
+        }
+    }
+}

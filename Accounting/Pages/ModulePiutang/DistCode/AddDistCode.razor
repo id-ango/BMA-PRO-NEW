@@ -1,0 +1,163 @@
+﻿@page "/ModulePiutang/AddDistCode"
+@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+@using eSoft.Piutang.Services
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.Services
+
+@inject IReceivableServices service
+@inject ILedgerServices serviceGl
+@inject NavigationManager navigationmanager
+
+
+<div class="top-row px-4 " style="z-index:5">
+    <h3>Add Distribution Code</h3>
+</div>
+
+<div class="content px-4">
+    <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>
+                Distribution Code :
+                <InputText id="codeBank" class="form-control" @bind-Value="bank.DistCode" style="text-transform:uppercase" @onfocusout="cekKode" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Nama Distribution :
+                <InputText class="form-control" @bind-Value="bank.Description" />
+            </label>
+        </div>
+        <br/>
+        <div class="form-group">
+            <label>
+                GL Account :
+                <InputSelect class="form-control" @bind-Value="bank.Dist1" style="width:60%; display:inline">
+                    <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                    @foreach (var item in GlAccounts)
+                    {
+                        <option value="@item.GlAcct">@item.NamaLengkap</option>
+                    }
+
+                </InputSelect>
+                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+            </label>
+        </div>
+        <br/>
+        <div class="float-md-right">
+            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePiutang/SetupDistCode", false))">Batal</button>
+        </div>
+
+    </EditForm>
+</div>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Distribution Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="GlAccounts" Context="cbBank" GetFilterableText="@(item =>$"{item.GlAcct} {item.GlNama} ")">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Bank Name</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.GlAcct</td>
+            <td>@cbBank.GlNama</td>
+
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.GlAcct)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    ArDistView bank = new ArDistView();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+    private List<GlAccount> GlAccounts;
+    public bool SearchOpen { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        bank.DistCode = "";
+        LoadGlAccounts();
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.DistCode;
+        DialogOpen = service.CekDistCode(Testing);
+        if (DialogOpen)
+        {
+            bank.DistCode = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private void HandleValidSubmit()
+    {
+        var newEdit = service.AddDist(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModulePiutang/SetupDistCode", false);
+
+    }
+
+    void LoadGlAccounts()
+    {
+        GlAccounts = serviceGl.GetGlAccount();
+    }
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            bank.Dist1 = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+}

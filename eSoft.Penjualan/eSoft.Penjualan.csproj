@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.36" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\eSoft.Persediaan\eSoft.Persediaan.csproj" />
+    <ProjectReference Include="..\eSoft.Piutang\eSoft.Piutang.csproj" />
+  </ItemGroup>
+
+</Project>

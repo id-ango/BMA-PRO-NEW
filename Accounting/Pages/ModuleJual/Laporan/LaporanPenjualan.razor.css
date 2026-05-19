@@ -1,0 +1,17 @@
+﻿td {
+    position: relative;
+}
+
+    
+
+
+.remarks {
+    background-color: lightgreen; /* Ganti dengan warna latar belakang yang Anda inginkan */
+    color: black; /* Ganti dengan warna teks yang Anda inginkan */
+    padding: 2px 5px; /* Sesuaikan dengan ukuran padding yang diinginkan */
+    display: inline-block;
+    width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    font-size: 12px;
+}

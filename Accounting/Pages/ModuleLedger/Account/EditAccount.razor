@@ -1,0 +1,124 @@
+﻿@page "/ModuleLedger/EditAccount/{Id:int}"
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.View
+@using eSoft.Ledger.Services 
+@inject ILedgerServices service
+@inject NavigationManager navigationmanager
+
+<h3>Edit Account</h3>
+
+<EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="form-group ">
+        <label>
+            Kode Bank :
+            <InputText id="codeBank" class="form-control" @bind-Value="bank.GlAcct" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Account Name :
+            <InputText class="form-control" @bind-Value="bank.GlNama" />
+        </label>
+    </div>
+
+    <div class="form-group">
+        <label>
+            Account Type :
+            <br />
+            @*<RadioButtonComponent TEnum="StatusGl" ></RadioButtonComponent>*@
+            <InputRadioGroup @bind-Value="bank.GlStatus">
+                @foreach (var status in (StatusGl[])Enum.GetValues(typeof(StatusGl)))
+                {
+                    <InputRadio Value="status" />
+                    @status
+                    <br />
+
+                }
+
+            </InputRadioGroup>
+
+        </label>
+    </div>
+    <br/>
+    <div class="float-md-right">
+        <button class="btn-success" type="submit">Simpan</button>
+        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleLedger/SetupAkunGl", false))">Batal</button>
+    </div>
+
+</EditForm>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Bank Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    GlAccountView bank = new GlAccountView();
+    GlAccount Bank = new GlAccount();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+   
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBank();
+    }
+
+    void LoadBank()
+    {
+        Bank = service.GetGlAccountId(Id);
+        bank.GlAccountId = Bank.GlAccountId;
+        bank.GlAcct = Bank.GlAcct;
+        bank.GlNama = Bank.GlNama;
+        bank.GlTipe = Bank.GlTipe;
+        bank.GlStatus = (StatusGl)bank.GlTipe;
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.GlAcct;
+        DialogOpen = service.CekKdAkun(Testing);
+        if (DialogOpen)
+        {
+            bank.GlAcct = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private async Task HandleValidSubmit()
+    {
+        var newEdit = await service.EditGlAccount(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleLedger/SetupAkunGl", false);
+
+    }
+
+}

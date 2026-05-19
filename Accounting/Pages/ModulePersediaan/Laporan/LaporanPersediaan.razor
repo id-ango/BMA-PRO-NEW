@@ -1,0 +1,296 @@
+﻿@page "/ModulePersediaan/LaporanPersediaan"
+
+@using Accounting.Services
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.View
+@using eSoft.Penjualan.Services
+
+@using eSoft.Pembelian.Model
+@using eSoft.Pembelian.View
+@using eSoft.Pembelian.Services
+
+@using eSoft.LaporanStock.Services
+
+@inject IExcelServices serviceXL
+@inject IJSRuntime JS
+
+@inject IInventoryServices   serviceIC
+@inject ISalesServices   serviceOE
+@inject IPurchaseServices   serviceIR
+@inject ILaporanStockServices  services
+
+@inject NavigationManager navigationmanager
+
+<h3>Laporan Persediaan</h3>
+<div class="row">
+    <div class="col-4">
+        <EditForm Model="transh">
+            <div class="form-group">
+                <label>
+                    Dari Tanggal :
+                    <InputDate class="form-control" @bind-Value="Tanggal1" />
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    Sd Tanggal :
+                    <InputDate class="form-control" @bind-Value="Tanggal2" />
+                </label>
+            </div>
+
+        </EditForm>
+    </div>
+
+    <div class="col-4">
+        <br />
+        <button class="btn btn-primary" @onclick="@(() => proses1())">Display Mutasi</button>
+        <br />
+
+    </div>
+
+    <div class="col-4">
+        <br />
+        <button class="btn btn-primary" @onclick="@(() => proses2())">Display Lokasi</button>
+        <br />
+
+    </div>
+    <div class="col-4">
+        <br />
+        <button class="btn btn-primary" @onclick="@(() => proses3())">Display Rekap Stock</button>
+        <br />
+        <br />
+        <button class="btn btn-success" @onclick="DownloadRekapToExcel">Export Rekap to Excel</button>
+        <button class="btn btn-success" @onclick="DownloadRekapPjlSlsToExcel">Export Rekap (PJL vs SLS)</button>
+    </div>
+</div>
+
+<div class="row">
+    <br />
+</div>
+
+@switch (Tampilan)
+{
+    case 1:
+        <div class="container">
+
+            <DataGridLaporanStockComponent Items="TransItem" OnDetail="OpenDetail" PrintDetail="printDetail"></DataGridLaporanStockComponent>
+
+        </div>
+        @if (DetailOpen)
+        {
+
+            <ModalSearchComponent OnClose="OnSearchClose" Items="TransDetail" Context="transaksi2" GetFilterableText="@(item => $"{item.ItemCode} {item.Keterangan} {item.Dokumen} ")">
+                <TableHeader>
+                    <th scope="col" style="width:10%">Dokumen</th>
+
+                    <th scope="col" style="width:30%">Keterangan</th>
+                    <th scope="col" style="width:10%">Qty</th>
+                    <th scope="col" style="width:20%">Cost</th>
+                    <th scope="col" style="width:10%">Balance</th>
+                    <th scope="col" style="width:20%">Total</th>
+
+
+                    <th></th>
+                </TableHeader>
+                <RowTemplate>
+                    <td style="width:10%">
+                        @transaksi2.Dokumen
+                        <br />
+                        <span class="badge bg-primary">@transaksi2.Tanggal.ToShortDateString()</span>
+                    </td>
+
+                    <td style="width:30%">@transaksi2.Keterangan</td>
+                    <td style="width:10%; text-align:right">@transaksi2.Qty.ToString("N")</td>
+                    <td style="width:20%; text-align:right">@transaksi2.Cost.ToString("N")</td>
+                    <td style="width:10%; text-align:right">@transaksi2.Jumlah.ToString("N")</td>
+                    <td style="width:20%; text-align:right">@transaksi2.CostJumlah.ToString("N")</td>
+
+                </RowTemplate>
+            </ModalSearchComponent>
+
+
+        }
+
+        break;
+
+    case 2:
+        <div class="container">
+
+            <DataGridLaporanLokasiQtyComponent Items="TransItemLokasi"></DataGridLaporanLokasiQtyComponent>
+
+        </div>
+
+        break;
+    case 3:
+        <div class="container">
+
+            <DataGridComponent Items="TransRekap"
+                               GetFilterableText="@(item => $"{item.ItemCode} {item.NamaItem}")"
+                               GetRowStyle="@(item => item.QtyAwal < 0 || item.QtyAkhir < 0 ? "background-color: #fff3cd;" : "")">
+
+                <TableHeader>
+                    <th scope="col" style="width:10%">ItemCode</th>
+                    <th scope="col" style="width:10%">Keterangan</th>
+                    <th scope="col" style="width:10%">Qty</th>
+                    <th scope="col" style="width:10%">Cost</th>
+                    <th scope="col" style="width:10%">Masuk</th>
+                    <th scope="col" style="width:10%">Masuk</th>
+                    <th scope="col" style="width:10%">Keluar</th>
+                    <th scope="col" style="width:10%">Keluar</th>
+                    <th scope="col" style="width:10%">Adjust</th>
+                    <th scope="col" style="width:10%">Adjust</th>
+                    <th scope="col" style="width:10%">Total</th>
+                    <th scope="col" style="width:10%">Total</th>
+
+                </TableHeader>
+
+                <RowTemplate>
+                    <td style="width:10%">@context.ItemCode</td>
+                    <td style="width:10%">@context.NamaItem</td>
+                    <td style="width:10%">@context.QtyAwal.ToString("N")</td>
+                    <td style="width:10%">@context.SaldoAwal.ToString("N")</td>
+                    <td style="width:10%">@context.QtyMasuk.ToString("N")</td>
+                    <td style="width:10%">@context.SaldoMasuk.ToString("N")</td>
+                    <td style="width:10%">@context.QtyKeluar.ToString("N")</td>
+                    <td style="width:10%">@context.SaldoKeluar.ToString("N")</td>
+                    <td style="width:10%">@context.QtyAdjust.ToString("N")</td>
+                    <td style="width:10%">@context.SaldoAdjust.ToString("N")</td>
+                    <td style="width:10%">@context.QtyAkhir.ToString("N")</td>
+                    <td style="width:10%">@context.SaldoAkhir.ToString("N")</td>
+                </RowTemplate>
+            </DataGridComponent>
+
+        </div>
+
+        break;
+
+}
+
+@code {
+
+
+    private List<IcStockCardView> TransDetail;
+    private List<IcItem> TransItem = new List<IcItem>();
+    private List<IcItemQtyByLocationView> TransItemLokasi = new();
+    private List<IcRekapStock> TransRekap = new();
+
+    private string nCount { get; set; }
+    private string nOngkir { get; set; }
+    private string nJumlah { get; set; }
+    private string nPPn { get; set; }
+    public IcStockCardView transh = new IcStockCardView();
+
+
+    public int Tampilan { get; set; } = 1;
+
+    public bool DeleteDialogOpen { get; set; }
+    public bool NullDialogOpen { get; set; }
+    public bool DetailOpen { get; set; }
+    public bool DetailOpen2 { get; set; }
+    public bool DetailOpen3 { get; set; }
+
+    public DateTime Tanggal1 { get; set; }
+    public DateTime Tanggal2 { get; set; }
+
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Tanggal2 = DateTime.Today;
+        Tanggal1 = DateTime.Today;
+    }
+
+
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        DetailOpen = false;
+        DetailOpen2 = false;
+        DetailOpen3 = false;
+        StateHasChanged();
+
+    }
+
+    private void proses1()
+    {
+        TransItem = serviceIC.GetIcItem(false);
+        Tampilan = 1;
+    }
+
+    private void OpenDetail(IcItem xKdBank)
+    {
+
+        TransDetail = services.CetakMutasi(Tanggal1, Tanggal2, xKdBank.ItemCode);
+        DetailOpen = !DetailOpen;
+        StateHasChanged();
+    }
+
+    private void printDetail(IcItem xKdBank)
+    {
+        string words = xKdBank.ItemCode + '+' + Tanggal1.ToString("yyyy-MM-dd") + '+' + Tanggal2.ToString("yyyy-MM-dd");
+        navigationmanager.NavigateTo($"/ModulePrinting/Kartustock/{words}");
+        StateHasChanged();
+    }
+
+    private void proses2()
+    {
+        TransItemLokasi = serviceIC.GetAllIcItemQtyByLocation();
+        Tampilan = 2;
+        StateHasChanged();
+    }
+
+    private void proses3()
+    {
+        TransRekap = services.RekapStock(Tanggal1, Tanggal2);
+        Tampilan = 3;
+        StateHasChanged();
+    }
+
+    private async Task DownloadRekapToExcel()
+    {
+        
+            TransRekap = services.RekapStock(Tanggal1, Tanggal2);
+            Tampilan = 3;
+            StateHasChanged();
+        
+
+        try
+        {
+            var bytes = serviceXL.CreateRekapStockWorksheet(TransRekap);
+            using var ms = new MemoryStream(bytes);
+            using var streamRef = new DotNetStreamReference(stream: ms);
+            var fileName = $"RekapStock_{Tanggal1:yyyy-MM-dd}_{Tanggal2:yyyy-MM-dd}.xlsx";
+            await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task DownloadRekapPjlSlsToExcel()
+    {
+        
+            TransRekap = services.RekapStock(Tanggal1, Tanggal2);
+            Tampilan = 3;
+            StateHasChanged();
+        
+
+        try
+        {
+            var bytes = serviceXL.CreateRekapStockPjlSlsPpnWorksheet(TransRekap, Tanggal1, Tanggal2);
+            using var ms = new MemoryStream(bytes);
+            using var streamRef = new DotNetStreamReference(stream: ms);
+            var fileName = $"RekapStock_PJL_SLS_PPN_{Tanggal1:yyyy-MM-dd}_{Tanggal2:yyyy-MM-dd}.xlsx";
+            await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        }
+        catch
+        {
+        }
+    }
+}

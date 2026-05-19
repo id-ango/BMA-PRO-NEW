@@ -1,0 +1,140 @@
+﻿@using eSoft.Piutang.Model
+@using eSoft.Piutang.View
+
+
+<div class="modal fade show" role="dialog" style="display:block">
+    <div class="modal-dialog" role="treegrid">
+        <div class="modal-content">
+
+            <div class="modal-header alert-success)">
+
+
+                <h5 class="modal-title">Detail Transaksi</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="@ModalOk">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@Detail">
+                    <div class="form-group">
+                        <label>
+                            Source Code
+                            <InputSelect class="form-control" @bind-Value="Detail.DistCode" style="width:80%; display:inline">
+                                <option value="">&nbsp;&nbsp;---Select Source Code---&nbsp;&nbsp;</option>
+                                @foreach (var item in SrcCode)
+                                {
+                                    <option value="@item.DistCode">@item.Description</option>
+                                }
+
+                            </InputSelect>
+                            <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            Keterangan
+                            <InputTextArea class="form-control" @bind-Value="@Detail.Keterangan"></InputTextArea>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            Terima :
+                            <InputNumber class="form-control" @bind-Value="Detail.Jumlah" />
+                        </label>
+                    </div>
+                    
+
+
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+
+                @*<button type="button" class="btn btn-primary" @onclick="@ModalOk">OK</button>*@
+                <button type="submit" class="btn btn-primary" @onclick="@SaveDetail">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (SearchOpen)
+{
+
+    <ModalSearchComponent OnClose="OnSearchClose" Items="SrcCode" Context="cbBank" GetFilterableText="@(item =>$"{item.DistCode} {item.Description} ")">
+        <TableHeader>
+            <th scope="col">Code</th>
+            <th scope="col">Nama Code</th>
+
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@cbBank.DistCode</td>
+            <td>@cbBank.Description</td>
+
+            <td>
+                <button @onclick="() => BtnChoose(cbBank.DistCode)" class="btn btn-success">Choose</button>
+
+            </td>
+        </RowTemplate>
+    </ModalSearchComponent>
+
+
+}
+
+@code{
+
+    [Parameter]
+    public string Currency { get; set; }
+
+    [Parameter]
+    public List<ArDist> SrcCode { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<ArTransDView> OnDetail { get; set; }
+
+    public ArTransDView Detail = new ArTransDView();
+
+
+    public bool SearchOpen { get; set; }
+
+
+
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+
+    private Task SaveDetail()
+    {
+        return OnDetail.InvokeAsync(Detail);
+
+
+
+    }
+
+   
+
+   
+
+    private void BtnChoose(string textSearch)
+    {
+        if (!string.IsNullOrEmpty(textSearch))
+        {
+            Detail.DistCode = textSearch;
+        }
+
+        SearchOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+
+        SearchOpen = false;
+        StateHasChanged();
+
+    }
+
+}

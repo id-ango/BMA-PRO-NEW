@@ -1,0 +1,22 @@
+﻿.custom-card {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+.custom-header {
+    background-color: #007bff;
+    color: #fff;
+    padding: 15px;
+    border-radius: 8px 8px 0 0;
+}
+
+.custom-body {
+    padding: 20px;
+}
+
+.custom-button {
+    margin-top: 10px;
+}

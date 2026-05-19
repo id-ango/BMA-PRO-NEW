@@ -1,0 +1,111 @@
+﻿@page "/ModuleFinancial/EditPrintTP/{Id:int}"
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+
+@inject IFinancialServices service
+@inject NavigationManager navigationmanager
+
+<h3>Edit Nama Cetak</h3>
+
+<EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>
+            Kode Cetak :
+            <InputText id="codeBank" class="form-control" @bind-Value="bank.KodeCetak" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Name :
+            <InputText class="form-control" @bind-Value="bank.NamaCetak" />
+        </label>
+    </div>
+
+
+    <br />
+    <div class="container">
+        <button class="btn-success" type="submit">Simpan</button>
+        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleFinancial/SetupPrintTP", false))">Batal</button>
+    </div>
+
+
+</EditForm>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Lokasi Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    FcPrintTPView bank = new ();
+    FcPrintTP Bank = new ();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBank();
+
+    }
+
+    void LoadBank()
+    {
+        Bank = service.GetPrintTPId(Id);
+        bank.FcPrintTPId = Bank.FcPrintTPId;
+        bank.KodeCetak = Bank.KodeCetak;
+        bank.NamaCetak = Bank.NamaCetak;
+
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.KodeCetak;
+        DialogOpen = service.CekKdPrintTP(Testing);
+        if (DialogOpen)
+        {
+            bank.KodeCetak = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private async Task HandleValidSubmit()
+    {
+        var newEdit = await service.EditPrintTP(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleFinancial/SetupPrintTP", false);
+
+    }
+
+
+}

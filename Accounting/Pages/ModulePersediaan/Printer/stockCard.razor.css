@@ -1,0 +1,48 @@
+﻿body {
+}
+
+.stock-card {
+    width: 21cm; /* Ukuran A4 */
+    /*border: 1px solid black;*/
+    padding: 10px;
+}
+
+@media print {
+   /* header, footer, aside, form, menu, nav {
+        display: none;
+    }
+*/
+    .dontprint {
+        display: none;
+    }
+}
+
+.header, .footer {
+    text-align: center;
+    font-weight: bold;
+}
+
+.details {
+    margin-top: 5px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.details-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+    .table th, .table td {
+        border: 1px solid black;
+        padding: 5px;
+        text-align: center;
+        height: 30px; /* Tinggi baris kosong */
+    }

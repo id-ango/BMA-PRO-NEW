@@ -1,0 +1,48 @@
+﻿<div class="modal" tabindex="-1" role="dialog" style="display:block">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+           
+            <div class="modal-header @(TombolSave? "alert-danger":"alert-success")">
+            
+
+                        <h5 class="modal-title">@Title</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="@ModalCancel">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>@Text</p>
+                    </div>
+                    <div class="modal-footer">
+                        @if (TombolSave)
+                        {
+                            <button type="button" class="btn btn-primary" @onclick="@ModalOk">OK</button>
+                        }
+
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="@ModalCancel">Close</button>
+                    </div>
+                </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public string Title { get; set; }
+    [Parameter]
+    public string Text { get; set; }
+    [Parameter]
+    public bool TombolSave { get; set; } = true;
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+}

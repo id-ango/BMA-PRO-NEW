@@ -1,0 +1,197 @@
+﻿@layout PrintLayout
+
+@page "/ModulePrinting/PrintTrialBalance/{query}"
+
+@using eSoft.Ledger.Model
+@using eSoft.Ledger.View
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+@using eSoft.Ledger.Services
+
+
+
+@inject IFinancialServices serviceFC
+@inject ILedgerServices serviceGL
+
+
+@inject NavigationManager navigationmanager
+
+<div class="dontprint" style="display:none inline">
+    <br />
+    &emsp;
+
+    <NavLink href="/ModuleFinancial/LaporanFinancial" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
+
+    &emsp;
+    <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+    &emsp;
+</div>
+
+@*<table width="100%" border="0" cellspacing="0" cellpadding="0">
+
+    <thead>
+
+        <tr>
+            <td colspan="3">&nbsp;</td>
+        </tr>
+
+
+        <tr>
+            <td colspan="3" style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:15px;" align="center">
+                @Title
+            </td>
+        </tr>
+
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+
+            </td>
+        </tr>
+
+    </tbody>
+</table>*@
+<br />
+
+<h1 style="text-align:center">@Title</h1>
+<h3 style="text-align:center">@kodeCetak</h3>
+<table width="100%" border="0" cellspacing="0" cellpadding="4">
+
+    <thead>
+        <tr>
+            <td colspan="5" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px;" align="right">
+            </td>
+        </tr>
+        <tr>
+            <td colspan="5" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px;" align="right">
+            </td>
+        </tr>
+        <tr>
+
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-left:1px solid #333; border-right:1px solid #333;" width="40%" height="32" align="center">Keterangan</td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="15%" align="center">Awal</td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="15%" align="center">Debet</td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="15%" align="center">Kredit</td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="15%" align="center">Akhir</td>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var transaksi in transFinancial)
+        {
+
+            <tr>
+                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  border-left:1px solid #333; " align="left">
+                    @(transaksi.GlNama )
+                </td>
+                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">
+                    @(transaksi.GlSldAwal.ToString("#,###.##;;' '"))
+                </td>
+                 <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">
+                    @(transaksi.GlPreFisc1.ToString("#,###.##;;' '"))
+                </td>
+                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">
+                    @(transaksi.GlPreFisc2.ToString("#,###.##;;' '"))
+                </td>
+                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;   border-right:1px solid #333;" align="right">
+                    @((transaksi.GlSldAwal+transaksi.GlPreFisc1-transaksi.GlPreFisc2).ToString("#,###.##;;' '"))
+                </td>
+            </tr>
+          
+            
+            
+
+            
+        }
+
+
+
+        <tr>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  border-left:1px solid #333; " align="center">&emsp;</td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;   border-right:1px solid #333;" align="center"></td>
+        </tr>
+
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="1" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px;" align="right">
+            </td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">
+                @(totalJum[0].ToString("#,###.##;;' '"))
+            </td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">
+                @(totalJum[1].ToString("#,###.##;;' '"))
+            </td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">
+                @(totalJum[2].ToString("#,###.##;;' '"))
+            </td>
+            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">
+                @(totalJum[3].ToString("#,###.##;;' '"))
+            </td>
+        </tr>
+    </tfoot>
+
+</table>
+
+
+
+
+
+@code {
+
+    [Parameter] public string query { get; set; }
+
+    private int Tahun = 2022;
+    private Dictionary<int, string> dictBulan = new();
+    private int Bulan = DateTime.Now.Month;
+    private List<FcPrintTP> cetakTP = new();
+    private string kodeCetak = "";
+    private List<FcAccount> transFinancial = new();
+    private List<FcCom> Perusahaan = new();
+    private string company = "";
+    Decimal[] totalJum = {0,0,0,0};
+
+    private string Title = "TRIAL BALANCE";
+
+  //  private int No = 0;
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        loadStock();
+
+    }
+
+    protected override void OnParametersSet()
+    {
+        //the param will be set now
+        var test = query;
+    }
+
+    private void loadStock()
+    {
+        string[] words = query.Split('+');
+
+
+        kodeCetak = words[0];
+        company = words[1];
+        Bulan = int.Parse(words[2]);
+        Tahun = int.Parse(words[3]);
+
+
+        transFinancial = serviceFC.printTrialBalance(company, Bulan, Tahun);
+        totalJum[0] = transFinancial.Sum(x => x.GlSldAwal);
+        totalJum[1] = transFinancial.Sum(x => x.GlPreFisc1);
+        totalJum[2] = transFinancial.Sum(x => x.GlPreFisc2);
+        totalJum[3] = totalJum[0] + totalJum[1] - totalJum[2];
+
+       
+        StateHasChanged();
+
+    }
+
+
+}

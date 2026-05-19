@@ -1,0 +1,114 @@
+﻿@page "/ModuleBank/EditSrcGroup/{Id:int}"
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+
+@inject ICashBankServices service
+
+@inject NavigationManager navigationmanager
+
+<h3>Edit Source Group</h3>
+
+<EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>
+            Source Group :
+            <InputText id="codeBank" class="form-control" @bind-Value="bank.Grp" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Nama Group :
+            <InputText class="form-control" @bind-Value="bank.NamaGrp" />
+        </label>
+    </div>
+    <br />
+    
+    <br />
+    <div class="float-md-right">
+        <button class="btn-success" type="submit">Simpan</button>
+        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleBank/SetupSrcGroup", false))">Batal</button>
+    </div>
+
+</EditForm>
+
+@if (DialogOpen)
+{
+    <ModalDialogComponent Title="Alert" Text="Kode Bank Sudah Ada" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+
+
+<style>
+    label {
+        width: 100%;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    SrcGroupView bank = new();
+    CbGrp Bank = new ();
+    public string Testing { get; set; }
+    private bool DialogOpen { get; set; }
+ 
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadBank();
+       
+    }
+
+    void LoadBank()
+    {
+        Bank = service.GetSrcGroupId(Id);
+        bank.CbGrpId = Bank.CbGrpId;
+        bank.Grp = Bank.Grp;
+        bank.NamaGrp = Bank.NamaGrp;
+      
+
+    }
+
+    private void cekKode()
+    {
+        Testing = bank.Grp;
+        DialogOpen = service.CekSrcGroup(Testing);
+        if (DialogOpen)
+        {
+            bank.Grp = "";
+        }
+        StateHasChanged();
+    }
+
+    private void OnDialogClose(bool accepted)
+    {
+
+        DialogOpen = false;
+        StateHasChanged();
+
+    }
+
+
+
+    private async Task HandleValidSubmit()
+    {
+        var newEdit = await service.EditSrcGroup(bank);
+        if (newEdit)
+        {
+
+
+        }
+
+        navigationmanager.NavigateTo("/ModuleBank/SetupSrcGroup", false);
+
+    }
+
+  
+}
+
+

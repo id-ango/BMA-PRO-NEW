@@ -1,0 +1,157 @@
+﻿@typeparam TItem
+@using System.Collections.Generic
+@using System.Linq
+
+<div class="bg-light justify-content-between">
+    @if (TotalEnabled)
+    {
+        @TotalJumlah.ToString("N")
+    }
+
+    @if (SearchEnabled)
+    {
+        <p align="right">
+            <input class="mr-sm-2" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
+            <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="searchFind">Search</button>
+        </p>
+    }
+    else
+    {
+        <p>&emsp;</p>
+    }
+</div>
+
+<table class="table table-hover table-bordered">
+    <thead>
+        <tr>@TableHeader</tr>
+    </thead>
+    <tbody>
+        @foreach (var item in GetPageItems())
+        {
+            @* <tr>@RowTemplate(item)</tr> *@
+            <tr style="@GetRowStyle?.Invoke(item)">@RowTemplate(item)</tr>
+        }
+    </tbody>
+</table>
+<div class="bg-light justify-content-between">
+    <p align="right">
+        <button class="btn btn-outline-danger my-2 my-sm-0" type="button" @onclick="BtnPrevPage">Prev</button>
+        <span style="font-size:12px;">
+            &nbsp; &nbsp; Page
+            <input type="number" max="@TotalPage" min="1" @bind-value="currentPageNumber" @bind-value:event="oninput" />
+            of @TotalPage &nbsp; &nbsp;
+        </span>
+        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="BtnNextPage">Next</button>
+    </p>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment TableHeader { get; set; }
+
+    [Parameter]
+    public RenderFragment<TItem> RowTemplate { get; set; }
+
+    [Parameter]
+    public IEnumerable<TItem> Items { get; set; }
+
+    [Parameter]
+    public decimal TotalJumlah { get; set; } = 0;
+
+    [Parameter]
+    public Func<TItem, string> GetFilterableText { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 20;
+
+    [Parameter]
+    public bool TotalEnabled { get; set; } = true;
+
+    [Parameter]
+    public bool SearchEnabled { get; set; } = true;
+
+    [Parameter]
+    public Func<TItem, decimal> PropertyJumlahSelector { get; set; }
+
+    [Parameter]
+    public Func<TItem, string> GetRowStyle { get; set; }
+
+    private string searchText;
+    private int currentPageNumber = 1;
+    private int TotalPage { get; set; }
+    private bool Enabled { get; set; } = true;
+    private static readonly Func<TItem, string> DefaultGetFilterableText = item => (item?.ToString() ?? "");
+    private IEnumerable<TItem> searchResult = null;
+
+    private void searchFind()
+    {
+        Func<TItem, string> filterFunc = GetFilterableText ?? DefaultGetFilterableText;
+        IEnumerable<TItem> result = (Items ?? Array.Empty<TItem>());
+        if (!string.IsNullOrEmpty(searchText))
+        {
+            result = result.Where(x => filterFunc(x).Contains(searchText, StringComparison.InvariantCultureIgnoreCase));
+        }
+        searchResult = result;
+        UpdatePagination();
+        if (PropertyJumlahSelector != null)
+        {
+            CalculateTotalJumlah();
+        }
+        currentPageNumber = 1;
+    }
+
+    private void BtnPrevPage()
+    {
+        if (currentPageNumber > 1)
+        {
+            currentPageNumber--;
+        }
+    }
+
+    private void BtnNextPage()
+    {
+        if (currentPageNumber < TotalPage)
+        {
+            currentPageNumber++;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        UpdatePagination();
+        if (PropertyJumlahSelector != null)
+        {
+            CalculateTotalJumlah();
+        }
+    }
+
+    private void UpdatePagination()
+    {
+        var itemCount = (searchResult ?? Items).Count();
+        TotalPage = MaxPageNumber(itemCount);
+
+        // Ensure currentPageNumber is within valid range
+        if (currentPageNumber > TotalPage)
+        {
+            currentPageNumber = 1;
+        }
+    }
+
+    private void CalculateTotalJumlah()
+    {
+        TotalJumlah = (searchResult ?? Items).Sum(PropertyJumlahSelector);
+    }
+
+    private int MaxPageNumber(int totalItemCount)
+    {
+        return (int)Math.Ceiling((double)totalItemCount / PageSize);
+    }
+
+    private IEnumerable<TItem> GetPageItems()
+    {
+        var itemsToPaginate = searchResult ?? Items;
+        return itemsToPaginate
+            .Skip((currentPageNumber - 1) * PageSize)
+            .Take(PageSize);
+    }
+}

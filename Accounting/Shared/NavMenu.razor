@@ -1,0 +1,657 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">BMA GROUP</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column">
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Home
+            </NavLink>
+        </li>
+
+        @*<AuthorizeView Roles="Admin, Finance">
+        <li class="nav-item px-3">
+        <NavLink class="nav-link" href="#" @onclick="(()=>expandLaporan = !expandLaporan)">
+        <span class="oi oi-list-rich" aria-hidden="true"></span> Laporan
+        </NavLink>
+        @if (expandLaporan)
+        {
+        <ul class="nav flex-column">
+
+        <li class="nav-item px-3">
+        <NavLink class="nav-link" href="ModuleHutang/LaporanAgingHutang">
+        <span aria-hidden="true"></span>Aging Hutang
+        </NavLink>
+        </li>
+
+        <li class="nav-item px-3">
+        <NavLink class="nav-link" href="ModulePiutang/LaporanAgingPiutang">
+        <span aria-hidden="true"></span>Aging Piutang
+        </NavLink>
+        </li>
+
+        <li class="nav-item px-3">
+        <NavLink class="nav-link" href="ModuleBank/LaporanCashBank">
+        <span aria-hidden="true"></span>Kas Bank
+        </NavLink>
+        </li>
+
+        </ul>
+
+
+        }
+        </li>  <!--   Laporan  -->
+        </AuthorizeView>*@
+
+        <AuthorizeView Roles="Admin, Finance">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandPenjualan = !expandPenjualan)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Penjualan
+                </NavLink>
+                @if (expandPenjualan)
+                {
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleJual/TransOrderJual">
+                                <span aria-hidden="true"></span> Order Penjualan
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleJual/CekStockSalesOrder">
+                                <span aria-hidden="true"></span> Cek Stock SO
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleJual/TransJual">
+                                <span aria-hidden="true"></span> Penjualan/Retur
+                            </NavLink>
+                        </li>
+
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleJual/TransJualNon">
+                                <span aria-hidden="true"></span> Penjualan/Retur Non
+                            </NavLink>
+                        </li>
+
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleJual/SetupKurir">
+                                <span aria-hidden="true"></span> Setup Kurir
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleJual/SetupSalesman">
+                                <span aria-hidden="true"></span> Setup Salesman
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleJual/uploadpdf">
+                                <span aria-hidden="true"></span> Upload PDF
+                            </NavLink>
+                        </li>
+                    </ul>
+
+
+                }
+            </li>  <!--   Penjualan  -->
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Admin, Finance">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandPembelian = !expandPembelian)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Pembelian
+                </NavLink>
+                @if (expandPembelian)
+                {
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleBeli/TransOrderBeli">
+                                <span aria-hidden="true"></span> Order Import
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleBeli/TransBeli">
+                                <span aria-hidden="true"></span> Pembelian/Retur
+                            </NavLink>
+                        </li>
+
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleBeli/LaporanOrderCurrency">
+                                <span aria-hidden="true"></span> Laporan Item/Order
+                            </NavLink>
+                        </li>
+
+                    </ul>
+
+
+                }
+            </li>  <!--   Pembelian  -->
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Admin, Finance, Warehouse">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandPersediaan = !expandPersediaan)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Persediaan
+                </NavLink>
+                @if (expandPersediaan)
+                {
+                    <ul class="nav flex-column">
+
+
+
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePersediaan/TransAdjustment">
+                                <span aria-hidden="true"></span> Transaksi Inventory
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePersediaan/TransMutasi">
+                                <span aria-hidden="true"></span> Mutasi Inventory
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePersediaan/SetupDivisi">
+                                <span aria-hidden="true"></span> Setup Divisi
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePersediaan/SetupLokasi">
+                                <span aria-hidden="true"></span> Setup Lokasi
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePersediaan/SetupItem">
+                                <span aria-hidden="true"></span> Setup Item
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePersediaan/SetupAcctSet">
+                                <span aria-hidden="true"></span> Setup Account Set
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePersediaan/SetupCategory">
+                                <span aria-hidden="true"></span> Setup Category
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePersediaan/CheckingPrice">
+                                <span aria-hidden="true"></span> Periksa Harga
+                            </NavLink>
+                        </li>
+                    </ul>
+
+
+                }
+            </li>  <!--   Persediaan -->
+
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Admin, Finance">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandHutang = !expandHutang)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Hutang
+                </NavLink>
+                @if (expandHutang)
+                {
+                    <ul class="nav flex-column">
+                        @* <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="ModuleHutang/LaporanHutang">
+                    <span aria-hidden="true"></span> Laporan Hutang
+                    </NavLink>
+                    </li>*@
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleHutang/TransHutang">
+                                <span aria-hidden="true"></span> Transaksi Hutang
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleHutang/TransApCa">
+                                <span aria-hidden="true"></span> Pembayaran
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleHutang/TransApDp">
+                                <span aria-hidden="true"></span> Pembayaran Dimuka
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleHutang/SetupSupplier">
+                                <span aria-hidden="true"></span> Setup Vendor
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleHutang/SetupAcctSet">
+                                <span aria-hidden="true"></span> Setup Account Set
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleHutang/SetupDistCode">
+                                <span aria-hidden="true"></span> Setup Distribution
+                            </NavLink>
+                        </li>
+
+                    </ul>
+
+
+                }
+            </li>  <!--   Hutang     -->
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Admin, Finance">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandPiutang = !expandPiutang)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Piutang
+                </NavLink>
+                @if (expandPiutang)
+                {
+                    <ul class="nav flex-column">
+                        @* <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="ModulePiutang/LaporanPiutang">
+                    <span aria-hidden="true"></span> Laporan Piutang
+                    </NavLink>
+                    </li>*@
+
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/TransPiutang">
+                                <span aria-hidden="true"></span> Transaksi Piutang
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/TransArCa">
+                                <span aria-hidden="true"></span> Pembayaran
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/TransArDp">
+                                <span aria-hidden="true"></span> Pembayaran Dimuka
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/TransInfoAging">
+                                <span aria-hidden="true"></span> Keterangan Piutang
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/SetupCustomer">
+                                <span aria-hidden="true"></span> Setup Customer
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/SetupAcctSet">
+                                <span aria-hidden="true"></span> Setup Account Set
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/SetupDistCode">
+                                <span aria-hidden="true"></span> Setup Distribution
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/Laporan-Lunas">
+                                <span aria-hidden="true"></span> Laporan Piutang Lunas
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/laporanagingdetail">
+                                <span aria-hidden="true"></span> Laporan Aging Detail
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/LaporanForecastPiutang">
+                                <span aria-hidden="true"></span> Forecast Piutang
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePiutang/AgingPiutangDashboard">
+                                <span aria-hidden="true"></span> &#9733; Aging Dashboard
+                            </NavLink>
+                        </li>
+                    </ul>
+
+
+                }
+            </li>  <!--   Piutang    -->
+        </AuthorizeView>
+        <AuthorizeView Roles="Admin, Finance">
+            <li class="nav-item px-3">
+
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandCashBank = !expandCashBank)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Cash Bank
+                </NavLink>
+                @if (expandCashBank)
+                {
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleBank/TransBank">
+                                <span aria-hidden="true"></span> Transaksi Bank/Kas
+                            </NavLink>
+                        </li>
+
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleBank/TransAntarBank">
+                                <span class="oi oi-arrow-right" aria-hidden="true"></span> Transfer Antar Bank
+                            </NavLink>
+                        </li>
+
+                      
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleBank/SetupCashBank">
+                                <span aria-hidden="true"></span> Setup Bank/Kas
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleBank/SetupSrcCode">
+                                <span aria-hidden="true"></span> Setup Src Code
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleBank/SetupSrcGroup">
+                                <span aria-hidden="true"></span> Setup Src Group
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleBank/BankTransaction">
+                                <span aria-hidden="true"></span> Tarik CSV BCA
+                            </NavLink>
+                        </li>
+                    </ul>
+
+
+                }
+
+
+            </li>  <!--   KasBank    -->
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Admin, Finance">
+            <li class="nav-item px-3">
+
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandAsset = !expandAsset)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Asset
+                </NavLink>
+                @if (expandAsset)
+                {
+
+
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleAsset/SetupAsset">
+                                <span aria-hidden="true"></span> Setup Asset
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleAsset/SetupAcctset">
+                                <span aria-hidden="true"></span> Setup Akunset
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleAsset/SetupDistCode">
+                                <span aria-hidden="true"></span> Setup Distribution
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleAsset/SetupDivisi">
+                                <span aria-hidden="true"></span> Setup Divisi
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleAsset/SetupItem">
+                                <span aria-hidden="true"></span> Setup Item
+                            </NavLink>
+                        </li>
+                    </ul>
+
+
+                }
+
+
+            </li>  <!--   Asset Management     -->
+
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Admin">
+            <li class="nav-item px-3">
+
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandLedger = !expandLedger)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Ledger
+                </NavLink>
+                @if (expandLedger)
+                {
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleLedger/SetupAkunGl">
+                                <span aria-hidden="true"></span> Setup Account
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleLedger/SetupKodeGL">
+                                <span aria-hidden="true"></span> Setup KodeGL
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleLedger/TransLedger">
+                                <span aria-hidden="true"></span> Trans Ledger
+                            </NavLink>
+                        </li>
+
+                    </ul>
+
+                }
+
+
+            </li>  <!--   Ledger     -->
+
+        </AuthorizeView>
+
+        <!--  Financial Statement  -->
+
+        <AuthorizeView Roles="Admin">
+            <li class="nav-item px-3">
+
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandFinancial = !expandFinancial)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Financial Statement
+                </NavLink>
+                @if (expandFinancial)
+                {
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleFinancial/LaporanFinancial">
+                                <span aria-hidden="true"></span> Laporan Financial
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleFinancial/LaporanPendukung">
+                                <span aria-hidden="true"></span> Laporan Pendukung
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleFinancial/LaporanJurnal">
+                                <span aria-hidden="true"></span> Laporan Jurnal
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleFinancial/TarikDataFinancial">
+                                <span aria-hidden="true"></span> Tarik Data Financial
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleFinancial/TransLedgerFCGL">
+                                <span aria-hidden="true"></span> Trans Ledger
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleFinancial/SetupPrintTP">
+                                <span aria-hidden="true"></span> Setup Nama Cetak
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleFinancial/SetupPrintTPGL">
+                                <span aria-hidden="true"></span> Setup Laporan
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                    @*<ul class="nav flex-column">
+                <li class="nav-item px-3">
+                <NavLink class="nav-link" href="ModuleFinancial/TransLedgerGL">
+                <span aria-hidden="true"></span> Trans Ledger GL
+                </NavLink>
+                </li>
+
+                </ul>*@
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleFinancial/SetupCompany">
+                                <span aria-hidden="true"></span> Setup Company
+                            </NavLink>
+                        </li>
+
+                    </ul>
+                }
+
+            </li>  <!--   Financial Statement     -->
+        </AuthorizeView>
+
+        <!--  Administration  -->
+        <AuthorizeView Roles="Admin">
+            <li class="nav-item px-3">
+
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandAdministration = !expandAdministration)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Administration
+                </NavLink>
+                @if (expandAdministration)
+                {
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleAdministration/SetupUserRole">
+                                <span class="aria-hidden="true"></span> Setup User Role
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleAdministration/SetupRole">
+                                <span class="aria-hidden="true"></span> Setup Role
+                            </NavLink>
+                        </li>
+
+                    </ul>
+
+
+                }
+
+
+            </li>  <!--   Administration     -->
+        </AuthorizeView>
+
+        <!--  Maintenance  -->
+        <AuthorizeView Roles="Admin, Finance">
+            <li class="nav-item px-3">
+
+                <NavLink class="nav-link" href="#" @onclick="(()=>expandMaintenance = !expandMaintenance)">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Maintenance
+                </NavLink>
+                @if (expandMaintenance)
+                {
+
+                    <ul class="nav flex-column">
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleMaintenance/ProsesStock">
+                                <span aria-hidden="true"></span> Proses Stock
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleMaintenance/ProsesCashBank">
+                                <span aria-hidden="true"></span> Proses CashBank
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleMaintenance/ProsesHutang">
+                                <span aria-hidden="true"></span> Proses Hutang
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleMaintenance/ProsesPiutang">
+                                <span aria-hidden="true"></span> Proses Piutang
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModulePersediaan/RubahItemDivisi">
+                                <span aria-hidden="true"></span> Rubah Divisi Item
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleMaintenance/BatalPiutang">
+                                <span aria-hidden="true"></span> Batal Piutang
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="ModuleTestRun/TransTestRun">
+                                <span aria-hidden="true"></span> Test Run
+                            </NavLink>
+                        </li>
+
+                    </ul>
+
+
+                }
+
+
+            </li>  <!--   Administration     -->
+        </AuthorizeView>
+    </ul>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+    // toogle sub menu
+    private bool expandCashBank;
+    private bool expandLedger;
+    private bool expandPiutang;
+    private bool expandHutang;
+    private bool expandPersediaan;
+    private bool expandPembelian;
+    private bool expandPenjualan;
+    private bool expandAsset;
+    private bool expandAdministration;
+    private bool expandMaintenance;
+    private bool expandFinancial;
+
+    //   private bool expandLaporan;
+
+    //
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

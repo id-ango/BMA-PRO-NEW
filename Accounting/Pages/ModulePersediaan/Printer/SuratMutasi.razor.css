@@ -1,0 +1,360 @@
+﻿/*
+	 CSS-Tricks Example
+	 by Chris Coyier
+	 http://css-tricks.com
+*/
+@page {
+    size: 210mm 297mm;
+    margin: 0 auto;
+}
+
+@media print {
+    header, footer, aside, form, menu, nav {
+        display: none;
+    }
+
+    .dontprint {
+        display: none;
+    }
+}
+/*body {
+	width:100%!important;
+	padding:0!important;
+	margin:0!important;
+}*/
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font: 14px/1.4 "Times New Roman", serif;
+}
+
+#page-wrap {
+    width: 100%;
+    margin: 0 0;
+    padding: 0 10px
+}
+
+textarea {
+    border: 0;
+    font: 14px arial, Serif;
+    overflow: hidden;
+    resize: none;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+    table td, table th {
+        border: 1px solid black;
+        padding: -1px;
+    }
+
+#header {
+    height: 26px;
+    width: 100%;
+    margin: 0 0;
+    background: none;
+    text-align: center;
+    color: black;
+    font: bold 16px "Times New Roman", Sans-Serif;
+    text-transform: uppercase;
+    text-decoration: underline;
+    letter-spacing: 5px;
+    padding: 0px 0px;
+}
+
+#address {
+    width: 450px;
+    height: 100px;
+    float: left;
+}
+
+#customer {
+    overflow: hidden;
+}
+
+#logo {
+    text-align: right;
+    float: right;
+    position: relative;
+    margin-top: 25px;
+    border: 1px solid #fff;
+    max-width: 540px;
+    max-height: 100px;
+    overflow: hidden;
+}
+
+    #logo:hover, #logo.edit {
+        border: 1px solid #000;
+        margin-top: 0px;
+        max-height: 125px;
+    }
+
+#logoctr {
+    display: none;
+}
+
+#logo:hover #logoctr, #logo.edit #logoctr {
+    display: block;
+    text-align: right;
+    line-height: 25px;
+    background: #eee;
+    padding: 0 5px;
+}
+
+#logohelp {
+    text-align: left;
+    display: none;
+    font-style: italic;
+    padding: 10px 5px;
+}
+
+    #logohelp input {
+        margin-bottom: 5px;
+    }
+
+.edit #logohelp {
+    display: block;
+}
+
+.edit #save-logo, .edit #cancel-logo {
+    display: inline;
+}
+
+.edit #image, #save-logo, #cancel-logo, .edit #change-logo, .edit #delete-logo {
+    display: none;
+}
+
+#customer-title {
+    font-size: 20px;
+    font-weight: bold;
+    float: left;
+}
+
+#meta {
+    margin-top: 1px;
+    width: 250px;
+    float: right;
+}
+
+    #meta td {
+        text-align: right;
+    }
+
+        #meta td.meta-head {
+            text-align: left;
+            background: #eee;
+        }
+
+        #meta td textarea {
+            width: 100%;
+            height: 10px;
+            text-align: right;
+        }
+
+#items {
+    clear: both;
+    width: 100%;
+    margin: 30px 0 0 0;
+    border: 1px solid black;
+    font-family:'Times New Roman', Times, serif;
+}
+
+    #items th {
+        background: #eee;
+        text-align: center
+    }
+    /*#items td {padding:1px}*/
+    #items textarea {
+        width: 100px;
+        height: 15px;
+    }
+
+    #items tr.item-row td {
+        border: 0;
+        vertical-align: top;
+        font: 13px "Times New Roman", Sans-Serif;
+    }
+
+    #items td.no {
+        width: 5%;
+        text-align: center
+    }
+
+    #items td.source {
+        width: 20%;
+        text-align: center
+    }
+
+    #items td.jumlah {
+        width: 15%;
+        text-align: right
+    }
+
+    #items td.description {
+        width: 80%;
+    }
+
+    #items td.item-name {
+        width: 175px;
+    }
+
+    #items tr.item-footer td {
+        border-bottom: 0;
+        border-top: 0;
+        vertical-align: top;
+    }
+
+    #items td.description textarea, #items td.item-name textarea #items td.no textarea #items td.source textarea #items td.jumlah textarea {
+        width: 100%;
+        font: 13px "Times New Roman", Sans-Serif;
+    }
+
+    #items textarea.keterangan {
+        height: 40px;
+    }
+
+    #items td.total-line {
+        border-right: 0;
+        text-align: center
+    }
+
+    #items td.total-value {
+        border-left: 0;
+        padding: 0px;
+        text-align: right;
+        background-color: lightgray
+    }
+
+        #items td.total-value textarea {
+            height: 20px;
+            background: none;
+        }
+
+    #items td.balance {
+        background: #eee;
+    }
+
+    #items td.blank {
+        border: 0;
+    }
+
+#terms {
+    text-align: center;
+    margin: 20px 0 0 0;
+}
+
+    #terms h5 {
+        text-transform: uppercase;
+        font: 13px "Times New Roman", Sans-Serif;
+        letter-spacing: 10px;
+        border-bottom: 1px solid black;
+        padding: 0 0 8px 0;
+        margin: 0 0 8px 0;
+    }
+
+    #terms textarea {
+        width: 100%;
+        text-align: center;
+    }
+
+textarea:hover, textarea:focus, #items td.total-value textarea:hover, #items td.total-value textarea:focus, .delete:hover {
+    background-color: #EEFF88;
+}
+
+.delete-wpr {
+    position: relative;
+}
+
+.delete {
+    display: block;
+    color: #000;
+    text-decoration: none;
+    position: absolute;
+    background: #EEEEEE;
+    font-weight: bold;
+    padding: 0px 3px;
+    border: 1px solid;
+    top: -6px;
+    left: -22px;
+    font-family: "Times New Roman";
+    font-size: 12px;
+}
+
+.kepala {
+    display: block;
+    width: 250px;
+    font: 12px "Times New Roman", Sans-Serif;
+    background-color: yellow;
+    text-align: center;
+    float: left;
+}
+
+.jthtempo {
+    width: 150px;
+    float: right;
+    text-align: left;
+    background-color: yellow;
+}
+
+.Judul {
+    font-size: 16px;
+}
+
+.Judul2 {
+    font: 10px "Times New Roman", Sans-Serif;
+}
+
+.tengah {
+    align-content: center;
+    text-align: center;
+    background-color: yellow;
+}
+
+#tandatangan {
+    clear: both;
+    width: 100%;
+    margin: 20px 0 0 0;
+    border: 1px solid black;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+    #tandatangan th {
+        background: #eee;
+        text-align: center
+    }
+    /*#items td {padding:1px}*/
+    #tandatangan textarea {
+        width: 100%;
+        height: 17px;
+    }
+
+    #tandatangan tr.item-row td {
+        border: 0;
+        vertical-align: top;
+        font: 13px "Times New Roman", Sans-Serif;
+    }
+
+#tandatangan td.penerima {
+    width: 30%;
+}
+
+#tandatangan td.expedisi {
+    width: 40%;
+}
+
+#tandatangan tr.item-footer td {
+    border-bottom: 0;
+    border-top: 0;
+    vertical-align: top;
+}
+
+#tandatangan td.description textarea, #tandatangan td.item-name textarea #tandatangan td.no textarea #items td.source textarea #tandatangan td.jumlah textarea {
+    width: 100%;
+    font: 13px "Times New Roman", Sans-Serif;
+}

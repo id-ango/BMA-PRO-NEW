@@ -1,0 +1,168 @@
+﻿@layout PrintLayout
+
+@page "/ModulePrinting/PrintNotaHutang/{Id:int}"
+@using eSoft.Hutang.Model
+@using eSoft.Hutang.View
+@using eSoft.Hutang.Services
+@using eSoft.CashBank.Model
+@using eSoft.CashBank.View
+@using eSoft.Fungsi.Function
+
+@inject IPayableServices service
+@inject NavigationManager navigationmanager
+
+
+<div class="dontprint" style="display:none inline">
+    <br />
+    &emsp;<NavLink href="/ModuleHutang/TransHutang" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>&emsp;
+    <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+</div>
+
+<div id="page-wrap">
+
+    <textarea id="header">@Title</textarea>
+
+    <div id="identity">
+
+        <textarea id="address">
+            @vendor
+        </textarea>
+
+        @*<div style="clear:both"></div>*@
+
+
+        <table id="meta">
+            <tr>
+                <td class="meta-head">Document #</td>
+                <td>@TransAll.Bukti</td>
+            </tr>
+            <tr>
+
+                <td class="meta-head">Date</td>
+                <td>@TransAll.Tanggal.ToShortDateString()</td>
+            </tr>
+            <tr>
+                <td class="meta-head">Supplier</td>
+                <td><div class="due">@TransAll.Supplier</div></td>
+            </tr>
+
+        </table>
+
+    </div>
+
+    <table id="items">
+
+        <tr>
+            <th>No</th>
+            <th>Src</th>
+            <th>Description</th>
+            <th>Amount</th>
+
+        </tr>
+
+        @foreach (var item in TransAll.ApTransDs)
+        {
+            <tr class="item-row">
+                <td class="no">@(noUrut++)</td>
+                <td class="source">@item.DistCode</td>
+                <td class="description"><textarea>@item.Keterangan</textarea></td>
+                <td class="jumlah">@item.Jumlah.ToString("N")</td>
+
+            </tr>
+        }
+
+        @if (TransAll.ApTransDs.Count < 6)
+        {
+            for (var x = TransAll.ApTransDs.Count; x < 6; x++)
+            {
+                <tr class="item-row">
+                    <td class="no"></td>
+                    <td class="source"></td>
+                    <td class="description"><textarea></textarea></td>
+                    <td class="jumlah"><textarea></textarea></td>
+
+                </tr>
+            }
+        }
+        <tr>
+            <td colspan="3" rowspan="2" class="description"><textarea class="keterangan">@TransAll.Keterangan</textarea></td>
+            <td class="total-line">Saldo</td>
+
+        </tr>
+        <tr>
+            <td class="total-value">@TransAll.Jumlah.ToString("N")</td>
+        </tr>
+
+    </table>
+    @Fungsi.BilanganToText(TransAll.Jumlah)
+
+
+
+    <table id="items">
+        <tr>
+            <th>Pembuat</th>
+            <th>Mengetahui</th>
+            <th>Accounting</th>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr class="item-footer">
+            <td>&nbsp;</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+
+</div>
+
+
+@code {
+    [Parameter] public string Title { get; set; } = "TRANSAKSI HUTANG";
+    [Parameter] public int Id { get; set; }
+
+    private ApTransHView Transh = new ApTransHView() { ApTransDs = new List<ApTransDView>() };
+    private ApTransH TransAll = new ApTransH() { ApTransDs = new List<ApTransD>() };
+    private ApSuppl banks;
+    private List<ApDist> srccode;
+    private ApTransDView Transd = new ApTransDView();
+    private ApTransDView TransK = new ApTransDView();
+    //   private List<TransDView> TransDs = new List<TransDView>();
+    private string enabled { get; set; }
+
+    public string kurs { get; set; } = "";
+    private int noUrut { get; set; } = 1;
+    private string vendor { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Transh.Tanggal = DateTime.Now;
+
+
+        LoadSrcCode();
+        LoadTrans();
+    }
+
+
+
+    void LoadSrcCode()
+    {
+        srccode = service.GetDist();
+    }
+
+    void LoadTrans()
+    {
+        TransAll = service.GetTrans(Id);
+        banks = service.GetSupplierKode(TransAll.Supplier);
+        vendor = banks.NamaLengkap + '\n' + banks.Alamat + '\n' + banks.Telpon;
+    }
+
+
+}
