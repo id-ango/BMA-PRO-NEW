@@ -93,7 +93,7 @@ namespace eSoft.Penjualan.Services
                 _contextAr.ArCusts.Update(customer);
             }
 
-            var piutang = _contextAr.ArPiutngs.Where(x => x.Dokumen == existingTrans.NoLpb).FirstOrDefault();
+            var piutang = _contextAr.ArPiutngs.FirstOrDefault(x => x.Dokumen == existingTrans.NoLpb);
             if (piutang != null)
             {
                 _contextAr.ArPiutngs.Remove(piutang);
@@ -117,7 +117,7 @@ namespace eSoft.Penjualan.Services
                 _contextAr.ArCusts.Update(customer);
             }
 
-            var piutang = _contextAr.ArPiutngs.Where(x => x.Dokumen == existingTrans.NoLpb && x.Bayar == 0).FirstOrDefault();
+            var piutang = _contextAr.ArPiutngs.FirstOrDefault(x => x.Dokumen == existingTrans.NoLpb && x.Bayar == 0);
             if (piutang != null)
             {
                 _contextAr.ArPiutngs.Remove(piutang);
@@ -170,7 +170,7 @@ namespace eSoft.Penjualan.Services
 
         private ArCust GetCustomer(string customerCode)
         {
-            return _contextAr.ArCusts.Where(x => x.Customer == customerCode).FirstOrDefault();
+            return _contextAr.ArCusts.FirstOrDefault(x => x.Customer == customerCode);
         }
     }
 }

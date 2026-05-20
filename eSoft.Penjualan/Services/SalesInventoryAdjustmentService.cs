@@ -19,24 +19,74 @@ namespace eSoft.Penjualan.Services
 
         public void ApplySaleDetail(OeTransDView item)
         {
-            var cekItem = _contextIc.IcItems.Where(x => x.ItemCode == item.ItemCode).FirstOrDefault();
+            ApplySaleDetail(item, null, null);
+        }
+
+        public void ApplyDetailsForCode(IEnumerable<OeTransDView> items, string kode)
+        {
+            var validItems = items.Where(x => x.Qty != 0).ToList();
+            if (validItems.Count == 0)
+            {
+                return;
+            }
+
+            var itemMap = LoadItemMap(validItems.Select(x => x.ItemCode));
+            var altItemMap = LoadAltItemMap(validItems.Select(x => x.ItemCode));
+
+            foreach (var item in validItems)
+            {
+                if (kode == "95")
+                {
+                    ApplyReturnDetail(item, itemMap, altItemMap);
+                }
+                else
+                {
+                    ApplySaleDetail(item, itemMap, altItemMap);
+                }
+            }
+        }
+
+        public void ApplyReturnDetail(OeTransDView item)
+        {
+            ApplyReturnDetail(item, null, null);
+        }
+
+        public void ReverseExistingDetail(OeTransD item, string kode)
+        {
+            ReverseExistingDetail(item, kode, null, null);
+        }
+
+        public void ReverseDetails(IEnumerable<OeTransD> items, string kode)
+        {
+            var validItems = items.Where(x => x.Qty != 0).ToList();
+            if (validItems.Count == 0)
+            {
+                return;
+            }
+
+            var itemMap = LoadItemMap(validItems.Select(x => x.ItemCode));
+            var altItemMap = LoadAltItemMap(validItems.Select(x => x.ItemCode));
+
+            foreach (var item in validItems)
+            {
+                ReverseExistingDetail(item, kode, itemMap, altItemMap);
+            }
+        }
+
+        private void ApplySaleDetail(OeTransDView item, Dictionary<string, IcItem> itemMap, Dictionary<string, IcAltItem> altItemMap)
+        {
+            var cekItem = GetItem(item.ItemCode, itemMap);
             if (cekItem == null)
             {
                 return;
             }
 
-            var cekLokasi1 = _contextIc.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+            var cekLokasi1 = GetAltItem(item.ItemCode, item.Lokasi, altItemMap);
             if (cekLokasi1 == null)
             {
-                var produk = new IcAltItem
-                {
-                    ItemCode = cekItem.ItemCode.ToUpper(),
-                    NamaItem = cekItem.NamaItem,
-                    Satuan = cekItem.Satuan,
-                    Lokasi = item.Lokasi,
-                    Qty = -1 * item.Qty
-                };
-                _contextIc.IcAltItems.Add(produk);
+                cekLokasi1 = CreateAltItem(cekItem, item.Lokasi, -1 * item.Qty);
+                _contextIc.IcAltItems.Add(cekLokasi1);
+                SetAltItem(item.ItemCode, item.Lokasi, cekLokasi1, altItemMap);
             }
             else
             {
@@ -66,46 +116,20 @@ namespace eSoft.Penjualan.Services
             _contextIc.IcItems.Update(cekItem);
         }
 
-        public void ApplyDetailsForCode(IEnumerable<OeTransDView> items, string kode)
+        private void ApplyReturnDetail(OeTransDView item, Dictionary<string, IcItem> itemMap, Dictionary<string, IcAltItem> altItemMap)
         {
-            foreach (var item in items)
-            {
-                if (item.Qty == 0)
-                {
-                    continue;
-                }
-
-                if (kode == "95")
-                {
-                    ApplyReturnDetail(item);
-                }
-                else
-                {
-                    ApplySaleDetail(item);
-                }
-            }
-        }
-
-        public void ApplyReturnDetail(OeTransDView item)
-        {
-            var cekItem = _contextIc.IcItems.Where(x => x.ItemCode == item.ItemCode).FirstOrDefault();
+            var cekItem = GetItem(item.ItemCode, itemMap);
             if (cekItem == null)
             {
                 return;
             }
 
-            var cekLokasi1 = _contextIc.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+            var cekLokasi1 = GetAltItem(item.ItemCode, item.Lokasi, altItemMap);
             if (cekLokasi1 == null)
             {
-                var produk = new IcAltItem
-                {
-                    ItemCode = cekItem.ItemCode.ToUpper(),
-                    NamaItem = cekItem.NamaItem,
-                    Satuan = cekItem.Satuan,
-                    Lokasi = item.Lokasi,
-                    Qty = item.Qty
-                };
-                _contextIc.IcAltItems.Add(produk);
+                cekLokasi1 = CreateAltItem(cekItem, item.Lokasi, item.Qty);
+                _contextIc.IcAltItems.Add(cekLokasi1);
+                SetAltItem(item.ItemCode, item.Lokasi, cekLokasi1, altItemMap);
             }
             else
             {
@@ -128,26 +152,20 @@ namespace eSoft.Penjualan.Services
             _contextIc.IcItems.Update(cekItem);
         }
 
-        public void ReverseExistingDetail(OeTransD item, string kode)
+        private void ReverseExistingDetail(OeTransD item, string kode, Dictionary<string, IcItem> itemMap, Dictionary<string, IcAltItem> altItemMap)
         {
-            var cekItem = _contextIc.IcItems.Where(x => x.ItemCode == item.ItemCode).FirstOrDefault();
+            var cekItem = GetItem(item.ItemCode, itemMap);
             if (cekItem == null)
             {
                 return;
             }
 
-            var cekLokasi1 = _contextIc.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+            var cekLokasi1 = GetAltItem(item.ItemCode, item.Lokasi, altItemMap);
             if (cekLokasi1 == null)
             {
-                var produk = new IcAltItem
-                {
-                    ItemCode = cekItem.ItemCode.ToUpper(),
-                    NamaItem = cekItem.NamaItem,
-                    Satuan = cekItem.Satuan,
-                    Lokasi = item.Lokasi,
-                    Qty = kode == "95" ? -1 * item.Qty : item.Qty
-                };
-                _contextIc.IcAltItems.Add(produk);
+                cekLokasi1 = CreateAltItem(cekItem, item.Lokasi, kode == "95" ? -1 * item.Qty : item.Qty);
+                _contextIc.IcAltItems.Add(cekLokasi1);
+                SetAltItem(item.ItemCode, item.Lokasi, cekLokasi1, altItemMap);
             }
             else
             {
@@ -199,17 +217,72 @@ namespace eSoft.Penjualan.Services
             _contextIc.IcItems.Update(cekItem);
         }
 
-        public void ReverseDetails(IEnumerable<OeTransD> items, string kode)
+        private Dictionary<string, IcItem> LoadItemMap(IEnumerable<string> itemCodes)
         {
-            foreach (var item in items)
-            {
-                if (item.Qty == 0)
-                {
-                    continue;
-                }
+            var distinctCodes = itemCodes
+                .Where(x => string.IsNullOrEmpty(x) == false)
+                .Distinct()
+                .ToList();
 
-                ReverseExistingDetail(item, kode);
+            return _contextIc.IcItems
+                .Where(x => distinctCodes.Contains(x.ItemCode))
+                .ToDictionary(x => x.ItemCode);
+        }
+
+        private Dictionary<string, IcAltItem> LoadAltItemMap(IEnumerable<string> itemCodes)
+        {
+            var distinctCodes = itemCodes
+                .Where(x => string.IsNullOrEmpty(x) == false)
+                .Distinct()
+                .ToList();
+
+            return _contextIc.IcAltItems
+                .Where(x => distinctCodes.Contains(x.ItemCode))
+                .ToDictionary(x => CreateAltItemKey(x.ItemCode, x.Lokasi));
+        }
+
+        private IcItem GetItem(string itemCode, Dictionary<string, IcItem> itemMap)
+        {
+            if (itemMap != null)
+            {
+                itemMap.TryGetValue(itemCode, out var item);
+                return item;
             }
+
+            return _contextIc.IcItems.FirstOrDefault(x => x.ItemCode == itemCode);
+        }
+
+        private IcAltItem GetAltItem(string itemCode, string lokasi, Dictionary<string, IcAltItem> altItemMap)
+        {
+            if (altItemMap != null)
+            {
+                altItemMap.TryGetValue(CreateAltItemKey(itemCode, lokasi), out var altItem);
+                return altItem;
+            }
+
+            return _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == itemCode && x.Lokasi == lokasi);
+        }
+
+        private void SetAltItem(string itemCode, string lokasi, IcAltItem altItem, Dictionary<string, IcAltItem> altItemMap)
+        {
+            altItemMap?.TryAdd(CreateAltItemKey(itemCode, lokasi), altItem);
+        }
+
+        private static IcAltItem CreateAltItem(IcItem item, string lokasi, decimal qty)
+        {
+            return new IcAltItem
+            {
+                ItemCode = item.ItemCode.ToUpper(),
+                NamaItem = item.NamaItem,
+                Satuan = item.Satuan,
+                Lokasi = lokasi,
+                Qty = qty
+            };
+        }
+
+        private static string CreateAltItemKey(string itemCode, string lokasi)
+        {
+            return $"{itemCode}::{lokasi}";
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using eSoft.Penjualan.Data;
 using eSoft.Penjualan.Model;
 using eSoft.Penjualan.View;
+using Microsoft.EntityFrameworkCore;
 
 namespace eSoft.Penjualan.Services
 {
@@ -19,12 +20,16 @@ namespace eSoft.Penjualan.Services
 
         public List<OeKurir> GetKurir()
         {
-            return _context.OeKurirs.ToList();
+            return _context.OeKurirs
+                .AsNoTracking()
+                .ToList();
         }
 
         public OeKurir GetKurirId(int id)
         {
-            return _context.OeKurirs.Where(x => x.OeKurirId == id).FirstOrDefault();
+            return _context.OeKurirs
+                .AsNoTracking()
+                .FirstOrDefault(x => x.OeKurirId == id);
         }
 
         public string GetKurirKode(string id)
@@ -32,26 +37,25 @@ namespace eSoft.Penjualan.Services
             if (string.IsNullOrEmpty(id))
                 return string.Empty;
 
-            return _context.OeKurirs.Where(x => x.Kurir == id).FirstOrDefault().NamaKurir;
+            return _context.OeKurirs
+                .AsNoTracking()
+                .Where(x => x.Kurir == id)
+                .Select(x => x.NamaKurir)
+                .FirstOrDefault() ?? string.Empty;
         }
 
         public bool CekKdKurir(string kurir)
         {
             string test = kurir.ToUpper();
-            var cekFirst = _context.OeKurirs.Where(x => x.Kurir == test).ToList();
-            if (cekFirst.Count == 0)
-            {
-                return false;
-            }
 
-            return true;
+            return _context.OeKurirs.Any(x => x.Kurir == test);
         }
 
         public bool AddKurir(OeKurirView kurir)
         {
             string test = kurir.Kurir.ToUpper();
-            var cekFirst = _context.OeKurirs.Where(x => x.Kurir == test).ToList();
-            if (cekFirst.Count == 0)
+            var exists = _context.OeKurirs.Any(x => x.Kurir == test);
+            if (!exists)
             {
                 OeKurir entity = new()
                 {
@@ -80,7 +84,7 @@ namespace eSoft.Penjualan.Services
         {
             try
             {
-                var existingKurir = _context.OeKurirs.Where(x => x.OeKurirId == kurir.OeKurirId).FirstOrDefault();
+                var existingKurir = _context.OeKurirs.FirstOrDefault(x => x.OeKurirId == kurir.OeKurirId);
                 if (existingKurir != null)
                 {
                     existingKurir.NamaKurir = kurir.NamaKurir;
@@ -114,7 +118,7 @@ namespace eSoft.Penjualan.Services
         {
             try
             {
-                var existingKurir = _context.OeKurirs.Where(x => x.OeKurirId == id).FirstOrDefault();
+                var existingKurir = _context.OeKurirs.FirstOrDefault(x => x.OeKurirId == id);
                 if (existingKurir != null)
                 {
                     _context.OeKurirs.Remove(existingKurir);

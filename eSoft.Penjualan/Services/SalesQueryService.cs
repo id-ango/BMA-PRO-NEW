@@ -14,34 +14,36 @@ namespace eSoft.Penjualan.Services
     {
         private readonly DbContextJual _context;
         private readonly DbContextPiutang _contextAr;
-        private readonly ISalesmanMasterService _salesmanMasterService;
-        private readonly IKurirMasterService _kurirMasterService;
 
         public SalesQueryService(
             DbContextJual context,
-            DbContextPiutang contextPiutang,
-            ISalesmanMasterService salesmanMasterService,
-            IKurirMasterService kurirMasterService)
+            DbContextPiutang contextPiutang)
         {
             _context = context;
             _contextAr = contextPiutang;
-            _salesmanMasterService = salesmanMasterService;
-            _kurirMasterService = kurirMasterService;
         }
 
         public ArPiutng GetPiutang(string bukti)
         {
-            return _contextAr.ArPiutngs.Where(x => x.Dokumen == bukti).FirstOrDefault();
+            return _contextAr.ArPiutngs
+                .AsNoTracking()
+                .FirstOrDefault(x => x.Dokumen == bukti);
         }
 
         public OeTransH GetOeTrans(int id)
         {
-            return _context.OeTransHs.Include(p => p.OeTransDs).Where(x => x.OeTransHId == id).FirstOrDefault();
+            return _context.OeTransHs
+                .AsNoTracking()
+                .Include(p => p.OeTransDs)
+                .FirstOrDefault(x => x.OeTransHId == id);
         }
 
         public OeTransH GetOeTransDokumen(string id)
         {
-            return _context.OeTransHs.Include(p => p.OeTransDs).Where(x => x.NoLpb == id).FirstOrDefault();
+            return _context.OeTransHs
+                .AsNoTracking()
+                .Include(p => p.OeTransDs)
+                .FirstOrDefault(x => x.NoLpb == id);
         }
 
         public List<OeTransH> GetFirstTransH()
@@ -87,14 +89,17 @@ namespace eSoft.Penjualan.Services
         public List<OeTransH> Get3TransH()
         {
             return _context.OeTransHs
-                .OrderByDescending(x => x.Tanggal.Date)
-                .Where(x => x.Tanggal.Date > DateTime.Today.Date.AddMonths(-3) && (x.Kode == "94" || x.Kode == "95"))
+                .AsNoTracking()
+                .Where(x => x.Tanggal > DateTime.Today.Date.AddMonths(-3) && (x.Kode == "94" || x.Kode == "95"))
+                .OrderByDescending(x => x.Tanggal)
                 .ToList();
         }
 
         public List<OeTransD> GetTransD()
         {
-            return _context.OeTransDs.ToList();
+            return _context.OeTransDs
+                .AsNoTracking()
+                .ToList();
         }
 
         public async Task<List<OeTransH>> GetTransKurirAsync()
@@ -168,7 +173,7 @@ namespace eSoft.Penjualan.Services
 
         private IQueryable<OeTransH> BuildTransHeaderQuery(DateTime tanggalAwal, DateTime tanggalAkhir, bool pajak)
         {
-            return from e in _context.OeTransHs
+            return from e in _context.OeTransHs.AsNoTracking()
                    orderby e.Tanggal descending
                    where (e.Kode == "94" || e.Kode == "95")
                        && e.Pajak == pajak
@@ -203,10 +208,42 @@ namespace eSoft.Penjualan.Services
 
         private void ApplyDisplayNames(List<OeTransH> transaksi)
         {
+            if (transaksi.Count == 0)
+            {
+                return;
+            }
+
+            var kurirCodes = transaksi
+                .Select(x => x.Kurir)
+                .Where(x => string.IsNullOrEmpty(x) == false)
+                .Distinct()
+                .ToList();
+
+            var salesmanCodes = transaksi
+                .Select(x => x.Salesman)
+                .Where(x => string.IsNullOrEmpty(x) == false)
+                .Distinct()
+                .ToList();
+
+            var kurirMap = _context.OeKurirs
+                .AsNoTracking()
+                .Where(x => kurirCodes.Contains(x.Kurir))
+                .ToDictionary(x => x.Kurir, x => x.NamaKurir);
+
+            var salesmanMap = _context.OeSalesmans
+                .AsNoTracking()
+                .Where(x => salesmanCodes.Contains(x.Salesman))
+                .ToDictionary(x => x.Salesman, x => x.NamaSales);
+
             transaksi.ForEach(x =>
             {
-                x.Kurir = _kurirMasterService.GetKurirKode(string.IsNullOrEmpty(x.Kurir) ? "" : x.Kurir);
-                x.Lokasi = _salesmanMasterService.GetSalesmanKode(string.IsNullOrEmpty(x.Salesman) ? "" : x.Salesman);
+                x.Kurir = string.IsNullOrEmpty(x.Kurir)
+                    ? string.Empty
+                    : kurirMap.GetValueOrDefault(x.Kurir, x.Kurir);
+
+                x.Lokasi = string.IsNullOrEmpty(x.Salesman)
+                    ? string.Empty
+                    : salesmanMap.GetValueOrDefault(x.Salesman, x.Salesman);
             });
         }
     }

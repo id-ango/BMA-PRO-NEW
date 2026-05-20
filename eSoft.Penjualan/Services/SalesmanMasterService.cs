@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using eSoft.Penjualan.Data;
 using eSoft.Penjualan.Model;
 using eSoft.Penjualan.View;
+using Microsoft.EntityFrameworkCore;
 
 namespace eSoft.Penjualan.Services
 {
@@ -19,12 +20,16 @@ namespace eSoft.Penjualan.Services
 
         public List<OeSalesman> GetSalesman()
         {
-            return _context.OeSalesmans.ToList();
+            return _context.OeSalesmans
+                .AsNoTracking()
+                .ToList();
         }
 
         public OeSalesman GetSalesmanId(int id)
         {
-            return _context.OeSalesmans.Where(x => x.OeSalesmanId == id).FirstOrDefault();
+            return _context.OeSalesmans
+                .AsNoTracking()
+                .FirstOrDefault(x => x.OeSalesmanId == id);
         }
 
         public string GetSalesmanKode(string id)
@@ -32,14 +37,18 @@ namespace eSoft.Penjualan.Services
             if (string.IsNullOrEmpty(id))
                 return string.Empty;
 
-            return _context.OeSalesmans.Where(x => x.Salesman == id).FirstOrDefault().NamaSales;
+            return _context.OeSalesmans
+                .AsNoTracking()
+                .Where(x => x.Salesman == id)
+                .Select(x => x.NamaSales)
+                .FirstOrDefault() ?? string.Empty;
         }
 
         public async Task<bool> DelSalesman(int id)
         {
             try
             {
-                var existingSalesman = _context.OeSalesmans.Where(x => x.OeSalesmanId == id).FirstOrDefault();
+                var existingSalesman = _context.OeSalesmans.FirstOrDefault(x => x.OeSalesmanId == id);
                 if (existingSalesman != null)
                 {
                     _context.OeSalesmans.Remove(existingSalesman);
@@ -58,20 +67,15 @@ namespace eSoft.Penjualan.Services
         public bool CekKdSalesman(string salesman)
         {
             string test = salesman.ToUpper();
-            var cekFirst = _context.OeSalesmans.Where(x => x.Salesman == test).ToList();
-            if (cekFirst.Count == 0)
-            {
-                return false;
-            }
 
-            return true;
+            return _context.OeSalesmans.Any(x => x.Salesman == test);
         }
 
         public bool AddSalesman(OeSalesmanView salesman)
         {
             string test = salesman.Salesman.ToUpper();
-            var cekFirst = _context.OeSalesmans.Where(x => x.Salesman == test).ToList();
-            if (cekFirst.Count == 0)
+            var exists = _context.OeSalesmans.Any(x => x.Salesman == test);
+            if (!exists)
             {
                 OeSalesman entity = new()
                 {
@@ -100,7 +104,7 @@ namespace eSoft.Penjualan.Services
         {
             try
             {
-                var existingSalesman = _context.OeSalesmans.Where(x => x.OeSalesmanId == salesman.OeSalesmanId).FirstOrDefault();
+                var existingSalesman = _context.OeSalesmans.FirstOrDefault(x => x.OeSalesmanId == salesman.OeSalesmanId);
                 if (existingSalesman != null)
                 {
                     existingSalesman.NamaSales = salesman.NamaSales;
