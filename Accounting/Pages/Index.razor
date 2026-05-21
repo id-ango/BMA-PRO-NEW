@@ -24,44 +24,75 @@
 @inject NavigationManager navigationmanager
 
 
-<div class="dashboard-shell">
-    <section class="dashboard-hero dashboard-hero-bmapt @(isHeroCollapsed ? "dashboard-hero-collapsed" : string.Empty)">
-        <div>
-            <div class="dashboard-hero-title-row">
-                <div>
-                    <span class="dashboard-kicker">Dashboard</span>
-                    <h1>BMA Group Executive Dashboard</h1>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-light dashboard-toggle-light" @onclick="ToggleHeroCollapse">
-                    @(isHeroCollapsed ? "Tampilkan header" : "Sembunyikan header")
-                </button>
-            </div>
-
-            @if (!isHeroCollapsed)
-            {
-                <p class="dashboard-lead">Tampilan dashboard ini disusun mengikuti pola BMA-PT: ringkasan KPI utama, perbandingan piutang dan hutang, posisi saldo bank, serta shortcut operasional yang langsung bisa dipakai.</p>
-            }
+<div class="landing-shell">
+    <section class="landing-topbar">
+        <div class="landing-title-block">
+            <span class="landing-kicker">Sistem Akuntansi Terintegrasi</span>
+            <h1>@AppBranding.HomeProductName</h1>
+            <p>@AppBranding.CompanyLegalName</p>
         </div>
 
-        @if (!isHeroCollapsed)
-        {
-            <div class="dashboard-hero-meta">
-                <div class="dashboard-refresh-card">
-                    <span class="dashboard-refresh-label">Last refresh</span>
-                    <strong>@GetLastRefreshLabel()</strong>
-                </div>
-                <div class="dashboard-hero-badges">
-                    <span class="dashboard-badge">Bank</span>
-                    <span class="dashboard-badge">Piutang</span>
-                    <span class="dashboard-badge">Hutang</span>
-                    <span class="dashboard-badge">Penjualan</span>
-                </div>
-            </div>
-        }
+        <div class="landing-view-switch" role="tablist" aria-label="Landing view switcher">
+            <button type="button" class="landing-view-button @GetLandingViewButtonClass(false)" @onclick="ShowHomeView">
+                Home
+            </button>
+            <button type="button" class="landing-view-button @GetLandingViewButtonClass(true)" @onclick="ShowDashboardViewAsync">
+                Dashboard
+            </button>
+        </div>
     </section>
 
-    <AuthorizeView Roles="Admin, Finance">
-        <section class="dashboard-kpi-grid">
+    @if (isDashboardView)
+    {
+        @if (isDashboardSummaryLoading)
+        {
+            <section class="dashboard-panel-card">
+                <div class="dashboard-loading-state">
+                    <span class="oi oi-loop-circular"></span>
+                    <span>Memuat ringkasan dashboard...</span>
+                </div>
+            </section>
+        }
+        else
+        {
+            <div class="dashboard-shell">
+                <section class="dashboard-hero dashboard-hero-bmapt @(isHeroCollapsed ? "dashboard-hero-collapsed" : string.Empty)">
+                    <div>
+                        <div class="dashboard-hero-title-row">
+                            <div>
+                                <span class="dashboard-kicker">Dashboard</span>
+                                <h1>@AppBranding.CompanyName Executive Dashboard</h1>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-light dashboard-toggle-light" @onclick="ToggleHeroCollapse">
+                                @(isHeroCollapsed ? "Tampilkan header" : "Sembunyikan header")
+                            </button>
+                        </div>
+
+                        @if (!isHeroCollapsed)
+                        {
+                            <p class="dashboard-lead">Tampilan dashboard ini baru dimuat saat tombol Dashboard dipilih, sehingga halaman awal tetap ringan dan fokus ke menu utama.</p>
+                        }
+                    </div>
+
+                    @if (!isHeroCollapsed)
+                    {
+                        <div class="dashboard-hero-meta">
+                            <div class="dashboard-refresh-card">
+                                <span class="dashboard-refresh-label">Last refresh</span>
+                                <strong>@GetLastRefreshLabel()</strong>
+                            </div>
+                            <div class="dashboard-hero-badges">
+                                <span class="dashboard-badge">Bank</span>
+                                <span class="dashboard-badge">Piutang</span>
+                                <span class="dashboard-badge">Hutang</span>
+                                <span class="dashboard-badge">Penjualan</span>
+                            </div>
+                        </div>
+                    }
+                </section>
+
+                <AuthorizeView Roles="Admin, Finance">
+                    <section class="dashboard-kpi-grid">
             <article class="dashboard-kpi-card dashboard-kpi-primary">
                 <div class="dashboard-kpi-icon"><span class="oi oi-briefcase"></span></div>
                 <div>
@@ -97,9 +128,9 @@
                     <p>@(totalPiutang >= totalHutangRp ? "Piutang lebih besar" : "Hutang lebih besar")</p>
                 </div>
             </article>
-        </section>
+                    </section>
 
-        <section class="dashboard-analytics-grid">
+                    <section class="dashboard-analytics-grid">
             <article class="dashboard-panel-card">
                 <div class="dashboard-panel-header-row">
                     <h2><span class="oi oi-bar-chart"></span> Aging Piutang</h2>
@@ -182,9 +213,9 @@
                     <span class="badge @(totalPiutang >= totalHutangRp ? "bg-success" : "bg-danger")">@(totalPiutang >= totalHutangRp ? "Piutang Lebih Besar" : "Hutang Lebih Besar")</span>
                 </div>
             </article>
-        </section>
+                    </section>
 
-        <section class="dashboard-bank-panel dashboard-panel-card">
+                    <section class="dashboard-bank-panel dashboard-panel-card">
             <div class="dashboard-panel-header-row">
                 <div>
                     <h2><span class="oi oi-spreadsheet"></span> Saldo Per Rekening Bank</h2>
@@ -235,15 +266,18 @@
                     <span>Panel saldo rekening disembunyikan agar quick menu lebih cepat terlihat.</span>
                 </div>
             }
-        </section>
-    </AuthorizeView>
+                    </section>
+                </AuthorizeView>
+            </div>
+        }
+    }
 
     <section class="dashboard-shortcuts-section dashboard-panel-card">
         <div class="dashboard-panel-header-row">
             <div>
                 <span class="dashboard-section-kicker">Quick access</span>
-                <h2>Menu utama per modul</h2>
-                <p class="dashboard-section-note">Setiap modul menampilkan child menu penting agar akses laporan dan menu utama lebih cepat.</p>
+                <h2>@(isDashboardView ? "Menu utama per modul" : "Home quick access")</h2>
+                <p class="dashboard-section-note">Index dibuka dalam mode Home. Ringkasan dashboard baru tampil saat tombol Dashboard dipilih.</p>
             </div>
         </div>
 
@@ -620,8 +654,11 @@
     private decimal ap90;
     private decimal apOver;
     private decimal apMax;
+    private bool isDashboardView;
     private bool isHeroCollapsed;
     private bool isBankPanelCollapsed = true;
+    private bool isDashboardSummaryLoaded;
+    private bool isDashboardSummaryLoading;
     private bool showOperationalSection;
     private bool isOperationalDataLoaded;
     private bool isOperationalDataLoading;
@@ -633,7 +670,7 @@
         currentUri = navigationmanager.Uri;
 
         LoadCek();
-        await LoadDashboardSummaryAsync();
+        await Task.CompletedTask;
 
     }
 
@@ -658,6 +695,47 @@
     private void ToggleHeroCollapse()
     {
         isHeroCollapsed = !isHeroCollapsed;
+    }
+
+    private string GetLandingViewButtonClass(bool dashboardView)
+    {
+        return isDashboardView == dashboardView ? "active" : string.Empty;
+    }
+
+    private Task ShowHomeView()
+    {
+        isDashboardView = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task ShowDashboardViewAsync()
+    {
+        isDashboardView = true;
+
+        if (!isDashboardSummaryLoaded)
+        {
+            await LoadDashboardSummaryOnDemandAsync();
+        }
+    }
+
+    private async Task LoadDashboardSummaryOnDemandAsync()
+    {
+        if (isDashboardSummaryLoading)
+        {
+            return;
+        }
+
+        isDashboardSummaryLoading = true;
+
+        try
+        {
+            await LoadDashboardSummaryAsync();
+            isDashboardSummaryLoaded = true;
+        }
+        finally
+        {
+            isDashboardSummaryLoading = false;
+        }
     }
 
     private void ToggleBankPanelCollapse()

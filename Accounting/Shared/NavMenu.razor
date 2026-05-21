@@ -4,9 +4,9 @@
 <div class="nav-shell">
     <div class="nav-header">
         <div>
-            <div class="nav-kicker">BMA Group</div>
-            <a class="navbar-brand" href="">Finance Control Center</a>
-            <div class="nav-caption">UI lebih modern dengan alur menu yang lebih jelas.</div>
+            <div class="nav-kicker">@AppBranding.CompanyName</div>
+            <a class="navbar-brand" href="">@AppBranding.WorkspaceTitle</a>
+            <div class="nav-caption">@AppBranding.WorkspaceSubtitle</div>
         </div>
 
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -17,6 +17,12 @@
     <div class="nav-summary-card">
         <div class="nav-summary-title">Akses cepat</div>
         <div class="nav-summary-text">Masuk ke modul transaksi, laporan, dan setup tanpa menu yang terasa padat.</div>
+    </div>
+
+    <div class="nav-user-card">
+        <div class="nav-user-title">User</div>
+        <div class="nav-user-company">@AppBranding.CompanyName</div>
+        <LoginDisplay />
     </div>
 </div>
 

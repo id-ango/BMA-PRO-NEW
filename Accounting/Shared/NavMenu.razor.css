@@ -65,6 +65,49 @@
     line-height: 1.5;
 }
 
+.nav-user-card {
+    margin-top: 1rem;
+    padding: 0.95rem 1rem;
+    border-radius: 1rem;
+    background: rgba(15, 23, 42, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.nav-user-title {
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #bfdbfe;
+}
+
+.nav-user-company {
+    margin-bottom: 0.75rem;
+    color: #fff;
+    font-weight: 700;
+}
+
+.nav-user-card ::deep a,
+.nav-user-card ::deep button {
+    color: #dbeafe;
+}
+
+.nav-user-card ::deep form {
+    margin: 0;
+}
+
+.nav-user-card ::deep .nav-link,
+.nav-user-card ::deep .btn-link {
+    padding: 0;
+    text-decoration: none;
+}
+
+.nav-user-card ::deep .btn-link {
+    border: none;
+    background: transparent;
+}
+
 .nav-scroll-region {
     padding: 0 0.75rem 1rem;
 }

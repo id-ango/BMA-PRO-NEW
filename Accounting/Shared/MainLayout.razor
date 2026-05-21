@@ -1,6 +1,6 @@
 ﻿@inherits LayoutComponentBase
 
-<PageTitle>BMA GROUP</PageTitle>
+<PageTitle>@AppBranding.CompanyName</PageTitle>
 
 <div class="app-shell">
     <aside class="app-sidebar">
@@ -14,16 +14,13 @@
             <div class="app-header-copy">
                 <span class="app-header-eyebrow">Business Management</span>
                 <div class="app-header-title-group">
-                    <strong class="app-header-title">BMA Group Workspace</strong>
-                    <span class="app-header-subtitle">Navigasi lebih rapi, fokus kerja lebih cepat.</span>
+                    <strong class="app-header-title">@AppBranding.CompanyName Workspace</strong>
+                    <span class="app-header-subtitle">@AppBranding.WorkspaceSubtitle</span>
                 </div>
             </div>
 
-            <div class="app-header-actions auth">
+            <div class="app-header-actions">
                 <div class="app-status-pill">.NET 10 • Blazor</div>
-                <div class="app-user-panel">
-                    <LoginDisplay />
-                </div>
             </div>
         </header>
 
