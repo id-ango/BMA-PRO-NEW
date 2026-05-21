@@ -243,69 +243,95 @@
             <div>
                 <span class="dashboard-section-kicker">Quick access</span>
                 <h2>Menu utama per modul</h2>
+                <p class="dashboard-section-note">Setiap modul menampilkan child menu penting agar akses laporan dan menu utama lebih cepat.</p>
             </div>
         </div>
 
         <div class="dashboard-shortcuts-grid dashboard-shortcuts-grid-bmapt">
-            <AuthorizeView Roles="Admin, Finance">
-                <a href="/ModulePersediaan/LaporanCurrentStock" class="dashboard-quick-link dashboard-quick-link-stock">
-                    <span class="oi oi-layers"></span>
-                    <div>
-                        <strong>Inventory</strong>
-                        <small>Laporan stock & persediaan</small>
+            <article class="dashboard-shortcut-card dashboard-shortcut-card-stock">
+                <div class="dashboard-shortcut-module-header">
+                    <span class="oi oi-layers dashboard-shortcut-icon"></span>
+                    <div class="dashboard-shortcut-header">
+                        <h3>Inventory</h3>
+                        <p>Akses cepat laporan stock dan persediaan.</p>
                     </div>
-                </a>
-            </AuthorizeView>
+                </div>
+                <div class="dashboard-shortcut-actions">
+                    <a href="/ModulePersediaan/LaporanCurrentStock" class="btn btn-outline-primary">Laporan Stock</a>
+                    <a href="/ModulePersediaan/LaporanPersediaan" class="btn btn-outline-primary">Laporan Persediaan</a>
+                </div>
+            </article>
 
-            <AuthorizeView Roles="Admin, Finance">
-                <a href="/ModuleBank/LaporanCashBank" class="dashboard-quick-link dashboard-quick-link-bank">
-                    <span class="oi oi-briefcase"></span>
-                    <div>
-                        <strong>Cash Bank</strong>
-                        <small>Saldo bank & rekap kas</small>
+            <article class="dashboard-shortcut-card dashboard-shortcut-card-sales">
+                <div class="dashboard-shortcut-module-header">
+                    <span class="oi oi-cart dashboard-shortcut-icon"></span>
+                    <div class="dashboard-shortcut-header">
+                        <h3>Penjualan</h3>
+                        <p>Ringkasan laporan penjualan yang paling sering dipakai.</p>
                     </div>
-                </a>
-            </AuthorizeView>
+                </div>
+                <div class="dashboard-shortcut-actions">
+                    <a href="/ModuleJual/LaporanPenjualan" class="btn btn-outline-primary">Laporan Penjualan</a>
+                    <a href="/ModuleJual/LaporanJualPerCustomer" class="btn btn-outline-primary">Per Customer</a>
+                    <a href="/ModuleJual/LaporanJualPertahun" class="btn btn-outline-primary">Per Tahun</a>
+                </div>
+            </article>
 
-            <AuthorizeView Roles="Admin, Finance">
-                <a href="/ModulePiutang/AgingPiutangDashboard" class="dashboard-quick-link dashboard-quick-link-ar">
-                    <span class="oi oi-dollar"></span>
-                    <div>
-                        <strong>Piutang</strong>
-                        <small>Aging receivable dashboard</small>
+            <article class="dashboard-shortcut-card dashboard-shortcut-card-bank">
+                <div class="dashboard-shortcut-module-header">
+                    <span class="oi oi-briefcase dashboard-shortcut-icon"></span>
+                    <div class="dashboard-shortcut-header">
+                        <h3>Cash Bank</h3>
+                        <p>Masuk ke laporan saldo dan rekap kas bank.</p>
                     </div>
-                </a>
-            </AuthorizeView>
+                </div>
+                <div class="dashboard-shortcut-actions">
+                    <a href="/ModuleBank/LaporanCashBank" class="btn btn-outline-primary">Laporan Cash Bank</a>
+                </div>
+            </article>
 
-            <AuthorizeView Roles="Admin, Finance">
-                <a href="/ModuleHutang/LaporanAgingHutang" class="dashboard-quick-link dashboard-quick-link-ap">
-                    <span class="oi oi-credit-card"></span>
-                    <div>
-                        <strong>Hutang</strong>
-                        <small>Aging payable & vendor</small>
+            <article class="dashboard-shortcut-card dashboard-shortcut-card-ar">
+                <div class="dashboard-shortcut-module-header">
+                    <span class="oi oi-dollar dashboard-shortcut-icon"></span>
+                    <div class="dashboard-shortcut-header">
+                        <h3>Piutang</h3>
+                        <p>Akses aging, laporan piutang, dan forecast.</p>
                     </div>
-                </a>
-            </AuthorizeView>
+                </div>
+                <div class="dashboard-shortcut-actions">
+                    <a href="/ModulePiutang/AgingPiutangDashboard" class="btn btn-outline-primary">Aging Dashboard</a>
+                    <a href="/ModulePiutang/LaporanPiutang" class="btn btn-outline-primary">Laporan Piutang</a>
+                    <a href="/ModulePiutang/LaporanForecastPiutang" class="btn btn-outline-primary">Forecast Piutang</a>
+                </div>
+            </article>
 
-            <AuthorizeView Roles="Admin, Finance">
-                <a href="/ModuleJual/LaporanPenjualan" class="dashboard-quick-link dashboard-quick-link-sales">
-                    <span class="oi oi-cart"></span>
-                    <div>
-                        <strong>Penjualan</strong>
-                        <small>Laporan penjualan</small>
+            <article class="dashboard-shortcut-card dashboard-shortcut-card-ap">
+                <div class="dashboard-shortcut-module-header">
+                    <span class="oi oi-credit-card dashboard-shortcut-icon"></span>
+                    <div class="dashboard-shortcut-header">
+                        <h3>Hutang</h3>
+                        <p>Akses aging dan laporan hutang vendor.</p>
                     </div>
-                </a>
-            </AuthorizeView>
+                </div>
+                <div class="dashboard-shortcut-actions">
+                    <a href="/ModuleHutang/LaporanAgingHutang" class="btn btn-outline-primary">Aging Hutang</a>
+                    <a href="/ModuleHutang/LaporanHutang" class="btn btn-outline-primary">Laporan Hutang</a>
+                </div>
+            </article>
 
-            <AuthorizeView Roles="Admin, Finance">
-                <a href="/ModuleBeli/LaporanPembelian" class="dashboard-quick-link dashboard-quick-link-purchase">
-                    <span class="oi oi-basket"></span>
-                    <div>
-                        <strong>Pembelian</strong>
-                        <small>Laporan pembelian</small>
+            <article class="dashboard-shortcut-card dashboard-shortcut-card-purchase">
+                <div class="dashboard-shortcut-module-header">
+                    <span class="oi oi-basket dashboard-shortcut-icon"></span>
+                    <div class="dashboard-shortcut-header">
+                        <h3>Pembelian</h3>
+                        <p>Laporan pembelian dan order currency.</p>
                     </div>
-                </a>
-            </AuthorizeView>
+                </div>
+                <div class="dashboard-shortcut-actions">
+                    <a href="/ModuleBeli/LaporanPembelian" class="btn btn-outline-primary">Laporan Pembelian</a>
+                    <a href="/ModuleBeli/LaporanOrderCurrency" class="btn btn-outline-primary">Laporan Item/Order</a>
+                </div>
+            </article>
         </div>
     </section>
 </div>

@@ -551,6 +551,24 @@
     height: 100%;
 }
 
+.dashboard-shortcut-module-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+}
+
+.dashboard-shortcut-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.95rem;
+    color: #fff;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
 .dashboard-shortcut-header h3 {
     margin: 0;
     color: #0f172a;
@@ -572,6 +590,30 @@
 .dashboard-shortcut-actions .btn {
     width: 100%;
     justify-content: center;
+}
+
+.dashboard-shortcut-card-stock .dashboard-shortcut-icon {
+    background: linear-gradient(135deg, #0891b2, #0e7490);
+}
+
+.dashboard-shortcut-card-bank .dashboard-shortcut-icon {
+    background: linear-gradient(135deg, #ea580c, #c2410c);
+}
+
+.dashboard-shortcut-card-ar .dashboard-shortcut-icon {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+.dashboard-shortcut-card-ap .dashboard-shortcut-icon {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+.dashboard-shortcut-card-sales .dashboard-shortcut-icon {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.dashboard-shortcut-card-purchase .dashboard-shortcut-icon {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
 }
 
 .dashboard-quick-link {
