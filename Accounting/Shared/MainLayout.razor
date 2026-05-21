@@ -2,19 +2,42 @@
 
 <PageTitle>BMA GROUP</PageTitle>
 
-<div class="page">
-    <div class="sidebar" style="height:3000px">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4 auth">
-            <LoginDisplay />
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+<div class="app-shell">
+    <aside class="app-sidebar">
+        <div class="app-sidebar-inner">
+            <NavMenu />
         </div>
+    </aside>
 
-        <article class="content px-4">
-            @Body
-        </article>
+    <main class="app-main">
+        <header class="app-header">
+            <div class="app-header-copy">
+                <span class="app-header-eyebrow">Business Management</span>
+                <div class="app-header-title-group">
+                    <strong class="app-header-title">BMA Group Workspace</strong>
+                    <span class="app-header-subtitle">Navigasi lebih rapi, fokus kerja lebih cepat.</span>
+                </div>
+            </div>
+
+            <div class="app-header-actions auth">
+                <div class="app-status-pill">.NET 10 • Blazor</div>
+                <div class="app-user-panel">
+                    <LoginDisplay />
+                </div>
+            </div>
+        </header>
+
+        <section class="app-content-shell">
+            <div class="app-content-intro">
+                <div>
+                    <span class="app-content-eyebrow">Operational Console</span>
+                    <p class="app-content-summary">Kelola transaksi, laporan, dan administrasi dari satu panel kerja yang lebih modern.</p>
+                </div>
+            </div>
+
+            <article class="content app-content">
+                @Body
+            </article>
+        </section>
     </main>
 </div>

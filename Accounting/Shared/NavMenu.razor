@@ -1,17 +1,31 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">BMA GROUP</a>
+﻿@implements IDisposable
+@inject NavigationManager NavigationManager
+
+<div class="nav-shell">
+    <div class="nav-header">
+        <div>
+            <div class="nav-kicker">BMA Group</div>
+            <a class="navbar-brand" href="">Finance Control Center</a>
+            <div class="nav-caption">UI lebih modern dengan alur menu yang lebih jelas.</div>
+        </div>
+
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
     </div>
+
+    <div class="nav-summary-card">
+        <div class="nav-summary-title">Akses cepat</div>
+        <div class="nav-summary-text">Masuk ke modul transaksi, laporan, dan setup tanpa menu yang terasa padat.</div>
+    </div>
 </div>
 
-<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
-    <ul class="nav flex-column">
-        <li class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="oi oi-home" aria-hidden="true"></span> Home
+<div class="@($"nav-scroll-region {NavMenuCssClass}")" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column nav-groups">
+        <li class="nav-section-label">Workspace</li>
+        <li class="nav-item px-3 nav-item-home">
+            <NavLink class="nav-link nav-link-home" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Dashboard
             </NavLink>
         </li>
 
@@ -49,12 +63,15 @@
         </li>  <!--   Laporan  -->
         </AuthorizeView>*@
 
+        <li class="nav-section-label">Operational Modules</li>
+
         <AuthorizeView Roles="Admin, Finance">
             <li class="nav-item px-3">
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandPenjualan = !expandPenjualan)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Penjualan
-                </NavLink>
-                @if (expandPenjualan)
+                <button type="button" class="@GetNavButtonClass("Penjualan")" @onclick='() => ToggleSection("Penjualan")'>
+                    <span class="oi oi-cart nav-group-icon nav-group-icon-sales" aria-hidden="true"></span> Penjualan
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Penjualan") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Penjualan"))
                 {
                     <ul class="nav flex-column">
                         <li class="nav-item px-3">
@@ -103,10 +120,11 @@
 
         <AuthorizeView Roles="Admin, Finance">
             <li class="nav-item px-3">
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandPembelian = !expandPembelian)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Pembelian
-                </NavLink>
-                @if (expandPembelian)
+                <button type="button" class="@GetNavButtonClass("Pembelian")" @onclick='() => ToggleSection("Pembelian")'>
+                    <span class="oi oi-basket nav-group-icon nav-group-icon-purchase" aria-hidden="true"></span> Pembelian
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Pembelian") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Pembelian"))
                 {
                     <ul class="nav flex-column">
                         <li class="nav-item px-3">
@@ -135,10 +153,11 @@
 
         <AuthorizeView Roles="Admin, Finance, Warehouse">
             <li class="nav-item px-3">
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandPersediaan = !expandPersediaan)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Persediaan
-                </NavLink>
-                @if (expandPersediaan)
+                <button type="button" class="@GetNavButtonClass("Persediaan")" @onclick='() => ToggleSection("Persediaan")'>
+                    <span class="oi oi-layers nav-group-icon nav-group-icon-stock" aria-hidden="true"></span> Persediaan
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Persediaan") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Persediaan"))
                 {
                     <ul class="nav flex-column">
 
@@ -192,12 +211,15 @@
 
         </AuthorizeView>
 
+        <li class="nav-section-label">Finance & Collection</li>
+
         <AuthorizeView Roles="Admin, Finance">
             <li class="nav-item px-3">
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandHutang = !expandHutang)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Hutang
-                </NavLink>
-                @if (expandHutang)
+                <button type="button" class="@GetNavButtonClass("Hutang")" @onclick='() => ToggleSection("Hutang")'>
+                    <span class="oi oi-credit-card nav-group-icon nav-group-icon-payable" aria-hidden="true"></span> Hutang
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Hutang") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Hutang"))
                 {
                     <ul class="nav flex-column">
                         @* <li class="nav-item px-3">
@@ -245,10 +267,11 @@
 
         <AuthorizeView Roles="Admin, Finance">
             <li class="nav-item px-3">
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandPiutang = !expandPiutang)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Piutang
-                </NavLink>
-                @if (expandPiutang)
+                <button type="button" class="@GetNavButtonClass("Piutang")" @onclick='() => ToggleSection("Piutang")'>
+                    <span class="oi oi-dollar nav-group-icon nav-group-icon-receivable" aria-hidden="true"></span> Piutang
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Piutang") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Piutang"))
                 {
                     <ul class="nav flex-column">
                         @* <li class="nav-item px-3">
@@ -321,10 +344,11 @@
         <AuthorizeView Roles="Admin, Finance">
             <li class="nav-item px-3">
 
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandCashBank = !expandCashBank)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Cash Bank
-                </NavLink>
-                @if (expandCashBank)
+                <button type="button" class="@GetNavButtonClass("CashBank")" @onclick='() => ToggleSection("CashBank")'>
+                    <span class="oi oi-briefcase nav-group-icon nav-group-icon-cashbank" aria-hidden="true"></span> Cash Bank
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("CashBank") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("CashBank"))
                 {
                     <ul class="nav flex-column">
                         <li class="nav-item px-3">
@@ -369,13 +393,16 @@
             </li>  <!--   KasBank    -->
         </AuthorizeView>
 
+        <li class="nav-section-label">Master Data & Reporting</li>
+
         <AuthorizeView Roles="Admin, Finance">
             <li class="nav-item px-3">
 
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandAsset = !expandAsset)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Asset
-                </NavLink>
-                @if (expandAsset)
+                <button type="button" class="@GetNavButtonClass("Asset")" @onclick='() => ToggleSection("Asset")'>
+                    <span class="oi oi-home nav-group-icon nav-group-icon-asset" aria-hidden="true"></span> Asset
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Asset") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Asset"))
                 {
 
 
@@ -418,10 +445,11 @@
         <AuthorizeView Roles="Admin">
             <li class="nav-item px-3">
 
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandLedger = !expandLedger)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Ledger
-                </NavLink>
-                @if (expandLedger)
+                <button type="button" class="@GetNavButtonClass("Ledger")" @onclick='() => ToggleSection("Ledger")'>
+                    <span class="oi oi-spreadsheet nav-group-icon nav-group-icon-ledger" aria-hidden="true"></span> Ledger
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Ledger") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Ledger"))
                 {
                     <ul class="nav flex-column">
                         <li class="nav-item px-3">
@@ -460,10 +488,11 @@
         <AuthorizeView Roles="Admin">
             <li class="nav-item px-3">
 
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandFinancial = !expandFinancial)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Financial Statement
-                </NavLink>
-                @if (expandFinancial)
+                <button type="button" class="@GetNavButtonClass("Financial")" @onclick='() => ToggleSection("Financial")'>
+                    <span class="oi oi-pie-chart nav-group-icon nav-group-icon-financial" aria-hidden="true"></span> Financial Statement
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Financial") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Financial"))
                 {
                     <ul class="nav flex-column">
                         <li class="nav-item px-3">
@@ -543,23 +572,26 @@
         </AuthorizeView>
 
         <!--  Administration  -->
+        <li class="nav-section-label">System Tools</li>
+
         <AuthorizeView Roles="Admin">
             <li class="nav-item px-3">
 
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandAdministration = !expandAdministration)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Administration
-                </NavLink>
-                @if (expandAdministration)
+                <button type="button" class="@GetNavButtonClass("Administration")" @onclick='() => ToggleSection("Administration")'>
+                    <span class="oi oi-people nav-group-icon nav-group-icon-admin" aria-hidden="true"></span> Administration
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Administration") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Administration"))
                 {
                     <ul class="nav flex-column">
                         <li class="nav-item px-3">
                             <NavLink class="nav-link" href="ModuleAdministration/SetupUserRole">
-                                <span class="aria-hidden="true"></span> Setup User Role
+                                <span aria-hidden="true"></span> Setup User Role
                             </NavLink>
                         </li>
                         <li class="nav-item px-3">
                             <NavLink class="nav-link" href="ModuleAdministration/SetupRole">
-                                <span class="aria-hidden="true"></span> Setup Role
+                                <span aria-hidden="true"></span> Setup Role
                             </NavLink>
                         </li>
 
@@ -576,10 +608,11 @@
         <AuthorizeView Roles="Admin, Finance">
             <li class="nav-item px-3">
 
-                <NavLink class="nav-link" href="#" @onclick="(()=>expandMaintenance = !expandMaintenance)">
-                    <span class="oi oi-list-rich" aria-hidden="true"></span> Maintenance
-                </NavLink>
-                @if (expandMaintenance)
+                <button type="button" class="@GetNavButtonClass("Maintenance")" @onclick='() => ToggleSection("Maintenance")'>
+                    <span class="oi oi-wrench nav-group-icon nav-group-icon-maintenance" aria-hidden="true"></span> Maintenance
+                    <span class="nav-chevron" aria-hidden="true">@(IsExpanded("Maintenance") ? "−" : "+")</span>
+                </button>
+                @if (IsExpanded("Maintenance"))
                 {
 
                     <ul class="nav flex-column">
@@ -632,26 +665,139 @@
 
 @code {
     private bool collapseNavMenu = true;
-    // toogle sub menu
-    private bool expandCashBank;
-    private bool expandLedger;
-    private bool expandPiutang;
-    private bool expandHutang;
-    private bool expandPersediaan;
-    private bool expandPembelian;
-    private bool expandPenjualan;
-    private bool expandAsset;
-    private bool expandAdministration;
-    private bool expandMaintenance;
-    private bool expandFinancial;
+    private string? activeSection;
+    private string? expandedSection;
 
-    //   private bool expandLaporan;
-
-    //
     private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override void OnInitialized()
+    {
+        SyncExpandedSectionWithRoute();
+        NavigationManager.LocationChanged += HandleLocationChanged;
+    }
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private bool IsExpanded(string section)
+    {
+        return string.Equals(expandedSection, section, StringComparison.Ordinal);
+    }
+
+    private bool IsActiveSection(string section)
+    {
+        return string.Equals(activeSection, section, StringComparison.Ordinal);
+    }
+
+    private string GetNavButtonClass(string section)
+    {
+        var classes = "nav-link nav-link-button";
+
+        if (IsExpanded(section))
+        {
+            classes += " nav-group-expanded";
+        }
+
+        if (IsActiveSection(section))
+        {
+            classes += " nav-group-active";
+        }
+
+        return classes;
+    }
+
+    private void ToggleSection(string section)
+    {
+        expandedSection = IsExpanded(section) ? null : section;
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        SyncExpandedSectionWithRoute();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void SyncExpandedSectionWithRoute()
+    {
+        var relativePath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        activeSection = GetSectionFromPath(relativePath);
+        expandedSection = activeSection;
+    }
+
+    private static string? GetSectionFromPath(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return null;
+        }
+
+        var normalizedPath = relativePath.Split('?', '#')[0].Trim('/');
+
+        if (normalizedPath.StartsWith("ModuleJual", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Penjualan";
+        }
+
+        if (normalizedPath.StartsWith("ModuleBeli", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Pembelian";
+        }
+
+        if (normalizedPath.StartsWith("ModulePersediaan", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalizedPath.Contains("RubahItemDivisi", StringComparison.OrdinalIgnoreCase)
+                ? "Maintenance"
+                : "Persediaan";
+        }
+
+        if (normalizedPath.StartsWith("ModuleHutang", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Hutang";
+        }
+
+        if (normalizedPath.StartsWith("ModulePiutang", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Piutang";
+        }
+
+        if (normalizedPath.StartsWith("ModuleBank", StringComparison.OrdinalIgnoreCase))
+        {
+            return "CashBank";
+        }
+
+        if (normalizedPath.StartsWith("ModuleAsset", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Asset";
+        }
+
+        if (normalizedPath.StartsWith("ModuleLedger", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Ledger";
+        }
+
+        if (normalizedPath.StartsWith("ModuleFinancial", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Financial";
+        }
+
+        if (normalizedPath.StartsWith("ModuleAdministration", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Administration";
+        }
+
+        if (normalizedPath.StartsWith("ModuleMaintenance", StringComparison.OrdinalIgnoreCase)
+            || normalizedPath.StartsWith("ModuleTestRun", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Maintenance";
+        }
+
+        return null;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
     }
 }

@@ -2,54 +2,46 @@
 @using eSoft.Piutang.View
 
 
-<div class="modal fade show" role="dialog" style="display:block">
-    <div class="modal-dialog" role="treegrid">
+<div class="modal fade show modal-shell" role="dialog" style="display:block">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
 
-            <div class="modal-header alert-success)">
-
-
+            <div class="modal-header modal-header-shell modal-header-success">
                 <h5 class="modal-title">Detail Transaksi</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="@ModalOk">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close modal-close-button" aria-label="Close" @onclick="@ModalOk"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body modal-body-shell">
                 <EditForm Model="@Detail">
-                    <div class="form-group">
-                        <label>
-                            Source Code
-                            <InputSelect class="form-control" @bind-Value="Detail.DistCode" style="width:80%; display:inline">
-                                <option value="">&nbsp;&nbsp;---Select Source Code---&nbsp;&nbsp;</option>
-                                @foreach (var item in SrcCode)
-                                {
-                                    <option value="@item.DistCode">@item.Description</option>
-                                }
+                    <div class="modal-form-grid">
+                        <div class="modal-form-group modal-form-group-wide">
+                            <label class="form-label">Source Code</label>
+                            <div class="modal-inline-actions">
+                                <InputSelect class="form-select" @bind-Value="Detail.DistCode">
+                                    <option value="">---Select Source Code---</option>
+                                    @foreach (var item in SrcCode)
+                                    {
+                                        <option value="@item.DistCode">@item.Description</option>
+                                    }
 
-                            </InputSelect>
-                            <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            Keterangan
+                                </InputSelect>
+                                <button class="btn btn-outline-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                            </div>
+                        </div>
+
+                        <div class="modal-form-group modal-form-group-wide">
+                            <label class="form-label">Keterangan</label>
                             <InputTextArea class="form-control" @bind-Value="@Detail.Keterangan"></InputTextArea>
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            Terima :
+                        </div>
+
+                        <div class="modal-form-group">
+                            <label class="form-label">Terima</label>
                             <InputNumber class="form-control" @bind-Value="Detail.Jumlah" />
-                        </label>
+                        </div>
                     </div>
-                    
-
-
                 </EditForm>
             </div>
-            <div class="modal-footer">
-
-                @*<button type="button" class="btn btn-primary" @onclick="@ModalOk">OK</button>*@
+            <div class="modal-footer modal-footer-shell">
+                <button type="button" class="btn btn-outline-secondary" @onclick="@ModalOk">Close</button>
                 <button type="submit" class="btn btn-primary" @onclick="@SaveDetail">Save</button>
             </div>
         </div>

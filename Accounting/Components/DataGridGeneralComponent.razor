@@ -2,57 +2,49 @@
 @using System.Collections.Generic
 @using System.Linq
 
-
-<div class="bg-light justify-content-between">
-    @if (TotalEnabled)
-        @TotalJumlah.ToString("N")
-
-
-
+<div class="data-grid-shell">
+    <div class="data-grid-toolbar">
+        <div class="data-grid-summary">
+            @if (TotalEnabled)
+            {
+                <span class="data-grid-summary-label">Total</span>
+                <strong>@TotalJumlah.ToString("N")</strong>
+            }
+        </div>
 
         @if (SearchEnabled)
-    {
-        <p align="right">
-            <input class="mr-sm-2" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
-            <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="searchFind">Search</button>
-        </p>
-    }
-    else
-    {
-        <p>
-            &emsp;
-        </p>
-    }
-</div>
-
-<table class="table table-striped table-hover">
-    <thead>
-
-        <tr>@TableHeader</tr>
-    </thead>
-    <tbody>
-        @foreach (var item in GetPageItems())
         {
-            <tr>@RowTemplate(item)</tr>
+            <div class="data-grid-search">
+                <input class="form-control" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
+                <button class="btn btn-primary" type="button" @onclick="searchFind">Search</button>
+            </div>
         }
-    </tbody>
+    </div>
 
-</table>
-<div class="bg-light justify-content-between">
-    <p align="right">
+    <div class="table-responsive data-grid-table-wrap">
+        <table class="table table-striped table-hover align-middle data-grid-table">
+            <thead>
+                <tr>@TableHeader</tr>
+            </thead>
+            <tbody>
+                @foreach (var item in GetPageItems())
+                {
+                    <tr>@RowTemplate(item)</tr>
+                }
+            </tbody>
+        </table>
+    </div>
 
-        <button class="btn btn-outline-danger my-2 my-sm-0" type="button" @onclick="BtnPrevPage">Prev</button>
-        @*<span style="font-size:14px; cursor:pointer" @onclick="BtnPrevPage"><b>&lt; Previous</b></span>*@
-        <span style="font-size:12px;">
-            &nbsp; &nbsp; Page
-            <input type="number" max="@TotalPage" min="1" @bind-value="@currentPageNumber" />
-            of @TotalPage &nbsp; &nbsp;
-        </span>
-        @*<span style="font-size:14px; cursor:pointer"  @onclick="BtnNextPage"><b>Next &gt;</b></span>*@
-        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="BtnNextPage">Next</button>
+    <div class="data-grid-footer">
+        <div class="data-grid-page-status">
+            Page <input class="form-control data-grid-page-input" type="number" max="@TotalPage" min="1" @bind-value="currentPageNumber" @bind-value:event="oninput" /> of @TotalPage
+        </div>
 
-    </p>
-
+        <div class="data-grid-pagination">
+            <button class="btn btn-outline-secondary" type="button" @onclick="BtnPrevPage">Prev</button>
+            <button class="btn btn-outline-primary" type="button" @onclick="BtnNextPage">Next</button>
+        </div>
+    </div>
 </div>
 @code {
 
@@ -125,7 +117,7 @@
         // Jika halaman yang sedang aktif masih valid, jangan ubah
         if (currentPageNumber > maxPage)
         {
-            currentPageNumber = maxPage;
+            currentPageNumber = Math.Max(1, maxPage);
         }
 
         TotalPage = maxPage;
@@ -171,15 +163,14 @@
 
     protected override void OnInitialized()
     {
-
-        TotalPage = MaxPageNumber(Items.Count());
+        TotalPage = MaxPageNumber((Items ?? Array.Empty<TItem>()).Count());
     }
 
     protected override void OnParametersSet()
     {
         if (searchResult == null)
         {
-            TotalPage = MaxPageNumber(Items.Count());
+            TotalPage = MaxPageNumber((Items ?? Array.Empty<TItem>()).Count());
         }
         else
         {
@@ -189,7 +180,7 @@
         // Pertahankan halaman jika masih valid
         if (currentPageNumber > TotalPage)
         {
-            currentPageNumber = TotalPage;
+            currentPageNumber = Math.Max(1, TotalPage);
         }
     }
 
@@ -203,14 +194,15 @@
         else
             maxPageNumber = (int)numberOfPages + 1;
 
-        return maxPageNumber;
+        return Math.Max(1, maxPageNumber);
     }
 
     private IEnumerable<TItem> GetPageItems()
     {
         if (searchResult == null)
         {
-            return Items.Skip(NumOfItemToSkip(currentPageNumber)).Take(NumOfItemToTake(Items.Count()));
+            var items = Items ?? Array.Empty<TItem>();
+            return items.Skip(NumOfItemToSkip(currentPageNumber)).Take(NumOfItemToTake(items.Count()));
         }
         else
         {

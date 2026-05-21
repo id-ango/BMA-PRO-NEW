@@ -1,14 +1,12 @@
 ﻿<div class="toast-container">
     @if (IsVisible)
     {
-        <div class="toast">
-            <div class="toast-header">
-                <strong class="mr-auto">Error</strong>
-                <button type="button" class="ml-2 mb-1 close" aria-label="Close" @onclick="HideToast">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+        <div class="toast toast-shell show" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header toast-header-shell">
+                <strong class="me-auto">Error</strong>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="HideToast"></button>
             </div>
-            <div class="toast-body">
+            <div class="toast-body toast-body-shell">
                 @ErrorMessage
             </div>
         </div>

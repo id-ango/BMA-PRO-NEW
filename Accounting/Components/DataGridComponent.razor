@@ -2,47 +2,49 @@
 @using System.Collections.Generic
 @using System.Linq
 
-<div class="bg-light justify-content-between">
-    @if (TotalEnabled)
-    {
-        @TotalJumlah.ToString("N")
-    }
+<div class="data-grid-shell">
+    <div class="data-grid-toolbar">
+        <div class="data-grid-summary">
+            @if (TotalEnabled)
+            {
+                <span class="data-grid-summary-label">Total</span>
+                <strong>@TotalJumlah.ToString("N")</strong>
+            }
+        </div>
 
-    @if (SearchEnabled)
-    {
-        <p align="right">
-            <input class="mr-sm-2" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
-            <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="searchFind">Search</button>
-        </p>
-    }
-    else
-    {
-        <p>&emsp;</p>
-    }
-</div>
-
-<table class="table table-hover table-bordered">
-    <thead>
-        <tr>@TableHeader</tr>
-    </thead>
-    <tbody>
-        @foreach (var item in GetPageItems())
+        @if (SearchEnabled)
         {
-            @* <tr>@RowTemplate(item)</tr> *@
-            <tr style="@GetRowStyle?.Invoke(item)">@RowTemplate(item)</tr>
+            <div class="data-grid-search">
+                <input class="form-control" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
+                <button class="btn btn-primary" type="button" @onclick="searchFind">Search</button>
+            </div>
         }
-    </tbody>
-</table>
-<div class="bg-light justify-content-between">
-    <p align="right">
-        <button class="btn btn-outline-danger my-2 my-sm-0" type="button" @onclick="BtnPrevPage">Prev</button>
-        <span style="font-size:12px;">
-            &nbsp; &nbsp; Page
-            <input type="number" max="@TotalPage" min="1" @bind-value="currentPageNumber" @bind-value:event="oninput" />
-            of @TotalPage &nbsp; &nbsp;
-        </span>
-        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="BtnNextPage">Next</button>
-    </p>
+    </div>
+
+    <div class="table-responsive data-grid-table-wrap">
+        <table class="table table-hover table-bordered align-middle data-grid-table">
+            <thead>
+                <tr>@TableHeader</tr>
+            </thead>
+            <tbody>
+                @foreach (var item in GetPageItems())
+                {
+                    <tr style="@GetRowStyle?.Invoke(item)">@RowTemplate(item)</tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="data-grid-footer">
+        <div class="data-grid-page-status">
+            Page <input class="form-control data-grid-page-input" type="number" max="@TotalPage" min="1" @bind-value="currentPageNumber" @bind-value:event="oninput" /> of @TotalPage
+        </div>
+
+        <div class="data-grid-pagination">
+            <button class="btn btn-outline-secondary" type="button" @onclick="BtnPrevPage">Prev</button>
+            <button class="btn btn-outline-primary" type="button" @onclick="BtnNextPage">Next</button>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -127,7 +129,7 @@
 
     private void UpdatePagination()
     {
-        var itemCount = (searchResult ?? Items).Count();
+        var itemCount = (searchResult ?? Items ?? Array.Empty<TItem>()).Count();
         TotalPage = MaxPageNumber(itemCount);
 
         // Ensure currentPageNumber is within valid range
@@ -139,17 +141,17 @@
 
     private void CalculateTotalJumlah()
     {
-        TotalJumlah = (searchResult ?? Items).Sum(PropertyJumlahSelector);
+        TotalJumlah = (searchResult ?? Items ?? Array.Empty<TItem>()).Sum(PropertyJumlahSelector);
     }
 
     private int MaxPageNumber(int totalItemCount)
     {
-        return (int)Math.Ceiling((double)totalItemCount / PageSize);
+        return Math.Max(1, (int)Math.Ceiling((double)totalItemCount / PageSize));
     }
 
     private IEnumerable<TItem> GetPageItems()
     {
-        var itemsToPaginate = searchResult ?? Items;
+        var itemsToPaginate = searchResult ?? Items ?? Array.Empty<TItem>();
         return itemsToPaginate
             .Skip((currentPageNumber - 1) * PageSize)
             .Take(PageSize);

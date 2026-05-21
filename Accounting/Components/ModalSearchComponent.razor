@@ -77,7 +77,12 @@
     [Parameter]
     public int PageSize { get; set; } = 10;
 
-   
+    private IEnumerable<TItem> SafeItems => Items ?? Array.Empty<TItem>();
+
+    private IEnumerable<TItem> FilteredItems { get; set; } = Array.Empty<TItem>();
+
+    private IEnumerable<TItem> CurrentItems => FilteredItems.Skip(NumOfItemToSkip(currentPageNumber)).Take(NumOfItemToTake(FilteredItems.Count()));
+
     private string searchText;
 
     private int currentPageNumber { get; set; } = 1;
@@ -88,22 +93,23 @@
 
     private static readonly Func<TItem, string> DefaultGetFilterableText = item => (item?.ToString() ?? "");
 
-
-
     private void searchFind()
     {
         Func<TItem, string> filterFunc = GetFilterableText ?? DefaultGetFilterableText;
-        IEnumerable<TItem> result = (Items ?? Array.Empty<TItem>());
+        IEnumerable<TItem> result = SafeItems;
         if (!string.IsNullOrEmpty(searchText))
         {
-            result = result.
-            Where(x =>
-            (GetFilterableText(x) ?? "")
+            result = result.Where(x =>
+            (filterFunc(x) ?? "")
             .Contains(searchText, StringComparison.InvariantCultureIgnoreCase));
         }
-        Items = result;
 
-        TotalPage = MaxPageNumber(Items.Count());
+        FilteredItems = result;
+        TotalPage = MaxPageNumber(FilteredItems.Count());
+        if (currentPageNumber > TotalPage)
+        {
+            currentPageNumber = TotalPage;
+        }
     }
 
     private int NumOfItemToSkip(int pageNumber)
@@ -142,8 +148,18 @@
 
     protected override void OnInitialized()
     {
+        FilteredItems = SafeItems;
+        TotalPage = MaxPageNumber(FilteredItems.Count());
+    }
 
-        TotalPage = MaxPageNumber(Items.Count());
+    protected override void OnParametersSet()
+    {
+        FilteredItems = SafeItems;
+        TotalPage = MaxPageNumber(FilteredItems.Count());
+        if (currentPageNumber > TotalPage)
+        {
+            currentPageNumber = TotalPage;
+        }
     }
 
     private int MaxPageNumber(int totalItemCount)
@@ -155,7 +171,7 @@
         else
             maxPageNumber = (int)numberOfPages + 1;
 
-        return maxPageNumber;
+        return Math.Max(1, maxPageNumber);
     }
 
     private Task ModalCancel()
