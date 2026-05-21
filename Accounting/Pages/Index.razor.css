@@ -34,6 +34,18 @@
     gap: 1rem;
 }
 
+.dashboard-hero-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.dashboard-hero-collapsed {
+    padding-top: 1.15rem;
+    padding-bottom: 1.15rem;
+}
+
 .dashboard-refresh-card {
     min-width: 220px;
     padding: 1rem 1.15rem;
@@ -67,6 +79,14 @@
 .dashboard-section-header h2 {
     margin: 0;
     color: #0f172a;
+}
+
+.dashboard-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .dashboard-lead {
@@ -188,6 +208,18 @@
     white-space: nowrap;
 }
 
+.dashboard-toggle-light {
+    border-color: rgba(255, 255, 255, 0.32);
+    color: #fff;
+}
+
+.dashboard-toggle-light:hover,
+.dashboard-toggle-light:focus {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.45);
+    color: #fff;
+}
+
 .dashboard-section-note-row {
     display: flex;
     justify-content: space-between;
@@ -214,6 +246,11 @@
     background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.85));
     color: #475569;
     text-align: center;
+}
+
+.dashboard-collapsed-state-compact {
+    min-height: 72px;
+    margin-bottom: 1rem;
 }
 
 .dashboard-kpi-card {

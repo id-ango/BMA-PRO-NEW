@@ -25,25 +25,39 @@
 
 
 <div class="dashboard-shell">
-    <section class="dashboard-hero dashboard-hero-bmapt">
+    <section class="dashboard-hero dashboard-hero-bmapt @(isHeroCollapsed ? "dashboard-hero-collapsed" : string.Empty)">
         <div>
-            <span class="dashboard-kicker">Dashboard</span>
-            <h1>BMA Group Executive Dashboard</h1>
-            <p class="dashboard-lead">Tampilan dashboard ini disusun mengikuti pola BMA-PT: ringkasan KPI utama, perbandingan piutang dan hutang, posisi saldo bank, serta shortcut operasional yang langsung bisa dipakai.</p>
+            <div class="dashboard-hero-title-row">
+                <div>
+                    <span class="dashboard-kicker">Dashboard</span>
+                    <h1>BMA Group Executive Dashboard</h1>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-light dashboard-toggle-light" @onclick="ToggleHeroCollapse">
+                    @(isHeroCollapsed ? "Tampilkan header" : "Sembunyikan header")
+                </button>
+            </div>
+
+            @if (!isHeroCollapsed)
+            {
+                <p class="dashboard-lead">Tampilan dashboard ini disusun mengikuti pola BMA-PT: ringkasan KPI utama, perbandingan piutang dan hutang, posisi saldo bank, serta shortcut operasional yang langsung bisa dipakai.</p>
+            }
         </div>
 
-        <div class="dashboard-hero-meta">
-            <div class="dashboard-refresh-card">
-                <span class="dashboard-refresh-label">Last refresh</span>
-                <strong>@GetLastRefreshLabel()</strong>
+        @if (!isHeroCollapsed)
+        {
+            <div class="dashboard-hero-meta">
+                <div class="dashboard-refresh-card">
+                    <span class="dashboard-refresh-label">Last refresh</span>
+                    <strong>@GetLastRefreshLabel()</strong>
+                </div>
+                <div class="dashboard-hero-badges">
+                    <span class="dashboard-badge">Bank</span>
+                    <span class="dashboard-badge">Piutang</span>
+                    <span class="dashboard-badge">Hutang</span>
+                    <span class="dashboard-badge">Penjualan</span>
+                </div>
             </div>
-            <div class="dashboard-hero-badges">
-                <span class="dashboard-badge">Bank</span>
-                <span class="dashboard-badge">Piutang</span>
-                <span class="dashboard-badge">Hutang</span>
-                <span class="dashboard-badge">Penjualan</span>
-            </div>
-        </div>
+        }
     </section>
 
     <AuthorizeView Roles="Admin, Finance">
@@ -172,37 +186,55 @@
 
         <section class="dashboard-bank-panel dashboard-panel-card">
             <div class="dashboard-panel-header-row">
-                <h2><span class="oi oi-spreadsheet"></span> Saldo Per Rekening Bank</h2>
-                <a href="/ModuleBank/LaporanCashBank" class="btn btn-sm btn-outline-primary">View report</a>
+                <div>
+                    <h2><span class="oi oi-spreadsheet"></span> Saldo Per Rekening Bank</h2>
+                    <p class="dashboard-section-note">@bankList.Count rekening aktif dengan total saldo @totalSaldoBank.ToString("N0")</p>
+                </div>
+                <div class="dashboard-panel-actions">
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ToggleBankPanelCollapse">
+                        @(isBankPanelCollapsed ? "Tampilkan saldo" : "Sembunyikan saldo")
+                    </button>
+                    <a href="/ModuleBank/LaporanCashBank" class="btn btn-sm btn-outline-primary">View report</a>
+                </div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 dashboard-bank-table">
-                    <thead>
-                        <tr>
-                            <th>Kode Bank</th>
-                            <th>Nama Bank</th>
-                            <th style="text-align:right">Saldo</th>
-                            <th style="width:30%">Proporsi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var bank in bankList)
-                        {
-                            var bankPct = totalSaldoBank != 0 ? Math.Abs(bank.Saldo / totalSaldoBank * 100) : 0;
+            @if (!isBankPanelCollapsed)
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 dashboard-bank-table">
+                        <thead>
                             <tr>
-                                <td><span class="badge bg-primary">@bank.KodeBank</span></td>
-                                <td>@bank.NmBank</td>
-                                <td style="text-align:right"><strong class="@(bank.Saldo >= 0 ? "text-primary" : "text-warning")">@bank.Saldo.ToString("N0")</strong></td>
-                                <td>
-                                    <div class="progress dashboard-progress dashboard-progress-sm">
-                                        <div class="progress-bar @(bank.Saldo >= 0 ? "bg-primary" : "bg-warning")" style="@($"width:{bankPct:N0}%;")">@bankPct.ToString("N1")%</div>
-                                    </div>
-                                </td>
+                                <th>Kode Bank</th>
+                                <th>Nama Bank</th>
+                                <th style="text-align:right">Saldo</th>
+                                <th style="width:30%">Proporsi</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            @foreach (var bank in bankList)
+                            {
+                                var bankPct = totalSaldoBank != 0 ? Math.Abs(bank.Saldo / totalSaldoBank * 100) : 0;
+                                <tr>
+                                    <td><span class="badge bg-primary">@bank.KodeBank</span></td>
+                                    <td>@bank.NmBank</td>
+                                    <td style="text-align:right"><strong class="@(bank.Saldo >= 0 ? "text-primary" : "text-warning")">@bank.Saldo.ToString("N0")</strong></td>
+                                    <td>
+                                        <div class="progress dashboard-progress dashboard-progress-sm">
+                                            <div class="progress-bar @(bank.Saldo >= 0 ? "bg-primary" : "bg-warning")" style="@($"width:{bankPct:N0}%;")">@bankPct.ToString("N1")%</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="dashboard-collapsed-state dashboard-collapsed-state-compact">
+                    <span class="oi oi-chevron-bottom"></span>
+                    <span>Panel saldo rekening disembunyikan agar quick menu lebih cepat terlihat.</span>
+                </div>
+            }
         </section>
     </AuthorizeView>
 
@@ -562,6 +594,8 @@
     private decimal ap90;
     private decimal apOver;
     private decimal apMax;
+    private bool isHeroCollapsed;
+    private bool isBankPanelCollapsed = true;
     private bool showOperationalSection;
     private bool isOperationalDataLoaded;
     private bool isOperationalDataLoading;
@@ -593,6 +627,16 @@
     public void Dispose()
     {
         // GC.SuppressFinalize(this);
+    }
+
+    private void ToggleHeroCollapse()
+    {
+        isHeroCollapsed = !isHeroCollapsed;
+    }
+
+    private void ToggleBankPanelCollapse()
+    {
+        isBankPanelCollapsed = !isBankPanelCollapsed;
     }
 
     private async Task ToggleOperationalSectionAsync()
