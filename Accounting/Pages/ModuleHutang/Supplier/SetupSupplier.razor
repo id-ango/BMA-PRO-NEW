@@ -6,26 +6,34 @@
 @implements IDisposable
 @inject NavigationManager navigationmanager
 
-<div class="container">
-    <h1>Setup Supplier</h1>
-</div>
+<div class="setup-page supplier-setup-page">
+    <section class="setup-page-hero">
+        <div>
+            <p class="setup-page-eyebrow">Hutang Master</p>
+            <h1>Setup Supplier</h1>
+            <p class="setup-page-subtitle">Tampilkan vendor beserta account set dan informasi penting dengan layout yang lebih bersih.</p>
+        </div>
+        <div class="setup-page-actions">
+            <NavLink href="/ModuleHutang/AddSupplier" class="btn btn-primary setup-action-button">Add Supplier</NavLink>
+        </div>
+    </section>
 
+    <section class="setup-grid-card">
+        <div class="setup-grid-summary">
+            <div>
+                <span class="setup-grid-summary-label">TOTAL</span>
+                <strong>@(Banks?.Count ?? 0).ToString("N0")</strong>
+            </div>
+        </div>
 
-<div class="container">
-    <NavLink href="/ModuleHutang/AddSupplier" class="btn btn-primary">Add</NavLink>
-</div>
-
-<br />
-<br />
-
-
-<div class="container">
-    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Supplier} {item.NamaSup} {item.Alamat} {item.Kota} {item.Telpon}")">
+        <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Supplier} {item.NamaSup} {item.Alamat} {item.Kota} {item.Telpon} {item.AcctSet} {item.Kurs}")">
         <TableHeader>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.Supplier)))" @onclick='() => ApplySort(nameof(ApSuppl.Supplier))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.Supplier))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.NamaSup)))" @onclick='() => ApplySort(nameof(ApSuppl.NamaSup))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.NamaSup))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass("Address"))" @onclick='() => ApplySort("Address")'>Address <span class="data-grid-sort-indicator">@GetSortIndicator("Address")</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.Telpon)))" @onclick='() => ApplySort(nameof(ApSuppl.Telpon))'>Telpon <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.Telpon))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.AcctSet)))" @onclick='() => ApplySort(nameof(ApSuppl.AcctSet))'>Account Set <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.AcctSet))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.Kurs)))" @onclick='() => ApplySort(nameof(ApSuppl.Kurs))'>Currency <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.Kurs))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.Hutang)))" @onclick='() => ApplySort(nameof(ApSuppl.Hutang))'>Hutang <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.Hutang))</span></button></th>
             <th></th>
         </TableHeader>
@@ -37,24 +45,27 @@
                 <span>@cbBank.Kota</span>
             </td>
             <td>@cbBank.Telpon</td>
+            <td>@cbBank.AcctSet</td>
+            <td>@cbBank.Kurs</td>
             <td>@cbBank.Hutang.ToString("N")</td>
             <td>
-                <button @onclick="() => OpenRubah(cbBank.ApSupplId)" class="btn btn-success">
+                <div class="setup-row-actions">
+                <button @onclick="() => OpenRubah(cbBank.ApSupplId)" class="setup-row-action setup-row-action-edit" type="button" aria-label="Edit supplier">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
                         <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z" />
                     </svg>
                 </button>
-                <button @onclick="() => OpenDeleteDialog(cbBank)" class="btn btn-danger">
+                <button @onclick="() => OpenDeleteDialog(cbBank)" class="setup-row-action setup-row-action-delete" type="button" aria-label="Delete supplier">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
                         <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
                         <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
                     </svg>
                 </button>
+                </div>
             </td>
         </RowTemplate>
     </DataGridComponent>
-
-
+    </section>
 </div>
 
 @if (DeleteDialogOpen)
@@ -112,6 +123,8 @@
             nameof(ApSuppl.NamaSup) => OrderBy(source, x => x.NamaSup),
             "Address" => OrderBy(source, x => $"{x.Alamat} {x.Kota}"),
             nameof(ApSuppl.Telpon) => OrderBy(source, x => x.Telpon),
+            nameof(ApSuppl.AcctSet) => OrderBy(source, x => x.AcctSet),
+            nameof(ApSuppl.Kurs) => OrderBy(source, x => x.Kurs),
             nameof(ApSuppl.Hutang) => sortAscending ? source.OrderBy(x => x.Hutang) : source.OrderByDescending(x => x.Hutang),
             _ => OrderBy(source, x => x.Supplier)
         };

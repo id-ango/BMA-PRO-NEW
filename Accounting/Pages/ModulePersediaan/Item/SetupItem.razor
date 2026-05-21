@@ -7,25 +7,34 @@
 @implements IDisposable
 @inject NavigationManager navigationmanager
 
-<div class="container">
-    <h1>Setup Persediaan</h1>
-</div>
+<div class="setup-page item-setup-page">
+    <section class="setup-page-hero">
+        <div>
+            <p class="setup-page-eyebrow">Persediaan Master</p>
+            <h1>Setup Item</h1>
+            <p class="setup-page-subtitle">Tampilkan item lebih informatif dengan divisi, account set, category, dan nilai stok utama.</p>
+        </div>
+        <div class="setup-page-actions">
+            <NavLink href="/ModulePersediaan/AddItem" class="btn btn-primary setup-action-button">Add Item</NavLink>
+        </div>
+    </section>
 
+    <section class="setup-grid-card">
+        <div class="setup-grid-summary">
+            <div>
+                <span class="setup-grid-summary-label">TOTAL</span>
+                <strong>@(Banks?.Count ?? 0).ToString("N0")</strong>
+            </div>
+        </div>
 
-<div class="container">
-    <NavLink href="/ModulePersediaan/AddItem" class="btn btn-primary">Add</NavLink>
-</div>
-
-<br />
-<br />
-
-
-<div class="container">
-    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.NamaItem} {item.ItemCode} {item.Satuan}" )">
+        <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.NamaItem} {item.ItemCode} {item.Satuan} {item.Divisi} {item.AcctSet} {item.Category}" )">
         <TableHeader>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.ItemCode)))" @onclick='() => ApplySort(nameof(IcItem.ItemCode))'>Item <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.ItemCode))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.NamaItem)))" @onclick='() => ApplySort(nameof(IcItem.NamaItem))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.NamaItem))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.Satuan)))" @onclick='() => ApplySort(nameof(IcItem.Satuan))'>Satuan <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.Satuan))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.Divisi)))" @onclick='() => ApplySort(nameof(IcItem.Divisi))'>Divisi <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.Divisi))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.AcctSet)))" @onclick='() => ApplySort(nameof(IcItem.AcctSet))'>Account Set <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.AcctSet))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.Category)))" @onclick='() => ApplySort(nameof(IcItem.Category))'>Category <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.Category))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.Qty)))" @onclick='() => ApplySort(nameof(IcItem.Qty))'>Qty <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.Qty))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.HrgUsd)))" @onclick='() => ApplySort(nameof(IcItem.HrgUsd))'>Hrg Import <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.HrgUsd))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.HrgNetto)))" @onclick='() => ApplySort(nameof(IcItem.HrgNetto))'>Hrg Net <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.HrgNetto))</span></button></th>
@@ -36,17 +45,21 @@
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.ItemCode</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.NamaItem</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Satuan</td>
+            <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Divisi</td>
+            <td class="@GetCellClass(cbBank.Disabled)">@cbBank.AcctSet</td>
+            <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Category</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Qty.ToString("N")</td>
             <td class="@GetCellClass(cbBank.Disabled)">@(string.IsNullOrEmpty(cbBank.CurrencyCode) ? "" : cbBank.CurrencyCode) @cbBank.HrgUsd.ToString("N")</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.HrgNetto.ToString("N")</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Cost.ToString("N")</td>
             <td>
-                <button @onclick="() => OpenRubah(cbBank.IcItemId)" class="btn btn-success">
+                <div class="setup-row-actions setup-row-actions-multi">
+                <button @onclick="() => OpenRubah(cbBank.IcItemId)" class="setup-row-action setup-row-action-edit" type="button" aria-label="Edit item">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
                         <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z" />
                     </svg>
                 </button>
-                <button @onclick="() => OpenDeleteDialog(cbBank)" class="btn btn-danger">
+                <button @onclick="() => OpenDeleteDialog(cbBank)" class="setup-row-action setup-row-action-delete" type="button" aria-label="Delete item">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
                         <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
                         <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
@@ -54,23 +67,23 @@
                 </button>
                 @if(!string.IsNullOrEmpty(cbBank.Foto))
                 {
-                <button @onclick="() => OpenDisplayDialog(cbBank)" class="btn btn-warning">
+                <button @onclick="() => OpenDisplayDialog(cbBank)" class="setup-row-action setup-row-action-preview" type="button" aria-label="Preview image">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-display" viewBox="0 0 16 16">
                             <path d="M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2h-4c0 .667.083 1.167.25 1.5H11a.5.5 0 0 1 0 1H5a.5.5 0 0 1 0-1h.75c.167-.333.25-.833.25-1.5H2s-2 0-2-2V4zm1.398-.855a.758.758 0 0 0-.254.302A1.46 1.46 0 0 0 1 4.01V10c0 .325.078.502.145.602.07.105.17.188.302.254a1.464 1.464 0 0 0 .538.143L2.01 11H14c.325 0 .502-.078.602-.145a.758.758 0 0 0 .254-.302 1.464 1.464 0 0 0 .143-.538L15 9.99V4c0-.325-.078-.502-.145-.602a.757.757 0 0 0-.302-.254A1.46 1.46 0 0 0 13.99 3H2c-.325 0-.502.078-.602.145z" />
                         </svg>
                 </button>
                 }
-                <button @onclick="() => ToggleFinish(cbBank)" class="btn btn-secondary">
+                <button @onclick="() => ToggleFinish(cbBank)" class="setup-row-action setup-row-action-status" type="button" aria-label="Toggle item status">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-database-x" viewBox="0 0 16 16">
                         <path d="M12.096 6.223A5 5 0 0 0 13 5.698V7c0 .289-.213.654-.753 1.007a4.5 4.5 0 0 1 1.753.25V4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16c.536 0 1.058-.034 1.555-.097a4.5 4.5 0 0 1-.813-.927Q8.378 15 8 15c-1.464 0-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13h.027a4.6 4.6 0 0 1 0-1H8c-1.464 0-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10q.393 0 .774-.024a4.5 4.5 0 0 1 1.102-1.132C9.298 8.944 8.666 9 8 9c-1.464 0-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777M3 4c0-.374.356-.875 1.318-1.313C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4" />
                         <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708" />
                     </svg>
                     </button>
+                </div>
             </td>
         </RowTemplate>
     </DataGridComponent>
-
-
+    </section>
 </div>
 
 @if (DeleteDialogOpen)
@@ -133,6 +146,9 @@
         {
             nameof(IcItem.NamaItem) => OrderBy(source, x => x.NamaItem),
             nameof(IcItem.Satuan) => OrderBy(source, x => x.Satuan),
+            nameof(IcItem.Divisi) => OrderBy(source, x => x.Divisi),
+            nameof(IcItem.AcctSet) => OrderBy(source, x => x.AcctSet),
+            nameof(IcItem.Category) => OrderBy(source, x => x.Category),
             nameof(IcItem.Qty) => sortAscending ? source.OrderBy(x => x.Qty) : source.OrderByDescending(x => x.Qty),
             nameof(IcItem.HrgUsd) => sortAscending ? source.OrderBy(x => x.HrgUsd) : source.OrderByDescending(x => x.HrgUsd),
             nameof(IcItem.HrgNetto) => sortAscending ? source.OrderBy(x => x.HrgNetto) : source.OrderByDescending(x => x.HrgNetto),

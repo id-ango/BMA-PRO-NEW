@@ -10,32 +10,35 @@
 @inject IExcelServices serviceXL
 @inject IJSRuntime JS
 
-<div class="container">
-    <h1>Setup Customer</h1>
-</div>
+<div class="setup-page customer-setup-page">
+    <section class="setup-page-hero">
+        <div>
+            <p class="setup-page-eyebrow">Piutang Master</p>
+            <h1>Setup Customer</h1>
+            <p class="setup-page-subtitle">Kelola data customer, account set, dan informasi kontak dalam satu tampilan yang lebih rapi.</p>
+        </div>
+        <div class="setup-page-actions">
+            <NavLink href="/ModulePiutang/AddCustomer" class="btn btn-primary setup-action-button">Add Customer</NavLink>
+            <button type="button" class="btn btn-secondary setup-action-button" @onclick="@(() => proses3())">Print Customer</button>
+            <button type="button" class="btn btn-success setup-action-button" @onclick="@(() => DownloadFileFromStream())">Download Customer</button>
+        </div>
+    </section>
 
+    <section class="setup-grid-card">
+        <div class="setup-grid-summary">
+            <div>
+                <span class="setup-grid-summary-label">TOTAL</span>
+                <strong>@(Banks?.Count ?? 0).ToString("N0")</strong>
+            </div>
+        </div>
 
-<div class="container">
-    <NavLink href="/ModulePiutang/AddCustomer" class="btn btn-primary">Add</NavLink>
-</div>
-
-<div class="container">
-    <br />
-    <button class="btn btn-primary" @onclick="@(() => proses3())">Print Customer</button>
-    <br />
-     <button class="btn btn-success" @onclick="@(() => DownloadFileFromStream())">Download Customer</button>
-</div>
-<br />
-<br />
-
-
-<div class="container">
-    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Alamat} {item.AlmtKrm}  {item.Kota} {item.Telpon}")">
+        <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Alamat} {item.AlmtKrm} {item.Kota} {item.Telpon} {item.AcctSet} {item.Golongan}")">
         <TableHeader>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.Customer)))" @onclick='() => ApplySort(nameof(ArCust.Customer))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.Customer))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.NamaCust)))" @onclick='() => ApplySort(nameof(ArCust.NamaCust))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.NamaCust))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass("Address"))" @onclick='() => ApplySort("Address")'>Address <span class="data-grid-sort-indicator">@GetSortIndicator("Address")</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.Telpon)))" @onclick='() => ApplySort(nameof(ArCust.Telpon))'>Telpon <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.Telpon))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.AcctSet)))" @onclick='() => ApplySort(nameof(ArCust.AcctSet))'>Account Set <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.AcctSet))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.Piutang)))" @onclick='() => ApplySort(nameof(ArCust.Piutang))'>Piutang <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.Piutang))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.Golongan)))" @onclick='() => ApplySort(nameof(ArCust.Golongan))'>Keterangan <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.Golongan))</span></button></th>
             <th></th>
@@ -48,25 +51,27 @@
                 <span>@cbBank.Kota</span>
             </td>
             <td>@cbBank.Telpon</td>
+            <td>@cbBank.AcctSet</td>
             <td>@cbBank.Piutang.ToString("N")</td>
             <td>@cbBank.Golongan</td>
             <td>
-                <button @onclick="() => OpenRubah(cbBank.ArCustId)" class="btn btn-success">
+                <div class="setup-row-actions">
+                <button @onclick="() => OpenRubah(cbBank.ArCustId)" class="setup-row-action setup-row-action-edit" type="button" aria-label="Edit customer">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
                         <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z" />
                     </svg>
                 </button>
-                <button @onclick="() => OpenDeleteDialog(cbBank)" class="btn btn-danger">
+                <button @onclick="() => OpenDeleteDialog(cbBank)" class="setup-row-action setup-row-action-delete" type="button" aria-label="Delete customer">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
                         <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
                         <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
                     </svg>
                 </button>
+                </div>
             </td>
         </RowTemplate>
     </DataGridComponent>
-
-
+    </section>
 </div>
 
 @if (DeleteDialogOpen)
@@ -124,6 +129,7 @@
             nameof(ArCust.NamaCust) => OrderBy(source, x => x.NamaCust),
             "Address" => OrderBy(source, x => $"{x.Alamat} {x.Kota}"),
             nameof(ArCust.Telpon) => OrderBy(source, x => x.Telpon),
+            nameof(ArCust.AcctSet) => OrderBy(source, x => x.AcctSet),
             nameof(ArCust.Piutang) => sortAscending ? source.OrderBy(x => x.Piutang) : source.OrderByDescending(x => x.Piutang),
             nameof(ArCust.Golongan) => OrderBy(source, x => x.Golongan),
             _ => OrderBy(source, x => x.Customer)
