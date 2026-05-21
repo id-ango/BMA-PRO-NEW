@@ -25,14 +25,7 @@
     </section>
 
     <section class="setup-grid-card">
-        <div class="setup-grid-summary">
-            <div>
-                <span class="setup-grid-summary-label">TOTAL</span>
-                <strong>@(Banks?.Count ?? 0).ToString("N0")</strong>
-            </div>
-        </div>
-
-        <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Alamat} {item.AlmtKrm} {item.Kota} {item.Telpon} {item.AcctSet} {item.Golongan}")">
+        <DataGridComponent Items="SortedBanks" TotalJumlah="@((decimal)(Banks?.Count ?? 0))" TotalFormat="N0" Context="cbBank" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Alamat} {item.AlmtKrm} {item.Kota} {item.Telpon} {item.AcctSet} {item.Golongan}")">
         <TableHeader>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.Customer)))" @onclick='() => ApplySort(nameof(ArCust.Customer))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.Customer))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.NamaCust)))" @onclick='() => ApplySort(nameof(ArCust.NamaCust))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.NamaCust))</span></button></th>

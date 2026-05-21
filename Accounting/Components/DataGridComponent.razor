@@ -5,32 +5,32 @@
 <div class="data-grid-shell">
     <div class="data-grid-toolbar">
         <div class="data-grid-toolbar-panel data-grid-summary-panel">
-        <div class="data-grid-summary">
-            @if (TotalEnabled)
-            {
-                <span class="data-grid-summary-label">Total</span>
-                <strong>@TotalJumlah.ToString("N")</strong>
-            }
-        </div>
+            <div class="data-grid-summary">
+                @if (TotalEnabled)
+                {
+                    <span class="data-grid-summary-label">Total</span>
+                    <strong>@TotalJumlah.ToString(TotalFormat)</strong>
+                }
+            </div>
         </div>
 
         @if (SearchEnabled)
         {
             <div class="data-grid-toolbar-panel data-grid-search-panel">
-            <div class="data-grid-search">
-                <div class="data-grid-search-input-wrap">
-                    <span class="data-grid-search-icon" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
-                        </svg>
-                    </span>
-                    <input class="form-control data-grid-search-input" type="search" placeholder="Search" aria-label="Search" value="@searchText" @oninput="HandleSearchInput">
-                    @if (!string.IsNullOrWhiteSpace(searchText))
-                    {
-                        <button type="button" class="data-grid-search-clear" @onclick="ClearSearch" aria-label="Clear search">×</button>
-                    }
+                <div class="data-grid-search">
+                    <div class="data-grid-search-input-wrap">
+                        <span class="data-grid-search-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+                            </svg>
+                        </span>
+                        <input class="form-control data-grid-search-input" type="search" placeholder="Search" aria-label="Search" value="@searchText" @oninput="HandleSearchInput">
+                        @if (!string.IsNullOrWhiteSpace(searchText))
+                        {
+                            <button type="button" class="data-grid-search-clear" @onclick="ClearSearch" aria-label="Clear search">×</button>
+                        }
+                    </div>
                 </div>
-            </div>
             </div>
         }
     </div>
@@ -73,6 +73,9 @@
 
     [Parameter]
     public decimal TotalJumlah { get; set; } = 0;
+
+    [Parameter]
+    public string TotalFormat { get; set; } = "N";
 
     [Parameter]
     public Func<TItem, string> GetFilterableText { get; set; }

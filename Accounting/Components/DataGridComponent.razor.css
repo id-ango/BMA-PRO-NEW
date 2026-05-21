@@ -144,9 +144,10 @@
     margin-bottom: 0;
     border-collapse: separate;
     border-spacing: 0;
+    overflow: hidden;
 }
 
-.data-grid-table thead th {
+.data-grid-table ::deep thead th {
     position: sticky;
     top: 0;
     z-index: 1;
@@ -157,21 +158,37 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     border-bottom-width: 1px;
+    border-color: rgba(203, 213, 225, 0.9);
+    border-top: none;
+    border-left-color: rgba(226, 232, 240, 0.9);
+    border-right-color: rgba(226, 232, 240, 0.9);
     padding-top: 0.95rem;
     padding-bottom: 0.95rem;
+    vertical-align: middle;
 }
 
-.data-grid-table tbody td {
+.data-grid-table ::deep thead th:first-child {
+    border-top-left-radius: 0.9rem;
+}
+
+.data-grid-table ::deep thead th:last-child {
+    border-top-right-radius: 0.9rem;
+}
+
+.data-grid-table ::deep tbody td {
     padding-top: 0.8rem;
     padding-bottom: 0.8rem;
     color: #0f172a;
     vertical-align: middle;
+    border-color: rgba(226, 232, 240, 0.78);
 }
 
-.data-grid-sort-button {
+.data-grid-table ::deep .data-grid-sort-button {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
+    justify-content: flex-start;
+    width: 100%;
     padding: 0;
     border: none;
     background: transparent;
@@ -180,21 +197,28 @@
     font-weight: inherit;
     text-transform: inherit;
     letter-spacing: inherit;
+    line-height: 1.35;
 }
 
-.data-grid-sort-button:hover {
+.data-grid-table ::deep .data-grid-sort-button:hover {
     color: #1d4ed8;
 }
 
-.data-grid-sort-indicator {
+.data-grid-table ::deep .data-grid-sort-indicator {
     min-width: 0.9rem;
     color: #94a3b8;
     font-size: 0.82rem;
     line-height: 1;
 }
 
-.data-grid-sort-button.active .data-grid-sort-indicator {
+.data-grid-table ::deep .data-grid-sort-button.active .data-grid-sort-indicator {
     color: #1d4ed8;
+}
+
+.data-grid-table ::deep th:last-child,
+.data-grid-table ::deep td:last-child {
+    width: 1%;
+    white-space: nowrap;
 }
 
 .data-grid-table tbody tr:hover {

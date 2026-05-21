@@ -6,118 +6,116 @@
 @inject IReceivableServices service
 @inject NavigationManager navigationmanager
 
-<h3>Edit Customer</h3>
+<div class="entity-form-page customer-form-page">
+<section class="entity-form-hero">
+    <div>
+        <p class="entity-form-eyebrow">Piutang Master</p>
+        <h1>Edit Customer</h1>
+        <p class="entity-form-subtitle">Perbarui informasi customer dengan layout yang lebih bersih dan nyaman digunakan.</p>
+    </div>
+</section>
 
 <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
     <DataAnnotationsValidator />
-    <ValidationSummary />
+    <div class="entity-form-card">
+        <ValidationSummary class="entity-form-validation" />
 
-    <div class="form-group">
-        <label>
-            Customer :
-            <InputText id="codeBank" class="form-control" @bind-Value="bank.Customer" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
-        </label>
+        <section class="entity-form-section">
+            <div class="entity-form-section-header">
+                <h2>Informasi Utama</h2>
+                <p>Perbarui identitas customer utama tanpa mengubah kode customer.</p>
+            </div>
+
+            <div class="entity-form-grid entity-form-grid-2">
+                <div class="entity-form-field">
+                    <label for="customerCode">Customer</label>
+                    <InputText id="customerCode" class="form-control entity-form-input" @bind-Value="bank.Customer" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="customerName">Name</label>
+                    <InputText id="customerName" class="form-control entity-form-input" @bind-Value="bank.NamaCust" />
+                </div>
+            </div>
+        </section>
+
+        <section class="entity-form-section">
+            <div class="entity-form-section-header">
+                <h2>Alamat</h2>
+                <p>Atur alamat utama dan alamat pengiriman customer.</p>
+            </div>
+
+            <div class="entity-form-grid entity-form-grid-address">
+                <div class="entity-form-field entity-form-field-wide">
+                    <label for="customerAddress">Address</label>
+                    <InputTextArea id="customerAddress" class="form-control entity-form-input entity-form-textarea" @bind-Value="bank.Alamat" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="customerCity">City</label>
+                    <InputText id="customerCity" class="form-control entity-form-input" @bind-Value="bank.Kota" />
+                </div>
+                <div class="entity-form-field entity-form-field-wide">
+                    <label for="customerShipAddress">Alamat Kirim</label>
+                    <InputTextArea id="customerShipAddress" class="form-control entity-form-input entity-form-textarea" @bind-Value="bank.AlmtKrm" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="customerShipCity">Kota Kirim</label>
+                    <InputText id="customerShipCity" class="form-control entity-form-input" @bind-Value="bank.KotaKrm" />
+                </div>
+            </div>
+        </section>
+
+        <section class="entity-form-section">
+            <div class="entity-form-section-header">
+                <h2>Kontak dan Akun</h2>
+                <p>Perbarui informasi kontak, NPWP/NIK, serta account set customer.</p>
+            </div>
+
+            <div class="entity-form-grid entity-form-grid-3">
+                <div class="entity-form-field">
+                    <label for="customerTelpon">Telpon</label>
+                    <InputText id="customerTelpon" class="form-control entity-form-input" @bind-Value="bank.Telpon" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="customerKontak">Kontak Person</label>
+                    <InputText id="customerKontak" class="form-control entity-form-input" @bind-Value="bank.Kontak" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="customerNpwp">NPWP/NIK</label>
+                    <InputText id="customerNpwp" class="form-control entity-form-input" @bind-Value="bank.NPWP_Cust" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="customerKeterangan">Keterangan</label>
+                    <InputText id="customerKeterangan" class="form-control entity-form-input" @bind-Value="bank.Golongan" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="customerTermin">Termin</label>
+                    <InputNumber id="customerTermin" class="form-control entity-form-input" @bind-Value="bank.Termin" />
+                </div>
+                <div class="entity-form-field entity-form-field-account">
+                    <label for="customerAcctSet">Set Account</label>
+                    <div class="entity-form-inline-select">
+                        <InputSelect id="customerAcctSet" class="form-control entity-form-input" @bind-Value="bank.AcctSet">
+                            <option value="">&nbsp;&nbsp;---Select Set Account---&nbsp;&nbsp;</option>
+                            @foreach (var item in GlAccounts)
+                            {
+                                <option value="@item.AcctSet">@item.Description</option>
+                            }
+
+                        </InputSelect>
+                        <button class="btn btn-primary entity-form-inline-button" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="entity-form-actions">
+            <button class="btn btn-success entity-form-submit" type="submit">Simpan</button>
+            <button class="btn btn-outline-secondary entity-form-cancel" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePiutang/SetupCustomer", false))">Batal</button>
+        </div>
     </div>
-    <div class="form-group">
-        <label>
-            Name :
-            <InputText class="form-control" @bind-Value="bank.NamaCust" />
-        </label>
-    </div>
-    <div class="form-group">
-        <table style="width:100%">
-            <tr>
-                <td style="width:70%">
-                    <label>
-                        Address :
-                        <InputTextArea class="form-control" @bind-Value="bank.Alamat" />
-                    </label>
-                </td>
-                <td style="width:30%">
-                    <label>
-                        City :
-                        <InputText class="form-control" @bind-Value="bank.Kota" />
-                    </label>
-                </td>
-            </tr>
-            <tr>
-                <td style="width:70%">
-                    <label>
-                        Alamat Kirim :
-                        <InputTextArea class="form-control" @bind-Value="bank.AlmtKrm" />
-                    </label>
-                </td>
-                <td style="width:30%">
-                    <label>
-                        Kota Kirim :
-                        <InputText class="form-control" @bind-Value="bank.KotaKrm" />
-                    </label>
-                </td>
-            </tr>
-        </table>
-
-    </div>
-
-
-    <div class="form-group">
-        <label>
-            Telpon :
-            <InputText class="form-control" @bind-Value="bank.Telpon" />
-        </label>
-    </div>
-
-    <div class="form-group">
-        <label>
-            Kontak Person :
-            <InputText class="form-control" @bind-Value="bank.Kontak" />
-        </label>
-    </div>
-    <div class="form-group">
-        <label>
-            NPWP/NIK :
-            <InputText class="form-control" @bind-Value="bank.NPWP_Cust" />
-        </label>
-    </div>
-
-    <br />
-    <div class="form-group">
-        <label>
-            Keterangan :
-            <InputText class="form-control" @bind-Value="bank.Golongan" />
-        </label>
-    </div>
-    <br />
-     <div class="form-group">
-        <label>
-            Termin :
-            <InputNumber class="form-control" @bind-Value="bank.Termin" />
-        </label>
-    </div>
-
-    <br />
-    <div class="form-group">
-        <label>
-            Set Account :
-            <InputSelect class="form-control" @bind-Value="bank.AcctSet" style="width:80%; display:inline">
-                <option value="">&nbsp;&nbsp;---Select Set Account---&nbsp;&nbsp;</option>
-                @foreach (var item in GlAccounts)
-                {
-                    <option value="@item.AcctSet">@item.Description</option>
-                }
-
-            </InputSelect>
-            <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
-        </label>
-    </div>
-
-    <br />
-    <div class="float-md-right">
-        <button class="btn-success" type="submit">Simpan</button>
-        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePiutang/SetupCustomer", false))">Batal</button>
-    </div>
-
-
 </EditForm>
+
+</div>
 
 @if (DialogOpen)
 {
@@ -147,12 +145,6 @@
 
 
 }
-<style>
-    label {
-        width: 100%;
-    }
-</style>
-
 @code {
     [Parameter]
     public int Id { get; set; }
@@ -229,6 +221,7 @@
     {
         GlAccounts = service.GetArAkunSet();
     }
+
 
     private void BtnChoose(string textSearch)
     {

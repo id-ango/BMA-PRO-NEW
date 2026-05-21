@@ -6,94 +6,106 @@
 @inject IPayableServices service
 @inject NavigationManager navigationmanager
 
-<h3>Edit Supplier</h3>
+<div class="entity-form-page supplier-form-page">
+<section class="entity-form-hero">
+    <div>
+        <p class="entity-form-eyebrow">Hutang Master</p>
+        <h1>Edit Supplier</h1>
+        <p class="entity-form-subtitle">Perbarui informasi supplier dengan tampilan form yang lebih modern dan konsisten.</p>
+    </div>
+</section>
 
 <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
     <DataAnnotationsValidator />
-    <ValidationSummary />
+    <div class="entity-form-card">
+        <ValidationSummary class="entity-form-validation" />
 
-    <div class="form-group">
-        <label>
-            Supplier :
-            <InputText id="codeBank" class="form-control" @bind-Value="bank.Supplier" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
-        </label>
+        <section class="entity-form-section">
+            <div class="entity-form-section-header">
+                <h2>Informasi Utama</h2>
+                <p>Perbarui identitas utama supplier tanpa mengubah kode supplier.</p>
+            </div>
+
+            <div class="entity-form-grid entity-form-grid-2">
+                <div class="entity-form-field">
+                    <label for="supplierCode">Supplier</label>
+                    <InputText id="supplierCode" class="form-control entity-form-input" @bind-Value="bank.Supplier" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="supplierName">Nama</label>
+                    <InputText id="supplierName" class="form-control entity-form-input" @bind-Value="bank.NamaSup" />
+                </div>
+            </div>
+        </section>
+
+        <section class="entity-form-section">
+            <div class="entity-form-section-header">
+                <h2>Alamat dan Kontak</h2>
+                <p>Atur alamat supplier dan informasi kontak utama.</p>
+            </div>
+
+            <div class="entity-form-grid entity-form-grid-address">
+                <div class="entity-form-field entity-form-field-wide">
+                    <label for="supplierAddress">Alamat</label>
+                    <InputTextArea id="supplierAddress" class="form-control entity-form-input entity-form-textarea" @bind-Value="bank.Alamat" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="supplierCity">Kota</label>
+                    <InputText id="supplierCity" class="form-control entity-form-input" @bind-Value="bank.Kota" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="supplierPhone">Telpon/HP</label>
+                    <InputText id="supplierPhone" class="form-control entity-form-input" @bind-Value="bank.Telpon" />
+                </div>
+                <div class="entity-form-field">
+                    <label for="supplierContact">Kontak Person</label>
+                    <InputText id="supplierContact" class="form-control entity-form-input" @bind-Value="bank.Kontak" />
+                </div>
+            </div>
+        </section>
+
+        <section class="entity-form-section">
+            <div class="entity-form-section-header">
+                <h2>Akun dan Pajak</h2>
+                <p>Perbarui account set, mata uang, dan status pajak supplier.</p>
+            </div>
+
+            <div class="entity-form-grid entity-form-grid-3">
+                <div class="entity-form-field entity-form-field-account">
+                    <label for="supplierAcctSet">Akun Set</label>
+                    <div class="entity-form-inline-select">
+                        <InputSelect id="supplierAcctSet" class="form-control entity-form-input" @bind-Value="bank.AcctSet">
+                            <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
+                            @foreach (var item in GlAccounts)
+                            {
+                                <option value="@item.AcctSet">@item.Description</option>
+                            }
+                        </InputSelect>
+                        <button class="btn btn-primary entity-form-inline-button" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                    </div>
+                </div>
+                <div class="entity-form-field entity-form-field-currency">
+                    <label for="supplierCurrency">Currency</label>
+                    <InputText id="supplierCurrency" class="form-control entity-form-input" @bind-Value="bank.Kurs" />
+                </div>
+                <div class="entity-form-field entity-form-field-switch">
+                    <label for="supplierTax">Status Pajak</label>
+                    <div class="entity-form-switch-shell">
+                        <InputCheckbox class="form-check-input" type="checkbox" id="supplierTax" @bind-Value="@bank.Pajak" />
+                        <label class="form-check-label entity-form-switch-label" for="supplierTax">@(bank.Pajak ? "Tax" : "Non Tax")</label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="entity-form-actions">
+            <button class="btn btn-success entity-form-submit" type="submit">Simpan</button>
+            <button class="btn btn-outline-secondary entity-form-cancel" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleHutang/SetupSupplier", false))">Batal</button>
+        </div>
     </div>
-    <div class="form-group">
-        <label>
-            Nama :
-            <InputText class="form-control" @bind-Value="bank.NamaSup" />
-        </label>
-    </div>
-    <div class="form-group">
-
-        <label>
-            Alamat :
-            <InputTextArea class="form-control" @bind-Value="bank.Alamat" />
-        </label>
-    </div>
-    <br />
-    <div class="form-group">
-
-        <label>
-            Kota :
-            <InputText class="form-control" @bind-Value="bank.Kota" />
-        </label>
-
-
-    </div>
-    <br />
-
-    <div class="form-group">
-        <label>
-            Telpon/HP :
-            <InputText class="form-control" @bind-Value="bank.Telpon" />
-        </label>
-    </div>
-    <br />
-    <div class="form-group">
-        <label>
-            Kontak Person :
-            <InputText class="form-control" @bind-Value="bank.Kontak" />
-        </label>
-    </div>
-    <br />
-    <div class="form-group">
-        <label>
-            Akun Set :
-            <InputSelect class="form-control" @bind-Value="bank.AcctSet" style="width:60%; display:inline">
-                <option value="">&nbsp;&nbsp;---Select GL Account---&nbsp;&nbsp;</option>
-                @foreach (var item in GlAccounts)
-                {
-                <option value="@item.AcctSet">@item.Description</option>
-                }
-            </InputSelect>
-            <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
-        </label>
-    </div>
-
-    <div class="form-group">
-        <label>
-            Currency :
-            <InputText class="form-control" @bind-Value="bank.Kurs" />
-        </label>
-    </div>
-    <br />
-    <div class="form-check form-switch">
-
-        <InputCheckbox class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" @bind-Value="@bank.Pajak" />
-        <label class="form-check-label" for="flexSwitchCheckDefault">@(bank.Pajak ? "Tax" : "Non Tax")</label>
-
-    </div>
-
-
-    <br />
-    <div class="float-md-right">
-        <button class="btn-success" type="submit">Simpan</button>
-        <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleHutang/SetupSupplier", false))">Batal</button>
-    </div>
-
-
 </EditForm>
+
+</div>
 
 @if (DialogOpen)
 {
@@ -123,12 +135,6 @@
 
 
 }
-
-<style>
-    label {
-        width: 100%;
-    }
-</style>
 
 @code {
     [Parameter]
@@ -201,6 +207,7 @@
     {
         GlAccounts = service.GetApAkunSet();
     }
+
 
     private void BtnChoose(string textSearch)
     {
