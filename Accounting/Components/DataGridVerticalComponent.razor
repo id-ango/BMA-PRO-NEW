@@ -15,8 +15,13 @@
         @if (SearchEnabled)
         {
             <div class="vertical-grid-search">
-                <input class="form-control" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
-                <button class="btn btn-primary" type="button" @onclick="searchFind">Search</button>
+                <div class="vertical-grid-search-input-wrap">
+                    <input class="form-control vertical-grid-search-input" type="search" placeholder="Search" aria-label="Search" value="@searchText" @oninput="HandleSearchInput">
+                    @if (!string.IsNullOrWhiteSpace(searchText))
+                    {
+                        <button type="button" class="vertical-grid-search-clear" @onclick="ClearSearch" aria-label="Clear search">×</button>
+                    }
+                </div>
             </div>
         }
     </div>
@@ -82,6 +87,18 @@
 
     private void searchFind()
     {
+        ApplyFilter();
+    }
+
+    private void HandleSearchInput(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? string.Empty;
+        ApplyFilter();
+    }
+
+    private void ClearSearch()
+    {
+        searchText = string.Empty;
         ApplyFilter();
     }
 

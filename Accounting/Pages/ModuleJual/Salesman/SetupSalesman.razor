@@ -25,16 +25,16 @@
 
 
 <div class="container">
-    <DataGridComponent Items="Banks"
+    <DataGridComponent Items="SortedBanks"
                        Context="cbBank"
                        GetFilterableText="@(item =>$"{item.Salesman} {item.NamaSales} {item.Alamat} {item.AlmtKrm}  {item.Kota} {item.Telpon}")"
                        TotalEnabled=false>
 
         <TableHeader>
-            <th scope="col">Code</th>
-            <th scope="col">Nama</th>
-            <th scope="col">Alamat</th>
-            <th scope="col">Telpon</th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(OeSalesman.Salesman)))" @onclick='() => ApplySort(nameof(OeSalesman.Salesman))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(OeSalesman.Salesman))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(OeSalesman.NamaSales)))" @onclick='() => ApplySort(nameof(OeSalesman.NamaSales))'>Nama <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(OeSalesman.NamaSales))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass("Address"))" @onclick='() => ApplySort("Address")'>Alamat <span class="data-grid-sort-indicator">@GetSortIndicator("Address")</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(OeSalesman.Telpon)))" @onclick='() => ApplySort(nameof(OeSalesman.Telpon))'>Telpon <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(OeSalesman.Telpon))</span></button></th>
             @* <th scope="col">Piutang</th>*@
             <th></th>
         </TableHeader>
@@ -82,6 +82,10 @@
 
     private List<OeSalesman> Banks;
     private OeSalesman _bankToDelete;
+    private string currentSortColumn = nameof(OeSalesman.Salesman);
+    private bool sortAscending = true;
+
+    private IEnumerable<OeSalesman> SortedBanks => ApplyCurrentSort(Banks ?? new List<OeSalesman>());
 
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
@@ -96,6 +100,49 @@
     private void LoadGet()
     {
         Banks = piutang.GetSalesman();
+    }
+
+    private void ApplySort(string columnName)
+    {
+        if (string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            sortAscending = !sortAscending;
+            return;
+        }
+
+        currentSortColumn = columnName;
+        sortAscending = true;
+    }
+
+    private IEnumerable<OeSalesman> ApplyCurrentSort(IEnumerable<OeSalesman> source)
+    {
+        return currentSortColumn switch
+        {
+            nameof(OeSalesman.NamaSales) => OrderBy(source, x => x.NamaSales),
+            "Address" => OrderBy(source, x => $"{x.Alamat} {x.Kota}"),
+            nameof(OeSalesman.Telpon) => OrderBy(source, x => x.Telpon),
+            _ => OrderBy(source, x => x.Salesman)
+        };
+    }
+
+    private IEnumerable<OeSalesman> OrderBy<TKey>(IEnumerable<OeSalesman> source, Func<OeSalesman, TKey> keySelector)
+    {
+        return sortAscending ? source.OrderBy(keySelector) : source.OrderByDescending(keySelector);
+    }
+
+    private string GetSortButtonClass(string columnName)
+    {
+        return string.Equals(currentSortColumn, columnName, StringComparison.Ordinal) ? "active" : string.Empty;
+    }
+
+    private string GetSortIndicator(string columnName)
+    {
+        if (!string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            return "↕";
+        }
+
+        return sortAscending ? "↑" : "↓";
     }
 
 

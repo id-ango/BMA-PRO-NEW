@@ -38,6 +38,37 @@
     flex-wrap: wrap;
 }
 
+.vertical-grid-search-input-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.vertical-grid-search-input {
+    padding-right: 2.5rem;
+}
+
+.vertical-grid-search-clear {
+    position: absolute;
+    right: 0.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: none;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.14);
+    color: #475569;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.vertical-grid-search-clear:hover {
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+}
+
 .vertical-grid-search .form-control {
     min-width: 220px;
 }

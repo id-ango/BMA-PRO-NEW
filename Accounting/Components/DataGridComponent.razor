@@ -15,8 +15,13 @@
         @if (SearchEnabled)
         {
             <div class="data-grid-search">
-                <input class="form-control" type="search" placeholder="Search" aria-label="Search" @bind-value="searchText">
-                <button class="btn btn-primary" type="button" @onclick="searchFind">Search</button>
+                <div class="data-grid-search-input-wrap">
+                    <input class="form-control data-grid-search-input" type="search" placeholder="Search" aria-label="Search" value="@searchText" @oninput="HandleSearchInput">
+                    @if (!string.IsNullOrWhiteSpace(searchText))
+                    {
+                        <button type="button" class="data-grid-search-clear" @onclick="ClearSearch" aria-label="Clear search">×</button>
+                    }
+                </div>
             </div>
         }
     </div>
@@ -100,6 +105,18 @@
             CalculateTotalJumlah();
         }
         currentPageNumber = 1;
+    }
+
+    private void HandleSearchInput(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? string.Empty;
+        searchFind();
+    }
+
+    private void ClearSearch()
+    {
+        searchText = string.Empty;
+        searchFind();
     }
 
     private void BtnPrevPage()

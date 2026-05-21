@@ -20,13 +20,13 @@
 
 
 <div class="container">
-    <DataGridComponent Items="Banks" Context="cbBank" GetFilterableText="@(item =>$"{item.Supplier} {item.NamaSup} {item.Alamat} {item.Kota} {item.Telpon}")">
+    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Supplier} {item.NamaSup} {item.Alamat} {item.Kota} {item.Telpon}")">
         <TableHeader>
-            <th scope="col">Code</th>
-            <th scope="col">Name</th>
-            <th scope="col">Address</th>
-            <th scope="col">Telpon</th>
-            <th scope="col">Hutang</th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.Supplier)))" @onclick='() => ApplySort(nameof(ApSuppl.Supplier))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.Supplier))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.NamaSup)))" @onclick='() => ApplySort(nameof(ApSuppl.NamaSup))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.NamaSup))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass("Address"))" @onclick='() => ApplySort("Address")'>Address <span class="data-grid-sort-indicator">@GetSortIndicator("Address")</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.Telpon)))" @onclick='() => ApplySort(nameof(ApSuppl.Telpon))'>Telpon <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.Telpon))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApSuppl.Hutang)))" @onclick='() => ApplySort(nameof(ApSuppl.Hutang))'>Hutang <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApSuppl.Hutang))</span></button></th>
             <th></th>
         </TableHeader>
         <RowTemplate>
@@ -73,6 +73,10 @@
 
     private List<ApSuppl> Banks;
     private ApSuppl _bankToDelete;
+    private string currentSortColumn = nameof(ApSuppl.Supplier);
+    private bool sortAscending = true;
+
+    private IEnumerable<ApSuppl> SortedBanks => ApplyCurrentSort(Banks ?? new List<ApSuppl>());
 
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
@@ -87,6 +91,50 @@
     private void LoadGet()
     {
         Banks = service.GetSupplier();
+    }
+
+    private void ApplySort(string columnName)
+    {
+        if (string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            sortAscending = !sortAscending;
+            return;
+        }
+
+        currentSortColumn = columnName;
+        sortAscending = true;
+    }
+
+    private IEnumerable<ApSuppl> ApplyCurrentSort(IEnumerable<ApSuppl> source)
+    {
+        return currentSortColumn switch
+        {
+            nameof(ApSuppl.NamaSup) => OrderBy(source, x => x.NamaSup),
+            "Address" => OrderBy(source, x => $"{x.Alamat} {x.Kota}"),
+            nameof(ApSuppl.Telpon) => OrderBy(source, x => x.Telpon),
+            nameof(ApSuppl.Hutang) => sortAscending ? source.OrderBy(x => x.Hutang) : source.OrderByDescending(x => x.Hutang),
+            _ => OrderBy(source, x => x.Supplier)
+        };
+    }
+
+    private IEnumerable<ApSuppl> OrderBy<TKey>(IEnumerable<ApSuppl> source, Func<ApSuppl, TKey> keySelector)
+    {
+        return sortAscending ? source.OrderBy(keySelector) : source.OrderByDescending(keySelector);
+    }
+
+    private string GetSortButtonClass(string columnName)
+    {
+        return string.Equals(currentSortColumn, columnName, StringComparison.Ordinal) ? "active" : string.Empty;
+    }
+
+    private string GetSortIndicator(string columnName)
+    {
+        if (!string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            return "↕";
+        }
+
+        return sortAscending ? "↑" : "↓";
     }
 
 

@@ -20,10 +20,10 @@
 
 
 <div class="container">
-    <DataGridComponent Items="Banks" Context="cbBank" GetFilterableText="@(item =>$"{item.Divisi} {item.NamaDiv} ")">
+    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Divisi} {item.NamaDiv} ")">
         <TableHeader>
-            <th scope="col">Code</th>
-            <th scope="col">Name</th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsDivisi.Divisi)))" @onclick='() => ApplySort(nameof(AsDivisi.Divisi))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsDivisi.Divisi))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsDivisi.NamaDiv)))" @onclick='() => ApplySort(nameof(AsDivisi.NamaDiv))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsDivisi.NamaDiv))</span></button></th>
 
             <th></th>
         </TableHeader>
@@ -66,6 +66,10 @@
 
     private List<AsDivisi> Banks;
     private AsDivisi _bankToDelete;
+    private string currentSortColumn = nameof(AsDivisi.Divisi);
+    private bool sortAscending = true;
+
+    private IEnumerable<AsDivisi> SortedBanks => ApplyCurrentSort(Banks ?? new List<AsDivisi>());
 
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
@@ -80,6 +84,47 @@
     private void LoadGet()
     {
         Banks = service.GetAsDiv();
+    }
+
+    private void ApplySort(string columnName)
+    {
+        if (string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            sortAscending = !sortAscending;
+            return;
+        }
+
+        currentSortColumn = columnName;
+        sortAscending = true;
+    }
+
+    private IEnumerable<AsDivisi> ApplyCurrentSort(IEnumerable<AsDivisi> source)
+    {
+        return currentSortColumn switch
+        {
+            nameof(AsDivisi.NamaDiv) => OrderBy(source, x => x.NamaDiv),
+            _ => OrderBy(source, x => x.Divisi)
+        };
+    }
+
+    private IEnumerable<AsDivisi> OrderBy<TKey>(IEnumerable<AsDivisi> source, Func<AsDivisi, TKey> keySelector)
+    {
+        return sortAscending ? source.OrderBy(keySelector) : source.OrderByDescending(keySelector);
+    }
+
+    private string GetSortButtonClass(string columnName)
+    {
+        return string.Equals(currentSortColumn, columnName, StringComparison.Ordinal) ? "active" : string.Empty;
+    }
+
+    private string GetSortIndicator(string columnName)
+    {
+        if (!string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            return "↕";
+        }
+
+        return sortAscending ? "↑" : "↓";
     }
 
 

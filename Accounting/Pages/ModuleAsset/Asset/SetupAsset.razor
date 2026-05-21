@@ -21,14 +21,14 @@
 
 
 <div class="container">
-    <DataGridComponent Items="Banks" Context="cbBank" GetFilterableText="@(item =>$"{item.BarcodeAssets} {item.NamaBarang} {item.AsItemCode}" )">
+    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.BarcodeAssets} {item.NamaBarang} {item.AsItemCode}" )">
         <TableHeader>
-            <th scope="col">BarCode</th>
-            <th scope="col">Name</th>
-            <th scope="col">Item</th>
-            <th scope="col">NIlai</th>
-            <th scope="col">Tgl Beli</th>
-            <th scope="col">Termin</th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsAssets.BarcodeAssets)))" @onclick='() => ApplySort(nameof(AsAssets.BarcodeAssets))'>BarCode <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsAssets.BarcodeAssets))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsAssets.NamaBarang)))" @onclick='() => ApplySort(nameof(AsAssets.NamaBarang))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsAssets.NamaBarang))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsAssets.AsItemCode)))" @onclick='() => ApplySort(nameof(AsAssets.AsItemCode))'>Item <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsAssets.AsItemCode))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsAssets.Nilai)))" @onclick='() => ApplySort(nameof(AsAssets.Nilai))'>NIlai <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsAssets.Nilai))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsAssets.TglBeli)))" @onclick='() => ApplySort(nameof(AsAssets.TglBeli))'>Tgl Beli <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsAssets.TglBeli))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsAssets.Termin)))" @onclick='() => ApplySort(nameof(AsAssets.Termin))'>Termin <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsAssets.Termin))</span></button></th>
             
             <th></th>
         </TableHeader>
@@ -89,6 +89,10 @@
     private List<AsAssets> Banks;
     private AsAssets _bankToDelete;
     private string imaging;
+    private string currentSortColumn = nameof(AsAssets.BarcodeAssets);
+    private bool sortAscending = true;
+
+    private IEnumerable<AsAssets> SortedBanks => ApplyCurrentSort(Banks ?? new List<AsAssets>());
 
     public bool DisplayDialogOpen { get; set; }
 
@@ -105,6 +109,51 @@
     private void LoadGet()
     {
         Banks = Services.GetAsAsset();
+    }
+
+    private void ApplySort(string columnName)
+    {
+        if (string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            sortAscending = !sortAscending;
+            return;
+        }
+
+        currentSortColumn = columnName;
+        sortAscending = true;
+    }
+
+    private IEnumerable<AsAssets> ApplyCurrentSort(IEnumerable<AsAssets> source)
+    {
+        return currentSortColumn switch
+        {
+            nameof(AsAssets.NamaBarang) => OrderBy(source, x => x.NamaBarang),
+            nameof(AsAssets.AsItemCode) => OrderBy(source, x => x.AsItemCode),
+            nameof(AsAssets.Nilai) => sortAscending ? source.OrderBy(x => x.Nilai) : source.OrderByDescending(x => x.Nilai),
+            nameof(AsAssets.TglBeli) => sortAscending ? source.OrderBy(x => x.TglBeli) : source.OrderByDescending(x => x.TglBeli),
+            nameof(AsAssets.Termin) => sortAscending ? source.OrderBy(x => x.Termin) : source.OrderByDescending(x => x.Termin),
+            _ => OrderBy(source, x => x.BarcodeAssets)
+        };
+    }
+
+    private IEnumerable<AsAssets> OrderBy<TKey>(IEnumerable<AsAssets> source, Func<AsAssets, TKey> keySelector)
+    {
+        return sortAscending ? source.OrderBy(keySelector) : source.OrderByDescending(keySelector);
+    }
+
+    private string GetSortButtonClass(string columnName)
+    {
+        return string.Equals(currentSortColumn, columnName, StringComparison.Ordinal) ? "active" : string.Empty;
+    }
+
+    private string GetSortIndicator(string columnName)
+    {
+        if (!string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            return "↕";
+        }
+
+        return sortAscending ? "↑" : "↓";
     }
 
     private async Task OnDeleteDialogClose(bool accepted)

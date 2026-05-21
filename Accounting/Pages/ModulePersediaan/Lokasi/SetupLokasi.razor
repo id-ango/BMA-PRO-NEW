@@ -24,10 +24,10 @@
 
 
 <div class="container">
-    <DataGridComponent Items="Banks" Context="cbBank" GetFilterableText="@(item =>$"{item.Lokasi} {item.NamaLokasi} ")">
+    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Lokasi} {item.NamaLokasi} ")">
         <TableHeader>
-            <th scope="col">Code</th>
-            <th scope="col">Name</th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcLokasi.Lokasi)))" @onclick='() => ApplySort(nameof(IcLokasi.Lokasi))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcLokasi.Lokasi))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcLokasi.NamaLokasi)))" @onclick='() => ApplySort(nameof(IcLokasi.NamaLokasi))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcLokasi.NamaLokasi))</span></button></th>
 
             <th></th>
         </TableHeader>
@@ -70,6 +70,10 @@
 
     private List<IcLokasi> Banks;
     private IcLokasi _bankToDelete;
+    private string currentSortColumn = nameof(IcLokasi.Lokasi);
+    private bool sortAscending = true;
+
+    private IEnumerable<IcLokasi> SortedBanks => ApplyCurrentSort(Banks ?? new List<IcLokasi>());
 
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
@@ -84,6 +88,47 @@
     private void LoadGet()
     {
         Banks = service.GetIcLokasi();
+    }
+
+    private void ApplySort(string columnName)
+    {
+        if (string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            sortAscending = !sortAscending;
+            return;
+        }
+
+        currentSortColumn = columnName;
+        sortAscending = true;
+    }
+
+    private IEnumerable<IcLokasi> ApplyCurrentSort(IEnumerable<IcLokasi> source)
+    {
+        return currentSortColumn switch
+        {
+            nameof(IcLokasi.NamaLokasi) => OrderBy(source, x => x.NamaLokasi),
+            _ => OrderBy(source, x => x.Lokasi)
+        };
+    }
+
+    private IEnumerable<IcLokasi> OrderBy<TKey>(IEnumerable<IcLokasi> source, Func<IcLokasi, TKey> keySelector)
+    {
+        return sortAscending ? source.OrderBy(keySelector) : source.OrderByDescending(keySelector);
+    }
+
+    private string GetSortButtonClass(string columnName)
+    {
+        return string.Equals(currentSortColumn, columnName, StringComparison.Ordinal) ? "active" : string.Empty;
+    }
+
+    private string GetSortIndicator(string columnName)
+    {
+        if (!string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            return "↕";
+        }
+
+        return sortAscending ? "↑" : "↓";
     }
 
 

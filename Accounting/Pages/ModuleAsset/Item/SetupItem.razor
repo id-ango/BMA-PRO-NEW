@@ -21,13 +21,13 @@
 
 
 <div class="container">
-    <DataGridComponent Items="Banks" Context="cbBank" GetFilterableText="@(item =>$"{item.NamaItem} {item.ItemCode} {item.Satuan}" )">
+    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.NamaItem} {item.ItemCode} {item.Satuan}" )">
         <TableHeader>
-            <th scope="col">Item</th>
-            <th scope="col">Name</th>
-            <th scope="col">Satuan</th>
-            <th scope="col">Qty</th>           
-            <th scope="col">Nilai Aset</th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsItem.ItemCode)))" @onclick='() => ApplySort(nameof(AsItem.ItemCode))'>Item <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsItem.ItemCode))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsItem.NamaItem)))" @onclick='() => ApplySort(nameof(AsItem.NamaItem))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsItem.NamaItem))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsItem.Satuan)))" @onclick='() => ApplySort(nameof(AsItem.Satuan))'>Satuan <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsItem.Satuan))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsItem.Qty)))" @onclick='() => ApplySort(nameof(AsItem.Qty))'>Qty <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsItem.Qty))</span></button></th>           
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(AsItem.Saldo)))" @onclick='() => ApplySort(nameof(AsItem.Saldo))'>Nilai Aset <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(AsItem.Saldo))</span></button></th>
            
             <th></th>
         </TableHeader>
@@ -73,6 +73,10 @@
 
     private List<AsItem> Banks;
     private AsItem _bankToDelete;
+    private string currentSortColumn = nameof(AsItem.ItemCode);
+    private bool sortAscending = true;
+
+    private IEnumerable<AsItem> SortedBanks => ApplyCurrentSort(Banks ?? new List<AsItem>());
 
 
 
@@ -89,6 +93,50 @@
     private void LoadGet()
     {
         Banks = Services.GetAsItem();
+    }
+
+    private void ApplySort(string columnName)
+    {
+        if (string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            sortAscending = !sortAscending;
+            return;
+        }
+
+        currentSortColumn = columnName;
+        sortAscending = true;
+    }
+
+    private IEnumerable<AsItem> ApplyCurrentSort(IEnumerable<AsItem> source)
+    {
+        return currentSortColumn switch
+        {
+            nameof(AsItem.NamaItem) => OrderBy(source, x => x.NamaItem),
+            nameof(AsItem.Satuan) => OrderBy(source, x => x.Satuan),
+            nameof(AsItem.Qty) => sortAscending ? source.OrderBy(x => x.Qty) : source.OrderByDescending(x => x.Qty),
+            nameof(AsItem.Saldo) => sortAscending ? source.OrderBy(x => x.Saldo) : source.OrderByDescending(x => x.Saldo),
+            _ => OrderBy(source, x => x.ItemCode)
+        };
+    }
+
+    private IEnumerable<AsItem> OrderBy<TKey>(IEnumerable<AsItem> source, Func<AsItem, TKey> keySelector)
+    {
+        return sortAscending ? source.OrderBy(keySelector) : source.OrderByDescending(keySelector);
+    }
+
+    private string GetSortButtonClass(string columnName)
+    {
+        return string.Equals(currentSortColumn, columnName, StringComparison.Ordinal) ? "active" : string.Empty;
+    }
+
+    private string GetSortIndicator(string columnName)
+    {
+        if (!string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            return "↕";
+        }
+
+        return sortAscending ? "↑" : "↓";
     }
 
     private async Task OnDeleteDialogClose(bool accepted)

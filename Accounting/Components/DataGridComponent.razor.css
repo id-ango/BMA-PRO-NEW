@@ -39,6 +39,37 @@
     flex-wrap: wrap;
 }
 
+.data-grid-search-input-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.data-grid-search-input {
+    padding-right: 2.5rem;
+}
+
+.data-grid-search-clear {
+    position: absolute;
+    right: 0.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: none;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.14);
+    color: #475569;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.data-grid-search-clear:hover {
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+}
+
 .data-grid-search .form-control {
     min-width: 220px;
 }
@@ -66,6 +97,35 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     border-bottom-width: 1px;
+}
+
+.data-grid-sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+}
+
+.data-grid-sort-button:hover {
+    color: #1d4ed8;
+}
+
+.data-grid-sort-indicator {
+    min-width: 0.9rem;
+    color: #94a3b8;
+    font-size: 0.82rem;
+    line-height: 1;
+}
+
+.data-grid-sort-button.active .data-grid-sort-indicator {
+    color: #1d4ed8;
 }
 
 .data-grid-table tbody tr:hover {

@@ -30,14 +30,14 @@
 
 
 <div class="container">
-    <DataGridComponent Items="Banks" Context="cbBank" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Alamat} {item.AlmtKrm}  {item.Kota} {item.Telpon}")">
+    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Customer} {item.NamaCust} {item.Alamat} {item.AlmtKrm}  {item.Kota} {item.Telpon}")">
         <TableHeader>
-            <th scope="col">Code</th>
-            <th scope="col">Name</th>
-            <th scope="col">Address</th>
-            <th scope="col">Telpon</th>
-            <th scope="col">Piutang</th>
-            <th scope="col">Keterangan</th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.Customer)))" @onclick='() => ApplySort(nameof(ArCust.Customer))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.Customer))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.NamaCust)))" @onclick='() => ApplySort(nameof(ArCust.NamaCust))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.NamaCust))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass("Address"))" @onclick='() => ApplySort("Address")'>Address <span class="data-grid-sort-indicator">@GetSortIndicator("Address")</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.Telpon)))" @onclick='() => ApplySort(nameof(ArCust.Telpon))'>Telpon <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.Telpon))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.Piutang)))" @onclick='() => ApplySort(nameof(ArCust.Piutang))'>Piutang <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.Piutang))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ArCust.Golongan)))" @onclick='() => ApplySort(nameof(ArCust.Golongan))'>Keterangan <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ArCust.Golongan))</span></button></th>
             <th></th>
         </TableHeader>
         <RowTemplate>
@@ -85,6 +85,10 @@
 
     private List<ArCust> Banks;
     private ArCust _bankToDelete;
+    private string currentSortColumn = nameof(ArCust.Customer);
+    private bool sortAscending = true;
+
+    private IEnumerable<ArCust> SortedBanks => ApplyCurrentSort(Banks ?? new List<ArCust>());
 
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
@@ -99,6 +103,51 @@
     private void LoadGet()
     {
         Banks = piutang.GetCustomer();
+    }
+
+    private void ApplySort(string columnName)
+    {
+        if (string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            sortAscending = !sortAscending;
+            return;
+        }
+
+        currentSortColumn = columnName;
+        sortAscending = true;
+    }
+
+    private IEnumerable<ArCust> ApplyCurrentSort(IEnumerable<ArCust> source)
+    {
+        return currentSortColumn switch
+        {
+            nameof(ArCust.NamaCust) => OrderBy(source, x => x.NamaCust),
+            "Address" => OrderBy(source, x => $"{x.Alamat} {x.Kota}"),
+            nameof(ArCust.Telpon) => OrderBy(source, x => x.Telpon),
+            nameof(ArCust.Piutang) => sortAscending ? source.OrderBy(x => x.Piutang) : source.OrderByDescending(x => x.Piutang),
+            nameof(ArCust.Golongan) => OrderBy(source, x => x.Golongan),
+            _ => OrderBy(source, x => x.Customer)
+        };
+    }
+
+    private IEnumerable<ArCust> OrderBy<TKey>(IEnumerable<ArCust> source, Func<ArCust, TKey> keySelector)
+    {
+        return sortAscending ? source.OrderBy(keySelector) : source.OrderByDescending(keySelector);
+    }
+
+    private string GetSortButtonClass(string columnName)
+    {
+        return string.Equals(currentSortColumn, columnName, StringComparison.Ordinal) ? "active" : string.Empty;
+    }
+
+    private string GetSortIndicator(string columnName)
+    {
+        if (!string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            return "↕";
+        }
+
+        return sortAscending ? "↑" : "↓";
     }
 
 

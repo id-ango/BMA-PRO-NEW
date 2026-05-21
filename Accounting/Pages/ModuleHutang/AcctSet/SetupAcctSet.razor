@@ -19,16 +19,16 @@
 <br />
 
 <div class="container">
-    <DataGridComponent Items="Banks" Context="cbBank" GetFilterableText="@(item =>$"{item.AcctSet} {item.Description}")">
+    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.AcctSet} {item.Description}")">
         <TableHeader>
-            <th scope="col">Code</th>
-            <th scope="col">Description</th>
-            <th scope="col">AP Control</th>
-            <th scope="col">Purchase Tax</th>
-            <th scope="col">Shipping Cost</th>
-            <th scope="col">Down Payment</th>
-            <th scope="col">Discount</th>
-            <th scope="col">WriteOff</th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApAcct.AcctSet)))" @onclick='() => ApplySort(nameof(ApAcct.AcctSet))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApAcct.AcctSet))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApAcct.Description)))" @onclick='() => ApplySort(nameof(ApAcct.Description))'>Description <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApAcct.Description))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApAcct.Acct1)))" @onclick='() => ApplySort(nameof(ApAcct.Acct1))'>AP Control <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApAcct.Acct1))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApAcct.Acct2)))" @onclick='() => ApplySort(nameof(ApAcct.Acct2))'>Purchase Tax <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApAcct.Acct2))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApAcct.Acct3)))" @onclick='() => ApplySort(nameof(ApAcct.Acct3))'>Shipping Cost <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApAcct.Acct3))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApAcct.Acct4)))" @onclick='() => ApplySort(nameof(ApAcct.Acct4))'>Down Payment <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApAcct.Acct4))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApAcct.Acct5)))" @onclick='() => ApplySort(nameof(ApAcct.Acct5))'>Discount <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApAcct.Acct5))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(ApAcct.Acct6)))" @onclick='() => ApplySort(nameof(ApAcct.Acct6))'>WriteOff <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(ApAcct.Acct6))</span></button></th>
             <th></th>
         </TableHeader>
         <RowTemplate>
@@ -75,6 +75,10 @@
 
     private List<ApAcct> Banks;
     private ApAcct _bankToDelete;
+    private string currentSortColumn = nameof(ApAcct.AcctSet);
+    private bool sortAscending = true;
+
+    private IEnumerable<ApAcct> SortedBanks => ApplyCurrentSort(Banks ?? new List<ApAcct>());
 
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
@@ -90,6 +94,53 @@
     private void LoadGet()
     {
         Banks = cashBank.GetApAkunSet();
+    }
+
+    private void ApplySort(string columnName)
+    {
+        if (string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            sortAscending = !sortAscending;
+            return;
+        }
+
+        currentSortColumn = columnName;
+        sortAscending = true;
+    }
+
+    private IEnumerable<ApAcct> ApplyCurrentSort(IEnumerable<ApAcct> source)
+    {
+        return currentSortColumn switch
+        {
+            nameof(ApAcct.Description) => OrderBy(source, x => x.Description),
+            nameof(ApAcct.Acct1) => OrderBy(source, x => x.Acct1),
+            nameof(ApAcct.Acct2) => OrderBy(source, x => x.Acct2),
+            nameof(ApAcct.Acct3) => OrderBy(source, x => x.Acct3),
+            nameof(ApAcct.Acct4) => OrderBy(source, x => x.Acct4),
+            nameof(ApAcct.Acct5) => OrderBy(source, x => x.Acct5),
+            nameof(ApAcct.Acct6) => OrderBy(source, x => x.Acct6),
+            _ => OrderBy(source, x => x.AcctSet)
+        };
+    }
+
+    private IEnumerable<ApAcct> OrderBy<TKey>(IEnumerable<ApAcct> source, Func<ApAcct, TKey> keySelector)
+    {
+        return sortAscending ? source.OrderBy(keySelector) : source.OrderByDescending(keySelector);
+    }
+
+    private string GetSortButtonClass(string columnName)
+    {
+        return string.Equals(currentSortColumn, columnName, StringComparison.Ordinal) ? "active" : string.Empty;
+    }
+
+    private string GetSortIndicator(string columnName)
+    {
+        if (!string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            return "↕";
+        }
+
+        return sortAscending ? "↑" : "↓";
     }
 
 

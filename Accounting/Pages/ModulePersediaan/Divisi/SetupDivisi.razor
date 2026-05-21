@@ -20,10 +20,10 @@
 
 
 <div class="container">
-    <DataGridComponent Items="Banks" Context="cbBank" GetFilterableText="@(item =>$"{item.Divisi} {item.NamaDiv} ")">
+    <DataGridComponent Items="SortedBanks" Context="cbBank" GetFilterableText="@(item =>$"{item.Divisi} {item.NamaDiv} ")">
         <TableHeader>
-            <th scope="col">Code</th>
-            <th scope="col">Name</th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcDiv.Divisi)))" @onclick='() => ApplySort(nameof(IcDiv.Divisi))'>Code <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcDiv.Divisi))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcDiv.NamaDiv)))" @onclick='() => ApplySort(nameof(IcDiv.NamaDiv))'>Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcDiv.NamaDiv))</span></button></th>
 
             <th></th>
         </TableHeader>
@@ -66,6 +66,10 @@
 
     private List<IcDiv> Banks;
     private IcDiv _bankToDelete;
+    private string currentSortColumn = nameof(IcDiv.Divisi);
+    private bool sortAscending = true;
+
+    private IEnumerable<IcDiv> SortedBanks => ApplyCurrentSort(Banks ?? new List<IcDiv>());
 
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
@@ -80,6 +84,47 @@
     private void LoadGet()
     {
         Banks = service.GetIcDiv();
+    }
+
+    private void ApplySort(string columnName)
+    {
+        if (string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            sortAscending = !sortAscending;
+            return;
+        }
+
+        currentSortColumn = columnName;
+        sortAscending = true;
+    }
+
+    private IEnumerable<IcDiv> ApplyCurrentSort(IEnumerable<IcDiv> source)
+    {
+        return currentSortColumn switch
+        {
+            nameof(IcDiv.NamaDiv) => OrderBy(source, x => x.NamaDiv),
+            _ => OrderBy(source, x => x.Divisi)
+        };
+    }
+
+    private IEnumerable<IcDiv> OrderBy<TKey>(IEnumerable<IcDiv> source, Func<IcDiv, TKey> keySelector)
+    {
+        return sortAscending ? source.OrderBy(keySelector) : source.OrderByDescending(keySelector);
+    }
+
+    private string GetSortButtonClass(string columnName)
+    {
+        return string.Equals(currentSortColumn, columnName, StringComparison.Ordinal) ? "active" : string.Empty;
+    }
+
+    private string GetSortIndicator(string columnName)
+    {
+        if (!string.Equals(currentSortColumn, columnName, StringComparison.Ordinal))
+        {
+            return "↕";
+        }
+
+        return sortAscending ? "↑" : "↓";
     }
 
 
