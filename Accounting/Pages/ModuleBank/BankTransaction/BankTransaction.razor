@@ -128,18 +128,13 @@
         try
         {
             using var reader = new StreamReader(file.OpenReadStream());
-            for (int i = 0; i < 4; i++) await reader.ReadLineAsync();
             string line;
             while ((line = await reader.ReadLineAsync()) != null)
             {
-                if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("Starting Balance"))
+                var transaction = ParseTransaction(line);
+                if (transaction != null)
                 {
-                    var values = line.Split(',');
-                    if (values.Length >= 6)
-                    {
-                        var transaction = ParseTransaction(values);
-                        if (transaction != null) transactions.Add(transaction);
-                    }
+                    transactions.Add(transaction);
                 }
             }
         }
@@ -150,19 +145,66 @@
         StateHasChanged();
     }
 
-    private BankTransactionView ParseTransaction(string[] values)
+    private BankTransactionView ParseTransaction(string line)
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(line) || line.StartsWith("Starting Balance", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            var values = SplitCsvLine(line)
+                .Select(value => value.Trim().Trim('"'))
+                .ToArray();
+
+            if (values.Length < 5)
+            {
+                return null;
+            }
+
+            var rawDate = values[0].Trim('\'');
+            if (!DateTime.TryParseExact(rawDate, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime tanggal))
+            {
+                return null;
+            }
+
+            var description = values[1].Trim();
+            var branch = values[2].Trim();
+
+            decimal amount;
+            string type;
+            decimal balance;
+
+            if (values.Length >= 6)
+            {
+                amount = ParseDecimal(values[3]);
+                type = values[4].Trim();
+                balance = ParseDecimal(values[5]);
+            }
+            else
+            {
+                var amountCell = values[3].Trim();
+                type = amountCell.Contains("DB", StringComparison.OrdinalIgnoreCase)
+                    ? "DB"
+                    : amountCell.Contains("CR", StringComparison.OrdinalIgnoreCase)
+                        ? "CR"
+                        : string.Empty;
+
+                amount = ParseDecimal(amountCell.Replace(" DB", string.Empty, StringComparison.OrdinalIgnoreCase)
+                    .Replace(" CR", string.Empty, StringComparison.OrdinalIgnoreCase));
+                balance = ParseDecimal(values[4]);
+            }
+
             return new BankTransactionView
                 {
-                    Date = values[0].Trim('\''),
-                    Description = values[1].Trim(),
-                    Branch = values[2].Trim(),
-                    Amount = decimal.Parse(values[3], NumberStyles.Any, CultureInfo.InvariantCulture),
-                    Type = values[4].Trim(),
-                    Balance = decimal.Parse(values[5], NumberStyles.Any, CultureInfo.InvariantCulture),
-                    Tanggal = DateTime.TryParseExact(values[0], "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime result) ? result : formModel.Date
+                    Date = rawDate,
+                    Description = description,
+                    Branch = branch,
+                    Amount = amount,
+                    Type = type,
+                    Balance = balance,
+                    Tanggal = tanggal
                 };
         }
         catch (Exception ex)
@@ -170,6 +212,39 @@
             Console.Error.WriteLine($"Error parsing transaction: {ex.Message}");
             return null;
         }
+    }
+
+    private static decimal ParseDecimal(string value)
+    {
+        return decimal.Parse(value.Replace(",", string.Empty).Trim().Trim('"'), NumberStyles.Any, CultureInfo.InvariantCulture);
+    }
+
+    private static List<string> SplitCsvLine(string line)
+    {
+        var values = new List<string>();
+        var current = new System.Text.StringBuilder();
+        var inQuotes = false;
+
+        foreach (var character in line)
+        {
+            if (character == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (character == ',' && !inQuotes)
+            {
+                values.Add(current.ToString());
+                current.Clear();
+                continue;
+            }
+
+            current.Append(character);
+        }
+
+        values.Add(current.ToString());
+        return values;
     }
 
     private async Task HandleValidSubmit()

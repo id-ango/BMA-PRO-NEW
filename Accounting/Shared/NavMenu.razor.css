@@ -286,6 +286,11 @@
 }
 
 @media (min-width: 641px) {
+    .nav-shell {
+        display: flex;
+        flex-direction: column;
+    }
+
     .navbar-toggler {
         display: none;
     }
@@ -293,7 +298,8 @@
     .nav-scroll-region,
     .nav-scroll-region.collapse {
         display: block;
-        max-height: calc(100vh - 14rem);
+        flex: 1 1 auto;
+        min-height: 0;
         overflow-y: auto;
         padding-bottom: 1.5rem;
     }
