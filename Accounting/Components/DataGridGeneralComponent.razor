@@ -86,7 +86,7 @@
 
     private bool Enabled { get; set; } = true;
 
-    private static readonly Func<TItem, string> DefaultGetFilterableText = item => (item?.ToString() ?? "");
+    private static readonly Func<TItem, string> DefaultGetFilterableText = item => BuildDefaultFilterableText(item);
 
     private IEnumerable<TItem> searchResult = null;
 
@@ -113,7 +113,7 @@
 
         if (!string.IsNullOrEmpty(searchText))
         {
-            result = result.Where(x => filterFunc(x).Contains(searchText, StringComparison.InvariantCultureIgnoreCase));
+            result = result.Where(x => (filterFunc(x) ?? string.Empty).Contains(searchText, StringComparison.InvariantCultureIgnoreCase));
         }
 
         searchResult = result;
@@ -225,6 +225,22 @@
         {
             return searchResult.Skip(NumOfItemToSkip(currentPageNumber)).Take(NumOfItemToTake(searchResult.Count()));
         }
+    }
+
+    private static string BuildDefaultFilterableText(TItem item)
+    {
+        if (item is null)
+        {
+            return string.Empty;
+        }
+
+        var values = typeof(TItem)
+            .GetProperties()
+            .Where(property => property.CanRead)
+            .Select(property => property.GetValue(item)?.ToString())
+            .Where(value => !string.IsNullOrWhiteSpace(value));
+
+        return string.Join(" ", values);
     }
 
 }

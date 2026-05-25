@@ -65,7 +65,7 @@
     {
         <h4>Transaction Data</h4>
         <button class="btn btn-danger" @onclick="DeleteSelectedTransactions">Delete Selected</button>
-        <DataGridGeneralComponent TItem="BankTransactionView" Items="transactions" PageSize="700" TotalEnabled="false" SearchEnabled="true" GetFilterableText="@(item => $"{item.Description} {item.Type}")">
+        <DataGridGeneralComponent TItem="BankTransactionView" Items="transactions" PageSize="700" TotalEnabled="false" SearchEnabled="true" GetFilterableText="@(item => $"{item.Date} {item.Description} {item.Branch} {item.Amount:N2} {item.Amount} {item.Type} {item.Balance:N2} {item.Balance} {item.Tanggal:dd/MM/yyyy} {item.SrcCode}")">
             <TableHeader>
                 <th><input type="checkbox" @onclick="SelectAllCheckboxes" /></th>
                 <th>Date</th>
