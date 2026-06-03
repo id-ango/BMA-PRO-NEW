@@ -379,11 +379,23 @@
     private void proses1()
     {
         TransHeader = service.Laporan1(Tanggal1, Tanggal2);
+        var kurirLookup = service.GetKurir()
+            .Where(x => string.IsNullOrWhiteSpace(x.Kurir) == false)
+            .ToDictionary(x => x.Kurir, x => x.NamaKurir);
+
+        var salesmanLookup = service.GetSalesman()
+            .Where(x => string.IsNullOrWhiteSpace(x.Salesman) == false)
+            .ToDictionary(x => x.Salesman, x => x.NamaSales);
+
         TransHeader.ForEach(x =>
-                {
-                    x.Kurir = service.GetKurirKode(string.IsNullOrEmpty(x.Kurir) ? "" : x.Kurir);
-                    x.Lokasi = service.GetSalesmanKode(string.IsNullOrEmpty(x.Salesman) ? "" : x.Salesman);
-                });
+        {
+            x.Kurir = string.IsNullOrEmpty(x.Kurir)
+                ? string.Empty
+                : kurirLookup.GetValueOrDefault(x.Kurir, x.Kurir);
+            x.Lokasi = string.IsNullOrEmpty(x.Salesman)
+                ? string.Empty
+                : salesmanLookup.GetValueOrDefault(x.Salesman, x.Salesman);
+        });
 
         Tampilan = 1;
         //  nJumlah = TransHeader.Sum(x => x.Jumlah).ToString("N");

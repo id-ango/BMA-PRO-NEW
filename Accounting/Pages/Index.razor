@@ -42,7 +42,119 @@
         </div>
     </section>
 
-    @if (isDashboardView)
+    @if (!isDashboardView)
+    {
+        <section class="home-quick-panel dashboard-panel-card">
+            <div class="dashboard-panel-header-row dashboard-panel-header-row-home">
+                <div>
+                    <span class="dashboard-section-kicker">Quick access</span>
+                    <h2>Menu utama</h2>
+                    <p class="dashboard-section-note">Tampilan awal dibuat sederhana seperti PT: fokus ke modul yang paling sering dipakai.</p>
+                </div>
+            </div>
+
+            <div class="home-module-grid">
+                <article class="home-module-card home-module-card-stock">
+                    <div class="home-module-card-header">
+                        <span class="oi oi-layers home-module-icon"></span>
+                        <div>
+                            <h3>Inventory</h3>
+                            <p>Laporan stock dan persediaan.</p>
+                        </div>
+                    </div>
+                    <div class="home-module-actions">
+                        <a href="/ModulePersediaan/LaporanCurrentStock" class="btn btn-primary">Laporan Stock</a>
+                        <a href="/ModulePersediaan/LaporanPersediaan" class="btn btn-outline-primary">Laporan Persediaan</a>
+                    </div>
+                </article>
+
+                <article class="home-module-card home-module-card-sales">
+                    <div class="home-module-card-header">
+                        <span class="oi oi-cart home-module-icon"></span>
+                        <div>
+                            <h3>Penjualan</h3>
+                            <p>Ringkasan laporan penjualan.</p>
+                        </div>
+                    </div>
+                    <div class="home-module-actions">
+                        <a href="/ModuleJual/LaporanPenjualan" class="btn btn-primary">Laporan Penjualan</a>
+                        <a href="/ModuleJual/LaporanJualPerCustomer" class="btn btn-outline-primary">Per Customer</a>
+                    </div>
+                </article>
+
+                <article class="home-module-card home-module-card-order">
+                    <div class="home-module-card-header">
+                        <span class="oi oi-list-rich home-module-icon"></span>
+                        <div>
+                            <h3>Sales Order</h3>
+                            <p>Order penjualan dan pengecekan stok.</p>
+                        </div>
+                    </div>
+                    <div class="home-module-actions">
+                        <a href="/ModuleJual/TransOrderJual" class="btn btn-primary">Order Penjualan</a>
+                        <a href="/ModuleJual/CekStockSalesOrder" class="btn btn-outline-primary">Cek Stock SO</a>
+                    </div>
+                </article>
+
+                <article class="home-module-card home-module-card-ar">
+                    <div class="home-module-card-header">
+                        <span class="oi oi-dollar home-module-icon"></span>
+                        <div>
+                            <h3>Piutang</h3>
+                            <p>Aging dan laporan receivable.</p>
+                        </div>
+                    </div>
+                    <div class="home-module-actions">
+                        <a href="/ModulePiutang/LaporanAgingPiutang" class="btn btn-primary">Aging Receivable</a>
+                        <a href="/ModulePiutang/LaporanPiutang" class="btn btn-outline-primary">Laporan Piutang</a>
+                    </div>
+                </article>
+
+                <article class="home-module-card home-module-card-bank">
+                    <div class="home-module-card-header">
+                        <span class="oi oi-briefcase home-module-icon"></span>
+                        <div>
+                            <h3>Bank and Cash</h3>
+                            <p>Kas bank dan rekap saldo.</p>
+                        </div>
+                    </div>
+                    <div class="home-module-actions">
+                        <a href="/ModuleBank/LaporanCashBank" class="btn btn-primary">Laporan Kas Bank</a>
+                        <a href="/ModuleBank/SourceBank" class="btn btn-outline-primary">Laporan per Kode</a>
+                    </div>
+                </article>
+
+                <article class="home-module-card home-module-card-ap">
+                    <div class="home-module-card-header">
+                        <span class="oi oi-credit-card home-module-icon"></span>
+                        <div>
+                            <h3>Hutang</h3>
+                            <p>Aging dan laporan payable.</p>
+                        </div>
+                    </div>
+                    <div class="home-module-actions">
+                        <a href="/ModuleHutang/LaporanAgingHutang" class="btn btn-primary">Aging Payable</a>
+                        <a href="/ModuleHutang/LaporanHutang" class="btn btn-outline-primary">Laporan Hutang</a>
+                    </div>
+                </article>
+
+                <article class="home-module-card home-module-card-purchase">
+                    <div class="home-module-card-header">
+                        <span class="oi oi-basket home-module-icon"></span>
+                        <div>
+                            <h3>Pembelian</h3>
+                            <p>Laporan pembelian dan order.</p>
+                        </div>
+                    </div>
+                    <div class="home-module-actions">
+                        <a href="/ModuleBeli/LaporanPembelian" class="btn btn-primary">Laporan Pembelian</a>
+                        <a href="/ModuleBeli/LaporanOrderCurrency" class="btn btn-outline-primary">Laporan Item/Order</a>
+                    </div>
+                </article>
+            </div>
+        </section>
+    }
+    else
     {
         @if (isDashboardSummaryLoading)
         {
@@ -267,12 +379,175 @@
                 </div>
             }
                     </section>
+
                 </AuthorizeView>
             </div>
         }
     }
 
-    <section class="dashboard-shortcuts-section dashboard-panel-card">
+    <section class="dashboard-data-section dashboard-panel-card dashboard-lazy-panel">
+        <div class="dashboard-section-header dashboard-section-header-stack">
+            <div>
+                <span class="dashboard-section-kicker">Activity queue</span>
+                <h2>Transaksi operasional</h2>
+                <p class="dashboard-section-note">Bagian ini tampil langsung di halaman utama, terpisah dari dashboard ringkasan.</p>
+            </div>
+            <button type="button" class="btn btn-outline-primary dashboard-toggle-btn" @onclick="ToggleOperationalSectionAsync">
+                @(showOperationalSection ? "Sembunyikan detail" : "Tampilkan detail operasional")
+            </button>
+        </div>
+
+        @if (showOperationalSection)
+        {
+            @if (isOperationalDataLoading)
+            {
+                <div class="dashboard-loading-state">
+                    <span class="oi oi-loop-circular"></span>
+                    <span>Memuat data operasional...</span>
+                </div>
+            }
+            else
+            {
+                <div class="dashboard-section-note-row">
+                    <span class="dashboard-pill">@TransHeader.Count transaksi siap ditinjau</span>
+                    <span class="dashboard-subtle-text">Detail dimuat hanya saat diperlukan.</span>
+                </div>
+
+                <section class="dashboard-data-section">
+                    <div class="dashboard-section-header">
+                        <div>
+                            <span class="dashboard-section-kicker">Activity queue</span>
+                            <h2>Transaksi pengiriman aktif</h2>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid-card">
+                        <DataGridVerticalComponent Items="TransHeader"
+                                                   Context="transaksi"
+                                                   GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaCust} {item.Keterangan}")"
+                                                   TotalEnabled=false
+                                                   SearchEnabled=false>
+                            <TableHeader>
+                                <th scope="col" style="width:15%">No Bukti</th>
+                                <th scope="col" style="width:20%">Customer</th>
+                                <th scope="col" style="width:20%">Keterangan</th>
+                                <th scope="col" style="width:40%">Kurir</th>
+                                <th scope="col" style="width:5%"></th>
+                            </TableHeader>
+                            <RowTemplate>
+                                @if (transaksi.Kode != "76")
+                                {
+                                    <td style="width:15%; background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
+                                        @transaksi.NoLpb
+                                        <br />
+                                        <span class="badge bg-primary">@transaksi.Tanggal.ToShortDateString()</span>
+                                        <br />
+                                        <span class="badge bg-success">@transaksi.NoPrj</span>
+                                    </td>
+                                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">@transaksi.NamaCust</td>
+                                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">@transaksi.Keterangan</td>
+                                    <td style="width:40%;text-align:right;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
+                                        <select class="form-control" @bind="transaksi.Kurir" style="width:60%; display:inline">
+                                            <option value="">&nbsp;&nbsp;---Select Kurir---&nbsp;&nbsp;</option>
+                                            @foreach (var item in kurirs)
+                                            {
+                                                <option value="@item.Kurir">[@item.Kurir]&nbsp; @item.NamaKurir</option>
+                                            }
+                                        </select>
+                                        <select class="form-control" @bind="transaksi.Salesman" style="width:60%; display:inline">
+                                            <option value="">&nbsp;&nbsp;---Select Salesman---&nbsp;&nbsp;</option>
+                                            @foreach (var item in salesmans)
+                                            {
+                                                <option value="@item.Salesman">[@item.Salesman]&nbsp; @item.NamaSales</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td style="width:5%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
+                                        <button @onclick="() => OpenDeleteDialog(transaksi)" class="btn btn-danger">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save" viewBox="0 0 16 16">
+                                                <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z" />
+                                            </svg>
+                                        </button>
+                                        <button @onclick="() => OpenPrint(transaksi.OeTransHId)" class="btn btn-info">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
+                                                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+                                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
+                                            </svg>
+                                        </button>
+                                        <button @onclick="() => OpenDetail3(transaksi.Customer)" class="btn btn-success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-expand" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13A.5.5 0 0 1 1 8zM7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708l2-2zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10z" />
+                                            </svg>
+
+                                        </button>
+                                    </td>
+                                }
+                            </RowTemplate>
+                        </DataGridVerticalComponent>
+                    </div>
+                </section>
+
+                <section class="dashboard-data-section">
+                    <div class="dashboard-section-header">
+                        <div>
+                            <span class="dashboard-section-kicker">Sales order</span>
+                            <h2>Order yang belum diproses</h2>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid-card">
+                        <DataGridVerticalComponent Items="TransHeader"
+                                                   Context="transaksi"
+                                                   GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaCust} {item.Keterangan}")"
+                                                   TotalEnabled=false
+                                                   SearchEnabled=false>
+                            <TableHeader>
+                                <th scope="col" style="width:15%">No Bukti</th>
+                                <th scope="col" style="width:20%">Customer</th>
+                                <th scope="col" style="width:20%">Keterangan</th>
+                                <th scope="col" style="width:40%">Kurir</th>
+                                <th scope="col" style="width:5%"></th>
+                            </TableHeader>
+                            <RowTemplate>
+                                @if (transaksi.Kode == "76")
+                                {
+                                    <td style="width:15%; background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">
+                                        @transaksi.NoLpb
+                                        <br />
+                                        <span class="badge bg-primary">@transaksi.Tanggal.ToShortDateString()</span>
+                                        <br />
+                                        <span class="badge bg-success">@transaksi.NoPrj</span>
+                                    </td>
+                                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">@transaksi.NamaCust</td>
+                                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">@transaksi.Keterangan</td>
+                                    <td style="width:40%;text-align:right;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")"></td>
+                                    <td style="width:5%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">
+                                        <button @onclick="() => OpenPrintOrder(transaksi.OeTransHId)" class="btn btn-info">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
+                                                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+                                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                }
+                            </RowTemplate>
+                        </DataGridVerticalComponent>
+                    </div>
+                </section>
+            }
+        }
+        else
+        {
+            <div class="dashboard-collapsed-state">
+                <span class="oi oi-chevron-bottom"></span>
+                <span>Klik tombol di atas bila perlu melihat transaksi aktif dan sales order.</span>
+            </div>
+        }
+    </section>
+
+    @if (isDashboardView)
+    {
+        <section class="dashboard-shortcuts-section dashboard-panel-card">
         <div class="dashboard-panel-header-row">
             <div>
                 <span class="dashboard-section-kicker">Quick access</span>
@@ -308,6 +583,20 @@
                     <a href="/ModuleJual/LaporanPenjualan" class="btn btn-outline-primary">Laporan Penjualan</a>
                     <a href="/ModuleJual/LaporanJualPerCustomer" class="btn btn-outline-primary">Per Customer</a>
                     <a href="/ModuleJual/LaporanJualPertahun" class="btn btn-outline-primary">Per Tahun</a>
+                </div>
+            </article>
+
+            <article class="dashboard-shortcut-card dashboard-shortcut-card-order">
+                <div class="dashboard-shortcut-module-header">
+                    <span class="oi oi-list-rich dashboard-shortcut-icon"></span>
+                    <div class="dashboard-shortcut-header">
+                        <h3>Sales Order</h3>
+                        <p>Order penjualan dan pengecekan stok.</p>
+                    </div>
+                </div>
+                <div class="dashboard-shortcut-actions">
+                    <a href="/ModuleJual/TransOrderJual" class="btn btn-outline-primary">Order Penjualan</a>
+                    <a href="/ModuleJual/CekStockSalesOrder" class="btn btn-outline-primary">Cek Stock SO</a>
                 </div>
             </article>
 
@@ -368,212 +657,9 @@
             </article>
         </div>
     </section>
+}
+
 </div>
-
-<AuthorizeView Roles="Admin, Finance">
-    <section class="dashboard-data-section dashboard-panel-card dashboard-lazy-panel">
-        <div class="dashboard-section-header dashboard-section-header-stack">
-            <div>
-                <span class="dashboard-section-kicker">Activity queue</span>
-                <h2>Transaksi operasional</h2>
-                <p class="dashboard-section-note">Bagian ini dibuat lazy load agar dashboard awal tetap ringan saat diakses.</p>
-            </div>
-            <button type="button" class="btn btn-outline-primary dashboard-toggle-btn" @onclick="ToggleOperationalSectionAsync">
-                @(showOperationalSection ? "Sembunyikan detail" : "Tampilkan detail operasional")
-            </button>
-        </div>
-
-        @if (showOperationalSection)
-        {
-            @if (isOperationalDataLoading)
-            {
-                <div class="dashboard-loading-state">
-                    <span class="oi oi-loop-circular"></span>
-                    <span>Memuat data operasional...</span>
-                </div>
-            }
-            else
-            {
-                <div class="dashboard-section-note-row">
-                    <span class="dashboard-pill">@TransHeader.Count transaksi siap ditinjau</span>
-                    <span class="dashboard-subtle-text">Detail dimuat hanya saat diperlukan.</span>
-                </div>
-
-                <section class="dashboard-data-section">
-                    <div class="dashboard-section-header">
-                        <div>
-                            <span class="dashboard-section-kicker">Activity queue</span>
-                            <h2>Transaksi pengiriman aktif</h2>
-                        </div>
-                    </div>
-
-                    <div class="dashboard-grid-card">
-                    <DataGridVerticalComponent Items="TransHeader"
-                                               Context="transaksi"
-                                               GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaCust} {item.Keterangan}")"
-                                               TotalEnabled=false
-                                               SearchEnabled=false>
-
-            <TableHeader>
-
-                <th scope="col" style="width:15%">No Bukti</th>
-                <th scope="col" style="width:20%">Customer</th>
-
-                <th scope="col" style="width:20%">Keterangan</th>
-                <th scope="col" style="width:40%">Kurir</th>
-
-
-                <th scope="col" style="width:5%"></th>
-            </TableHeader>
-            <RowTemplate>
-                @if (transaksi.Kode != "76")
-
-                {
-
-                    <td style="width:15%; background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
-                        @transaksi.NoLpb
-                        <br />
-                        <span class="badge bg-primary">@transaksi.Tanggal.ToShortDateString()</span>
-                        <br />
-                        <span class="badge bg-success">@transaksi.NoPrj</span>
-                    </td>
-                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">@transaksi.NamaCust</td>
-
-                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">@transaksi.Keterangan</td>
-                    <td style="width:40%;text-align:right;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
-
-                        @*<SearchInputSelectComponent Items="kurirs" Context="transaksi2" GetFilterableText="@(item =>$"{item.Kurir}")">
-                    <BindTemplate>
-                    @transaksi2.Kurir
-                    </BindTemplate>
-                    <OptionTemplate>
-                    <option value="@transaksi2.Kurir">[@transaksi2.Kurir]&nbsp; @transaksi2.NamaKurir</option>
-                    </OptionTemplate>
-
-                    </SearchInputSelectComponent>*@
-                        <select class="form-control" @bind="transaksi.Kurir" style="width:60%; display:inline">
-                            <option value="">&nbsp;&nbsp;---Select Kurir---&nbsp;&nbsp;</option>
-                            @foreach (var item in kurirs)
-                            {
-                                <option value="@item.Kurir">[@item.Kurir]&nbsp; @item.NamaKurir</option>
-                            }
-
-                        </select>
-
-                        <select class="form-control" @bind="transaksi.Salesman" style="width:60%; display:inline">
-                            <option value="">&nbsp;&nbsp;---Select Salesman---&nbsp;&nbsp;</option>
-                            @foreach (var item in salesmans)
-                            {
-                                <option value="@item.Salesman">[@item.Salesman]&nbsp; @item.NamaSales</option>
-                            }
-
-                        </select>
-                        @*   <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
-
-                    </td>
-
-
-
-                    <td style="width:5%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
-
-                        <button @onclick="() => OpenDeleteDialog(transaksi)" class="btn btn-danger">
-
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save" viewBox="0 0 16 16">
-                                <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z" />
-                            </svg>
-                        </button>
-                        <button @onclick="() => OpenPrint(transaksi.OeTransHId)" class="btn btn-info">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
-                                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
-                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
-                            </svg>
-                        </button>
-                        <button @onclick="() => OpenDetail3(transaksi.Customer)" class="btn btn-success">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-expand" viewBox="0 0 16 16">
-                                <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13A.5.5 0 0 1 1 8zM7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708l2-2zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10z" />
-                            </svg>
-
-                        </button>
-                    </td>
-
-                }
-            </RowTemplate>
-                    </DataGridVerticalComponent>
-                    </div>
-                </section>
-
-
-                <section class="dashboard-data-section">
-                    <div class="dashboard-section-header">
-                        <div>
-                            <span class="dashboard-section-kicker">Sales order</span>
-                            <h2>Order yang belum diproses</h2>
-                        </div>
-                    </div>
-
-                    <div class="dashboard-grid-card">
-                    <DataGridVerticalComponent Items="TransHeader"
-                                               Context="transaksi"
-                                               GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaCust} {item.Keterangan}")"
-                                               TotalEnabled=false
-                                               SearchEnabled=false>
-
-            <TableHeader>
-
-                <th scope="col" style="width:15%">No Bukti</th>
-                <th scope="col" style="width:20%">Customer</th>
-
-                <th scope="col" style="width:20%">Keterangan</th>
-                <th scope="col" style="width:40%">Kurir</th>
-
-
-                <th scope="col" style="width:5%"></th>
-            </TableHeader>
-            <RowTemplate>
-                @if (transaksi.Kode == "76")
-                {
-                    <td style="width:15%; background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">
-                        @transaksi.NoLpb
-                        <br />
-                        <span class="badge bg-primary">@transaksi.Tanggal.ToShortDateString()</span>
-                        <br />
-                        <span class="badge bg-success">@transaksi.NoPrj</span>
-                    </td>
-                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">@transaksi.NamaCust</td>
-
-                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">@transaksi.Keterangan</td>
-                    <td style="width:40%;text-align:right;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")"> </td>
-                   
-
-
-
-                    <td style="width:5%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">
-
-
-                        <button @onclick="() => OpenPrintOrder(transaksi.OeTransHId)" class="btn btn-info">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
-                                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
-                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
-                            </svg>
-                        </button>
-                    </td>
-                }
-
-            </RowTemplate>
-                    </DataGridVerticalComponent>
-                    </div>
-                </section>
-            }
-        }
-        else
-        {
-            <div class="dashboard-collapsed-state">
-                <span class="oi oi-chevron-bottom"></span>
-                <span>Klik tombol di atas bila perlu melihat transaksi aktif dan sales order.</span>
-            </div>
-        }
-    </section>
-</AuthorizeView>
 
 @if (DetailOpen3)
 {
@@ -659,7 +745,7 @@
     private bool isBankPanelCollapsed = true;
     private bool isDashboardSummaryLoaded;
     private bool isDashboardSummaryLoading;
-    private bool showOperationalSection;
+    private bool showOperationalSection = true;
     private bool isOperationalDataLoaded;
     private bool isOperationalDataLoading;
 
@@ -715,6 +801,11 @@
         if (!isDashboardSummaryLoaded)
         {
             await LoadDashboardSummaryOnDemandAsync();
+        }
+
+        if (!isOperationalDataLoaded)
+        {
+            await LoadOperationalDataAsync();
         }
     }
 

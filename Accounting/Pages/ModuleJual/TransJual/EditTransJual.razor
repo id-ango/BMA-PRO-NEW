@@ -491,14 +491,21 @@
     {
         if (!string.IsNullOrEmpty(textSearch))
         {
+            var customer = serviceAR.GetCustomerCode(textSearch);
+
+            if (customer == null)
+            {
+                SearchOpen = false;
+                StateHasChanged();
+                return;
+            }
+
             Transh.Customer = textSearch;
-            Transh.AlamatKirim = (string.IsNullOrEmpty(serviceAR.GetCustomerCode(textSearch).AlmtKrm) ?
-                                         "" : serviceAR.GetCustomerCode(textSearch).AlmtKrm)
-                                  + "\r\n" +
-                                  (string.IsNullOrEmpty(serviceAR.GetCustomerCode(textSearch).KotaKrm) ?
-                                         "" : serviceAR.GetCustomerCode(textSearch).KotaKrm);
-            Transh.NamaCust = serviceAR.GetCustomerCode(textSearch).NamaLengkap;
-            termin = serviceAR.GetCustomerCode(textSearch).Termin;
+            Transh.AlamatKirim = (string.IsNullOrEmpty(customer.AlmtKrm) ? "" : customer.AlmtKrm)
+                                 + "\r\n"
+                                 + (string.IsNullOrEmpty(customer.KotaKrm) ? "" : customer.KotaKrm);
+            Transh.NamaCust = customer.NamaLengkap;
+            termin = customer.Termin;
 
             Transh.JthTempo = Transh.Tanggal.AddDays(termin);
         }
@@ -512,14 +519,24 @@
 
         var itemcode = (from e in supplier where e.Customer == args.Value.ToString() select e).FirstOrDefault();
 
-        Transh.AlamatKirim = (string.IsNullOrEmpty(serviceAR.GetCustomerCode(itemcode.Customer).AlmtKrm) ?
-                                     "" : serviceAR.GetCustomerCode(itemcode.Customer).AlmtKrm)
-                              + "\r\n" +
-                              (string.IsNullOrEmpty(serviceAR.GetCustomerCode(itemcode.Customer).KotaKrm) ?
-                                     "" : serviceAR.GetCustomerCode(itemcode.Customer).KotaKrm);
+        if (itemcode == null)
+        {
+            return;
+        }
 
-        Transh.NamaCust = serviceAR.GetCustomerCode(itemcode.Customer).NamaLengkap;
-        termin = itemcode.Termin;
+        var customer = serviceAR.GetCustomerCode(itemcode.Customer);
+
+        if (customer == null)
+        {
+            return;
+        }
+
+        Transh.AlamatKirim = (string.IsNullOrEmpty(customer.AlmtKrm) ? "" : customer.AlmtKrm)
+                             + "\r\n"
+                             + (string.IsNullOrEmpty(customer.KotaKrm) ? "" : customer.KotaKrm);
+
+        Transh.NamaCust = customer.NamaLengkap;
+        termin = customer.Termin;
         Transh.JthTempo = Transh.Tanggal.AddDays(termin);
     }
 
