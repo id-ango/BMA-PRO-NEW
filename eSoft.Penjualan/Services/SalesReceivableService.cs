@@ -97,6 +97,7 @@ namespace eSoft.Penjualan.Services
             if (piutang != null)
             {
                 _contextAr.ArPiutngs.Remove(piutang);
+                _contextAr.Entry(piutang).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
             }
         }
 
@@ -121,6 +122,7 @@ namespace eSoft.Penjualan.Services
             if (piutang != null)
             {
                 _contextAr.ArPiutngs.Remove(piutang);
+                _contextAr.Entry(piutang).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
             }
         }
 
