@@ -140,6 +140,8 @@ namespace eSoft.Pembelian.Services
                 IrTransDs = new List<IrTransD>()
             };
 
+            var altItemDictAdd = new Dictionary<string, IcAltItem>();
+
             foreach (var item in trans.IrTransDs)
             {
                 IcItem cekItem = _contextIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
@@ -194,10 +196,16 @@ namespace eSoft.Pembelian.Services
                     continue;
                 }
 
-                IcAltItem cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                var altKey = $"{item.ItemCode}::{item.Lokasi}";
+                if (!altItemDictAdd.TryGetValue(altKey, out IcAltItem cekLokasi1))
+                {
+                    cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                    if (cekLokasi1 != null) altItemDictAdd[altKey] = cekLokasi1;
+                }
+
                 if (cekLokasi1 == null)
                 {
-                    IcAltItem produk = new IcAltItem()
+                    cekLokasi1 = new IcAltItem()
                     {
                         ItemCode = cekItem.ItemCode.ToUpper(),
                         NamaItem = cekItem.NamaItem,
@@ -205,7 +213,8 @@ namespace eSoft.Pembelian.Services
                         Lokasi = item.Lokasi,
                         Qty = item.Qty
                     };
-                    _contextIc.IcAltItems.Add(produk);
+                    _contextIc.IcAltItems.Add(cekLokasi1);
+                    altItemDictAdd[altKey] = cekLokasi1;
                 }
                 else
                 {
@@ -307,6 +316,8 @@ namespace eSoft.Pembelian.Services
 
                 cKode = existingTrans.Kode;
 
+                var altItemDictDel = new Dictionary<string, IcAltItem>();
+
                 foreach (var item in existingTrans.IrTransDs)
                 {
                     if (item.Qty == 0)
@@ -320,7 +331,13 @@ namespace eSoft.Pembelian.Services
                         continue;
                     }
 
-                    IcAltItem cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                    var altKeyDel = $"{item.ItemCode}::{item.Lokasi}";
+                    if (!altItemDictDel.TryGetValue(altKeyDel, out IcAltItem cekLokasi1))
+                    {
+                        cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                        if (cekLokasi1 != null) altItemDictDel[altKeyDel] = cekLokasi1;
+                    }
+
                     if (cekLokasi1 == null)
                     {
                         IcAltItem produk = new IcAltItem()
@@ -332,6 +349,7 @@ namespace eSoft.Pembelian.Services
                             Qty = (cKode == "82" ? -1 * item.Qty : item.Qty)
                         };
                         _contextIc.IcAltItems.Add(produk);
+                        altItemDictDel[altKeyDel] = produk;
                     }
                     else
                     {
@@ -461,6 +479,8 @@ namespace eSoft.Pembelian.Services
 
                 cKode = existingTrans.Kode;
 
+                var altItemDictEdit1 = new Dictionary<string, IcAltItem>();
+
                 foreach (var item in existingTrans.IrTransDs)
                 {
                     if (item.Qty == 0)
@@ -474,7 +494,13 @@ namespace eSoft.Pembelian.Services
                         continue;
                     }
 
-                    IcAltItem cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                    var altKeyE1 = $"{item.ItemCode}::{item.Lokasi}";
+                    if (!altItemDictEdit1.TryGetValue(altKeyE1, out IcAltItem cekLokasi1))
+                    {
+                        cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                        if (cekLokasi1 != null) altItemDictEdit1[altKeyE1] = cekLokasi1;
+                    }
+
                     if (cekLokasi1 == null)
                     {
                         IcAltItem produk = new IcAltItem()
@@ -486,6 +512,7 @@ namespace eSoft.Pembelian.Services
                             Qty = (existingTrans.Kode == "82" ? -1 * item.Qty : item.Qty)
                         };
                         _contextIc.IcAltItems.Add(produk);
+                        altItemDictEdit1[altKeyE1] = produk;
                     }
                     else
                     {
@@ -587,6 +614,8 @@ namespace eSoft.Pembelian.Services
                     IrTransDs = new List<IrTransD>()
                 };
 
+                var altItemDictEdit2 = new Dictionary<string, IcAltItem>();
+
                 foreach (var item in trans.IrTransDs)
                 {
                     IcItem cekItem = _contextIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
@@ -627,10 +656,16 @@ namespace eSoft.Pembelian.Services
                         continue;
                     }
 
-                    IcAltItem cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                    var altKeyE2 = $"{item.ItemCode}::{item.Lokasi}";
+                    if (!altItemDictEdit2.TryGetValue(altKeyE2, out IcAltItem cekLokasi1))
+                    {
+                        cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                        if (cekLokasi1 != null) altItemDictEdit2[altKeyE2] = cekLokasi1;
+                    }
+
                     if (cekLokasi1 == null)
                     {
-                        IcAltItem produk = new IcAltItem()
+                        cekLokasi1 = new IcAltItem()
                         {
                             ItemCode = cekItem.ItemCode.ToUpper(),
                             NamaItem = cekItem.NamaItem,
@@ -638,7 +673,8 @@ namespace eSoft.Pembelian.Services
                             Lokasi = item.Lokasi,
                             Qty = (cKode == "82" ? item.Qty : -1 * item.Qty)
                         };
-                        _contextIc.IcAltItems.Add(produk);
+                        _contextIc.IcAltItems.Add(cekLokasi1);
+                        altItemDictEdit2[altKeyE2] = cekLokasi1;
                     }
                     else
                     {

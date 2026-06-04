@@ -81,13 +81,7 @@ namespace eSoft.Penjualan.Services
                 OeTransDs = _salesDetailFactory.CreateDetails(trans, noLpb, "94")
             };
 
-            foreach (var item in trans.OeTransDs)
-            {
-                if (item.Qty != 0)
-                {
-                    _salesInventoryAdjustmentService.ApplySaleDetail(item);
-                }
-            }
+            _salesInventoryAdjustmentService.ApplyDetailsForCode(trans.OeTransDs, "94");
 
             _context.OeTransHs.Add(transH);
 
@@ -202,13 +196,7 @@ namespace eSoft.Penjualan.Services
             {
                 using var scope = new TransactionScope(TransactionScopeOption.Required, SalesTransactionOptions, TransactionScopeAsyncFlowOption.Enabled);
 
-                foreach (var item in existingTrans.OeTransDs)
-                {
-                    if (item.Qty != 0)
-                    {
-                        _salesInventoryAdjustmentService.ReverseExistingDetail(item, existingTrans.Kode);
-                    }
-                }
+                _salesInventoryAdjustmentService.ReverseDetails(existingTrans.OeTransDs, existingTrans.Kode);
 
                 _salesReceivableService.ReverseExistingReceivableForEdit(existingTrans);
                 _context.OeTransHs.Remove(existingTrans);
@@ -240,20 +228,7 @@ namespace eSoft.Penjualan.Services
                     OeTransDs = _salesDetailFactory.CreateDetails(trans, trans.NoLpb, existingTrans.Kode)
                 };
 
-                foreach (var item in trans.OeTransDs)
-                {
-                    if (item.Qty != 0)
-                    {
-                        if (existingTrans.Kode == "95")
-                        {
-                            _salesInventoryAdjustmentService.ApplyReturnDetail(item);
-                        }
-                        else
-                        {
-                            _salesInventoryAdjustmentService.ApplySaleDetail(item);
-                        }
-                    }
-                }
+                _salesInventoryAdjustmentService.ApplyDetailsForCode(trans.OeTransDs, existingTrans.Kode);
 
                 if (!trans.NonPiutang)
                 {

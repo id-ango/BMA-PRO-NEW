@@ -80,6 +80,8 @@ namespace eSoft.Persediaan.Services
                 Kode = "81",
                 IcTransDs = new List<IcTransD>()
             };
+            var altItemDictAdd = new Dictionary<string, IcAltItem>();
+
             foreach (var item in trans.IcTransDs)
             {
                 transH.IcTransDs.Add(new IcTransD()
@@ -101,7 +103,13 @@ namespace eSoft.Persediaan.Services
                 {
                     if (item.QtyShp != 0)
                     {
-                        IcAltItem cekLokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+                        var altKey = $"{item.ItemCode}::{item.Lokasi}";
+                        if (!altItemDictAdd.TryGetValue(altKey, out IcAltItem cekLokasi1))
+                        {
+                            cekLokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+                            if (cekLokasi1 != null) altItemDictAdd[altKey] = cekLokasi1;
+                        }
+
                         if (cekLokasi1 == null)
                         {
                             IcAltItem Produk = new IcAltItem()
@@ -112,9 +120,8 @@ namespace eSoft.Persediaan.Services
                                 Lokasi = item.Lokasi,
                                 Qty = item.QtyShp
                             };
-
                             _context.IcAltItems.Add(Produk);
-
+                            altItemDictAdd[altKey] = Produk;
                         }
                         else
                         {
@@ -152,6 +159,8 @@ namespace eSoft.Persediaan.Services
 
             if (ExistingTrans != null)
             {
+                var altItemDictRev = new Dictionary<string, IcAltItem>();
+
                 foreach (var item in ExistingTrans.IcTransDs)
                 {
                     IcItem cekItem = _context.IcItems.Where(x => x.ItemCode == item.ItemCode).FirstOrDefault();
@@ -159,16 +168,19 @@ namespace eSoft.Persediaan.Services
                     {
                         if (item.QtyShp != 0)
                         {
-                            IcAltItem itemlokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+                            var altKeyRev = $"{item.ItemCode}::{item.Lokasi}";
+                            if (!altItemDictRev.TryGetValue(altKeyRev, out IcAltItem itemlokasi1))
+                            {
+                                itemlokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+                                if (itemlokasi1 != null) altItemDictRev[altKeyRev] = itemlokasi1;
+                            }
+
                             if (itemlokasi1 != null)
                             {
                                 itemlokasi1.Qty -= item.QtyShp;
                                 _context.IcAltItems.Update(itemlokasi1);
                             }
-
                         }
-
-
                     }
                     cekItem.Qty -= item.QtyShp;
                     cekItem.Cost -= item.Jumlah;
@@ -190,6 +202,8 @@ namespace eSoft.Persediaan.Services
                 Kode = "81",
                 IcTransDs = new List<IcTransD>()
             };
+            var altItemDictEdit = new Dictionary<string, IcAltItem>();
+
             foreach (var item in trans.IcTransDs)
             {
                 transH.IcTransDs.Add(new IcTransD()
@@ -211,7 +225,13 @@ namespace eSoft.Persediaan.Services
                 {
                     if (item.QtyShp != 0)
                     {
-                        IcAltItem cekLokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+                        var altKeyEdit = $"{item.ItemCode}::{item.Lokasi}";
+                        if (!altItemDictEdit.TryGetValue(altKeyEdit, out IcAltItem cekLokasi1))
+                        {
+                            cekLokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+                            if (cekLokasi1 != null) altItemDictEdit[altKeyEdit] = cekLokasi1;
+                        }
+
                         if (cekLokasi1 == null)
                         {
                             IcAltItem Produk = new IcAltItem()
@@ -223,7 +243,7 @@ namespace eSoft.Persediaan.Services
                                 Qty = item.QtyShp
                             };
                             _context.IcAltItems.Add(Produk);
-
+                            altItemDictEdit[altKeyEdit] = Produk;
                         }
                         else
                         {
@@ -258,6 +278,8 @@ namespace eSoft.Persediaan.Services
 
                 if (ExistingTrans != null)
                 {
+                    var altItemDictDel = new Dictionary<string, IcAltItem>();
+
                     foreach (var item in ExistingTrans.IcTransDs)
                     {
                         IcItem cekItem = _context.IcItems.Where(x => x.ItemCode == item.ItemCode).FirstOrDefault();
@@ -265,24 +287,25 @@ namespace eSoft.Persediaan.Services
                         {
                             if (item.QtyShp != 0)
                             {
-                                IcAltItem itemlokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+                                var altKeyDel = $"{item.ItemCode}::{item.Lokasi}";
+                                if (!altItemDictDel.TryGetValue(altKeyDel, out IcAltItem itemlokasi1))
+                                {
+                                    itemlokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+                                    if (itemlokasi1 != null) altItemDictDel[altKeyDel] = itemlokasi1;
+                                }
+
                                 if (itemlokasi1 != null)
                                 {
                                     itemlokasi1.Qty -= item.QtyShp;
                                     _context.IcAltItems.Update(itemlokasi1);
                                 }
-
                             }
-
-
                         }
                         cekItem.Qty -= item.QtyShp;
                         cekItem.Cost -= item.Jumlah;
                         cekItem.HrgNetto = cekItem.Qty != 0 ? cekItem.Cost / cekItem.Qty : cekItem.Harga;
 
                         _context.IcItems.Update(cekItem);
-
-
                     }
                     _context.IcTransHs.Remove(ExistingTrans);
                     await _context.SaveChangesAsync();

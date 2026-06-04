@@ -226,7 +226,9 @@ namespace eSoft.Penjualan.Services
 
             return _contextIc.IcItems
                 .Where(x => distinctCodes.Contains(x.ItemCode))
-                .ToDictionary(x => x.ItemCode);
+                .AsEnumerable()
+                .GroupBy(x => x.ItemCode)
+                .ToDictionary(g => g.Key, g => g.First());
         }
 
         private Dictionary<string, IcAltItem> LoadAltItemMap(IEnumerable<string> itemCodes)
@@ -238,7 +240,9 @@ namespace eSoft.Penjualan.Services
 
             return _contextIc.IcAltItems
                 .Where(x => distinctCodes.Contains(x.ItemCode))
-                .ToDictionary(x => CreateAltItemKey(x.ItemCode, x.Lokasi));
+                .AsEnumerable()
+                .GroupBy(x => CreateAltItemKey(x.ItemCode, x.Lokasi))
+                .ToDictionary(g => g.Key, g => g.First());
         }
 
         private IcItem GetItem(string itemCode, Dictionary<string, IcItem> itemMap)
