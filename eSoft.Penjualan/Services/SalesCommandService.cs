@@ -158,6 +158,11 @@ namespace eSoft.Penjualan.Services
                 return false;
             }
 
+            if (!string.IsNullOrEmpty(existingTrans.Cek) && _salesReceivableService.HasSettlement(existingTrans.NoLpb))
+            {
+                return false;
+            }
+
             _salesInventoryAdjustmentService.ReverseDetails(existingTrans.OeTransDs, existingTrans.Kode);
 
             if (existingTrans.Cek == "1")

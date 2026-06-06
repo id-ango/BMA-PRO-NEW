@@ -314,6 +314,11 @@ namespace eSoft.Pembelian.Services
                     return false;
                 }
 
+                if (_contextAp.ApHutangs.Any(x => x.Dokumen == existingTrans.NoLpb && x.Bayar > 0))
+                {
+                    return false;
+                }
+
                 cKode = existingTrans.Kode;
 
                 var altItemDictDel = new Dictionary<string, IcAltItem>();
