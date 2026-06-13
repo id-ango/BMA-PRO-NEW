@@ -23,643 +23,575 @@
 @inject IOrderSalesServices serviceOrderSales
 @inject NavigationManager navigationmanager
 
+<!-- Header dengan toggle Home/Dashboard -->
+<div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h2>@AppBranding.CompanyName</h2>
+        <p>Menu Utama</p>
+    </div>
+    <div style="gap: 10px; display: flex;">
+        <button class="btn @(isShowDashboard ? "btn-outline-primary" : "btn-primary")" @onclick="() => isShowDashboard = false">
+            Home
+        </button>
+        <button class="btn @(isShowDashboard ? "btn-primary" : "btn-outline-primary")" @onclick="ShowDashboardAsync">
+            Dashboard
+        </button>
+    </div>
+</div>
 
-<div class="landing-shell">
-    <section class="landing-topbar">
-        <div class="landing-title-block">
-            <span class="landing-kicker">Sistem Akuntansi Terintegrasi</span>
-            <h1>@AppBranding.HomeProductName</h1>
-            <p>@AppBranding.CompanyLegalName</p>
-        </div>
-
-        <div class="landing-view-switch" role="tablist" aria-label="Landing view switcher">
-            <button type="button" class="landing-view-button @GetLandingViewButtonClass(false)" @onclick="ShowHomeView">
-                Home
-            </button>
-            <button type="button" class="landing-view-button @GetLandingViewButtonClass(true)" @onclick="ShowDashboardViewAsync">
-                Dashboard
-            </button>
-        </div>
-    </section>
-
-    @if (!isDashboardView)
-    {
-        <section class="home-quick-panel dashboard-panel-card">
-            <div class="dashboard-panel-header-row dashboard-panel-header-row-home">
-                <div>
-                    <span class="dashboard-section-kicker">Quick access</span>
-                    <h2>Menu utama</h2>
-                    <p class="dashboard-section-note">Tampilan awal dibuat sederhana seperti PT: fokus ke modul yang paling sering dipakai.</p>
+@if (!isShowDashboard)
+{
+    <!-- HOME VIEW: Module cards -->
+    <div class="row">
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="oi oi-layers"></span> Inventory
+                    </h5>
+                    <p class="card-text">Laporan stock dan persediaan.</p>
+                    <a href="/ModulePersediaan/LaporanCurrentStock" class="btn btn-primary btn-sm">Laporan Stock</a>
+                    <br />
+                    <br />
+                    <a href="/ModulePersediaan/LaporanPersediaan" class="btn btn-primary btn-sm">Laporan Persediaan</a>
                 </div>
             </div>
+        </div>
+    </AuthorizeView>
 
-            <div class="home-module-grid">
-                <article class="home-module-card home-module-card-stock">
-                    <div class="home-module-card-header">
-                        <span class="oi oi-layers home-module-icon"></span>
-                        <div>
-                            <h3>Inventory</h3>
-                            <p>Laporan stock dan persediaan.</p>
-                        </div>
-                    </div>
-                    <div class="home-module-actions">
-                        <a href="/ModulePersediaan/LaporanCurrentStock" class="btn btn-primary">Laporan Stock</a>
-                        <a href="/ModulePersediaan/LaporanPersediaan" class="btn btn-outline-primary">Laporan Persediaan</a>
-                    </div>
-                </article>
-
-                <article class="home-module-card home-module-card-sales">
-                    <div class="home-module-card-header">
-                        <span class="oi oi-cart home-module-icon"></span>
-                        <div>
-                            <h3>Penjualan</h3>
-                            <p>Ringkasan laporan penjualan.</p>
-                        </div>
-                    </div>
-                    <div class="home-module-actions">
-                        <a href="/ModuleJual/LaporanPenjualan" class="btn btn-primary">Laporan Penjualan</a>
-                        <a href="/ModuleJual/LaporanJualPerCustomer" class="btn btn-outline-primary">Per Customer</a>
-                    </div>
-                </article>
-
-                <article class="home-module-card home-module-card-order">
-                    <div class="home-module-card-header">
-                        <span class="oi oi-list-rich home-module-icon"></span>
-                        <div>
-                            <h3>Sales Order</h3>
-                            <p>Order penjualan dan pengecekan stok.</p>
-                        </div>
-                    </div>
-                    <div class="home-module-actions">
-                        <a href="/ModuleJual/TransOrderJual" class="btn btn-primary">Order Penjualan</a>
-                        <a href="/ModuleJual/CekStockSalesOrder" class="btn btn-outline-primary">Cek Stock SO</a>
-                    </div>
-                </article>
-
-                <article class="home-module-card home-module-card-ar">
-                    <div class="home-module-card-header">
-                        <span class="oi oi-dollar home-module-icon"></span>
-                        <div>
-                            <h3>Piutang</h3>
-                            <p>Aging dan laporan receivable.</p>
-                        </div>
-                    </div>
-                    <div class="home-module-actions">
-                        <a href="/ModulePiutang/LaporanAgingPiutang" class="btn btn-primary">Aging Receivable</a>
-                        <a href="/ModulePiutang/LaporanPiutang" class="btn btn-outline-primary">Laporan Piutang</a>
-                    </div>
-                </article>
-
-                <article class="home-module-card home-module-card-bank">
-                    <div class="home-module-card-header">
-                        <span class="oi oi-briefcase home-module-icon"></span>
-                        <div>
-                            <h3>Bank and Cash</h3>
-                            <p>Kas bank dan rekap saldo.</p>
-                        </div>
-                    </div>
-                    <div class="home-module-actions">
-                        <a href="/ModuleBank/LaporanCashBank" class="btn btn-primary">Laporan Kas Bank</a>
-                        <a href="/ModuleBank/SourceBank" class="btn btn-outline-primary">Laporan per Kode</a>
-                    </div>
-                </article>
-
-                <article class="home-module-card home-module-card-ap">
-                    <div class="home-module-card-header">
-                        <span class="oi oi-credit-card home-module-icon"></span>
-                        <div>
-                            <h3>Hutang</h3>
-                            <p>Aging dan laporan payable.</p>
-                        </div>
-                    </div>
-                    <div class="home-module-actions">
-                        <a href="/ModuleHutang/LaporanAgingHutang" class="btn btn-primary">Aging Payable</a>
-                        <a href="/ModuleHutang/LaporanHutang" class="btn btn-outline-primary">Laporan Hutang</a>
-                    </div>
-                </article>
-
-                <article class="home-module-card home-module-card-purchase">
-                    <div class="home-module-card-header">
-                        <span class="oi oi-basket home-module-icon"></span>
-                        <div>
-                            <h3>Pembelian</h3>
-                            <p>Laporan pembelian dan order.</p>
-                        </div>
-                    </div>
-                    <div class="home-module-actions">
-                        <a href="/ModuleBeli/LaporanPembelian" class="btn btn-primary">Laporan Pembelian</a>
-                        <a href="/ModuleBeli/LaporanOrderCurrency" class="btn btn-outline-primary">Laporan Item/Order</a>
-                    </div>
-                </article>
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="oi oi-cart"></span> Penjualan
+                    </h5>
+                    <p class="card-text">Ringkasan laporan penjualan.</p>
+                    <a href="/ModuleJual/LaporanPenjualan" class="btn btn-primary btn-sm">Laporan Penjualan</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleJual/LaporanJualPerCustomer" class="btn btn-primary btn-sm">Per Customer</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleJual/LaporanJualPertahun" class="btn btn-primary btn-sm">Per Tahun</a>
+                </div>
             </div>
-        </section>
+        </div>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="oi oi-list-rich"></span> Sales Order
+                    </h5>
+                    <p class="card-text">Order penjualan dan pengecekan stok.</p>
+                    <a href="/ModuleJual/TransOrderJual" class="btn btn-primary btn-sm">Order Penjualan</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleJual/CekStockSalesOrder" class="btn btn-primary btn-sm">Cek Stock SO</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+</div>
+
+<div class="row">
+    &emsp;
+</div>
+
+<div class="row">
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="oi oi-dollar"></span> Piutang
+                    </h5>
+                    <p class="card-text">Aging dan laporan receivable.</p>
+                    <a href="/ModulePiutang/LaporanAgingPiutang" class="btn btn-primary btn-sm">Aging Receivable</a>
+                    <br />
+                    <br />
+                    <a href="/ModulePiutang/LaporanPiutang" class="btn btn-primary btn-sm">Laporan Piutang</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="oi oi-briefcase"></span> Bank and Cash
+                    </h5>
+                    <p class="card-text">Kas bank dan rekap saldo.</p>
+                    <a href="/ModuleBank/LaporanCashBank" class="btn btn-primary btn-sm">Laporan Kas Bank</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleBank/SourceBank" class="btn btn-primary btn-sm">Laporan per Kode</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="oi oi-credit-card"></span> Hutang
+                    </h5>
+                    <p class="card-text">Aging dan laporan payable.</p>
+                    <a href="/ModuleHutang/LaporanAgingHutang" class="btn btn-primary btn-sm">Aging Payable</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleHutang/LaporanHutang" class="btn btn-primary btn-sm">Laporan Hutang</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+</div>
+
+<div class="row">
+    &emsp;
+</div>
+
+<div class="row">
+    <AuthorizeView Roles="Admin, Finance">
+        <div class="col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="oi oi-basket"></span> Pembelian
+                    </h5>
+                    <p class="card-text">Laporan pembelian dan order.</p>
+                    <a href="/ModuleBeli/LaporanPembelian" class="btn btn-primary btn-sm">Laporan Pembelian</a>
+                    <br />
+                    <br />
+                    <a href="/ModuleBeli/LaporanOrderCurrency" class="btn btn-primary btn-sm">Laporan Item/Order</a>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+</div>
+
+    <!-- Sales & Order Transactions Section -->
+    <section style="margin-top: 30px;">
+        <div style="margin-bottom: 15px;">
+            <h4>Transaksi Penjualan & Sales Order</h4>
+            <button class="btn btn-outline-primary btn-sm" @onclick="() => showTransactionDetailAsync()">
+                @(showTransactionDetail ? "Sembunyikan Detail" : "Tampilkan Detail")
+            </button>
+        </div>
+
+        @if (showTransactionDetail)
+        {
+            @if (isLoadingTransactions)
+            {
+                <div class="alert alert-info">Memuat data transaksi...</div>
+            }
+            else if (TransHeader != null && TransHeader.Count > 0)
+            {
+                <div class="card" style="margin-top: 15px;">
+                    <div class="card-body">
+                        <h5>Daftar Transaksi</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>No Bukti</th>
+                                        <th>Tanggal</th>
+                                        <th>Customer</th>
+                                        <th>Keterangan</th>
+                                        <th>Tipe</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var trans in TransHeader.Take(10))
+                                    {
+                                        <tr>
+                                            <td>@trans.NoLpb</td>
+                                            <td>@trans.Tanggal.ToShortDateString()</td>
+                                            <td>@trans.NamaCust</td>
+                                            <td>@trans.Keterangan</td>
+                                            <td>
+                                                @if (trans.Kode == "76")
+                                                {
+                                                    <span class="badge bg-info">Sales Order</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-success">Penjualan</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </section>
+}
+else
+{
+    <!-- DASHBOARD VIEW: Financial Summary (PT Style) -->
+    <section class="dashboard-hero mb-4">
+        <div>
+            <span class="dashboard-eyebrow">Ringkasan Operasional</span>
+            <h3 class="mb-2">
+                <span class="oi oi-dashboard" aria-hidden="true"></span> Dashboard Keuangan
+            </h3>
+            <p class="dashboard-hero-copy mb-0">Pantau posisi kas, piutang, hutang, dan aging schedule dalam satu tampilan yang lebih ringkas.</p>
+        </div>
+        @if (isLoaded)
+        {
+            <div class="dashboard-status-card">
+                <span class="dashboard-status-label">Status Data</span>
+                <strong class="dashboard-status-value">@GetLastRefreshLabel()</strong>
+                <span class="dashboard-status-caption">@bankList.Count rekening, @jumlahDokPiutang piutang, @jumlahDokHutang hutang</span>
+            </div>
+        }
+    </section>
+
+    @if (isDashboardLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Memuat data dashboard...</p>
+        </div>
     }
     else
     {
-        @if (isDashboardSummaryLoading)
-        {
-            <section class="dashboard-panel-card">
-                <div class="dashboard-loading-state">
-                    <span class="oi oi-loop-circular"></span>
-                    <span>Memuat ringkasan dashboard...</span>
-                </div>
-            </section>
-        }
-        else
-        {
-            <div class="dashboard-shell">
-                <section class="dashboard-hero dashboard-hero-bmapt @(isHeroCollapsed ? "dashboard-hero-collapsed" : string.Empty)">
-                    <div>
-                        <div class="dashboard-hero-title-row">
+        <!-- ROW 1: Summary Cards -->
+        <div class="row g-3 mb-4">
+            <!-- Card: Total Saldo Bank -->
+            <div class="col-lg-4 col-md-6">
+                <div class="card dashboard-card border-0 shadow-sm h-100 summary-card summary-card-bank">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <span class="dashboard-kicker">Dashboard</span>
-                                <h1>@AppBranding.CompanyName Executive Dashboard</h1>
+                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Saldo Bank</h6>
+                                <h3 class="fw-bold text-primary mb-0">@totalSaldoBank.ToString("N0")</h3>
+                                <small class="text-muted">@bankList.Count rekening aktif</small>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-light dashboard-toggle-light" @onclick="ToggleHeroCollapse">
-                                @(isHeroCollapsed ? "Tampilkan header" : "Sembunyikan header")
-                            </button>
+                            <div class="dashboard-icon bg-primary bg-opacity-10 text-primary">
+                                <span class="oi oi-dollar"></span>
+                            </div>
                         </div>
+                        <hr class="my-2" />
+                        <a href="/ModuleBank/LaporanCashBank" class="text-decoration-none small">
+                            <span class="oi oi-arrow-right"></span> Lihat Detail Bank
+                        </a>
+                    </div>
+                </div>
+            </div>
 
-                        @if (!isHeroCollapsed)
+            <!-- Card: Total Piutang -->
+            <div class="col-lg-4 col-md-6">
+                <div class="card dashboard-card border-0 shadow-sm h-100 summary-card summary-card-piutang">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Piutang</h6>
+                                <h3 class="fw-bold text-success mb-0">@totalPiutang.ToString("N0")</h3>
+                                <small class="text-muted">@jumlahDokPiutang dokumen outstanding</small>
+                            </div>
+                            <div class="dashboard-icon bg-success bg-opacity-10 text-success">
+                                <span class="oi oi-arrow-circle-top"></span>
+                            </div>
+                        </div>
+                        <hr class="my-2" />
+                        <a href="/ModulePiutang/LaporanAgingPiutang" class="text-decoration-none small">
+                            <span class="oi oi-arrow-right"></span> Lihat Aging Piutang
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card: Total Hutang (sudah konversi kurs) -->
+            <div class="col-lg-4 col-md-6">
+                <div class="card dashboard-card border-0 shadow-sm h-100 summary-card summary-card-hutang">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Hutang (Rp)</h6>
+                                <h3 class="fw-bold text-danger mb-0">@totalHutangRp.ToString("N0")</h3>
+                                <small class="text-muted">@jumlahDokHutang dokumen outstanding</small>
+                                @if (jumlahDokValas > 0)
+                                {
+                                    <br />
+                                    <span class="badge bg-warning text-dark mt-1">
+                                        <span class="oi oi-globe"></span> @jumlahDokValas dok valas (konversi kurs)
+                                    </span>
+                                }
+                            </div>
+                            <div class="dashboard-icon bg-danger bg-opacity-10 text-danger">
+                                <span class="oi oi-arrow-circle-bottom"></span>
+                            </div>
+                        </div>
+                        <hr class="my-2" />
+                        <a href="/ModuleHutang/LaporanAgingHutang" class="text-decoration-none small">
+                            <span class="oi oi-arrow-right"></span> Lihat Aging Hutang
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 2: Gauge - Net Position & Comparison -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100 dashboard-panel">
+                    <div class="card-header bg-white fw-bold dashboard-panel-header">
+                        <span class="oi oi-bar-chart"></span> Posisi Keuangan Bersih
+                    </div>
+                    <div class="card-body text-center">
+                        @{
+                            var netPosition = totalSaldoBank + totalPiutang - totalHutangRp;
+                            var netClass = netPosition >= 0 ? "text-success" : "text-danger";
+                            var netLabel = netPosition >= 0 ? "SURPLUS" : "DEFISIT";
+                        }
+                        <div class="gauge-container mb-3">
+                            <div class="gauge-circle @(netPosition >= 0 ? "gauge-positive" : "gauge-negative")">
+                                <div class="gauge-value">
+                                    <small class="d-block text-muted">@netLabel</small>
+                                    <strong class="@netClass" style="font-size: 1.3rem;">@netPosition.ToString("N0")</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row text-center mt-3">
+                            <div class="col-4">
+                                <small class="text-muted d-block">Bank</small>
+                                <strong class="text-primary">@totalSaldoBank.ToString("N0")</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">+ Piutang</small>
+                                <strong class="text-success">@totalPiutang.ToString("N0")</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">- Hutang (Rp)</small>
+                                <strong class="text-danger">@totalHutangRp.ToString("N0")</strong>
+                            </div>
+                        </div>
+                        @if (jumlahDokValas > 0)
                         {
-                            <p class="dashboard-lead">Tampilan dashboard ini baru dimuat saat tombol Dashboard dipilih, sehingga halaman awal tetap ringan dan fokus ke menu utama.</p>
+                            <div class="alert alert-warning small mt-2 mb-0 py-1 px-2">
+                                <span class="oi oi-info"></span> Hutang sudah dikonversi ke Rupiah (ada @jumlahDokValas dok mata uang asing)
+                            </div>
                         }
                     </div>
-
-                    @if (!isHeroCollapsed)
-                    {
-                        <div class="dashboard-hero-meta">
-                            <div class="dashboard-refresh-card">
-                                <span class="dashboard-refresh-label">Last refresh</span>
-                                <strong>@GetLastRefreshLabel()</strong>
-                            </div>
-                            <div class="dashboard-hero-badges">
-                                <span class="dashboard-badge">Bank</span>
-                                <span class="dashboard-badge">Piutang</span>
-                                <span class="dashboard-badge">Hutang</span>
-                                <span class="dashboard-badge">Penjualan</span>
-                            </div>
-                        </div>
-                    }
-                </section>
-
-                <AuthorizeView Roles="Admin, Finance">
-                    <section class="dashboard-kpi-grid">
-            <article class="dashboard-kpi-card dashboard-kpi-primary">
-                <div class="dashboard-kpi-icon"><span class="oi oi-briefcase"></span></div>
-                <div>
-                    <span class="dashboard-kpi-label">Total Saldo Bank</span>
-                    <h2>@totalSaldoBank.ToString("N0")</h2>
-                    <p>@bankList.Count rekening aktif</p>
-                </div>
-            </article>
-
-            <article class="dashboard-kpi-card dashboard-kpi-success">
-                <div class="dashboard-kpi-icon"><span class="oi oi-dollar"></span></div>
-                <div>
-                    <span class="dashboard-kpi-label">Total Piutang</span>
-                    <h2>@totalPiutang.ToString("N0")</h2>
-                    <p>@jumlahDokPiutang dokumen receivable</p>
-                </div>
-            </article>
-
-            <article class="dashboard-kpi-card dashboard-kpi-danger">
-                <div class="dashboard-kpi-icon"><span class="oi oi-credit-card"></span></div>
-                <div>
-                    <span class="dashboard-kpi-label">Total Hutang</span>
-                    <h2>@totalHutangRp.ToString("N0")</h2>
-                    <p>@jumlahDokHutang dokumen payable</p>
-                </div>
-            </article>
-
-            <article class="dashboard-kpi-card dashboard-kpi-neutral">
-                <div class="dashboard-kpi-icon"><span class="oi oi-pulse"></span></div>
-                <div>
-                    <span class="dashboard-kpi-label">Selisih Net</span>
-                    <h2>@((totalPiutang - totalHutangRp).ToString("N0"))</h2>
-                    <p>@(totalPiutang >= totalHutangRp ? "Piutang lebih besar" : "Hutang lebih besar")</p>
-                </div>
-            </article>
-                    </section>
-
-                    <section class="dashboard-analytics-grid">
-            <article class="dashboard-panel-card">
-                <div class="dashboard-panel-header-row">
-                    <h2><span class="oi oi-bar-chart"></span> Aging Piutang</h2>
-                    <a href="/ModulePiutang/AgingPiutangDashboard" class="btn btn-sm btn-outline-primary">Open detail</a>
-                </div>
-                <div class="dashboard-aging-list">
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>Current</span><strong>@arCurrent.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-success" style="width: @(GetPercent(arCurrent, arMax))%;"></div></div>
-                    </div>
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>1 - 30 Hari</span><strong>@ar30.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-info" style="width: @(GetPercent(ar30, arMax))%;"></div></div>
-                    </div>
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>31 - 60 Hari</span><strong>@ar60.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-warning" style="width: @(GetPercent(ar60, arMax))%;"></div></div>
-                    </div>
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>61 - 90 Hari</span><strong>@ar90.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-danger" style="width: @(GetPercent(ar90, arMax))%;"></div></div>
-                    </div>
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>&gt; 90 Hari</span><strong>@arOver.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-dark" style="width: @(GetPercent(arOver, arMax))%;"></div></div>
-                    </div>
-                </div>
-            </article>
-
-            <article class="dashboard-panel-card">
-                <div class="dashboard-panel-header-row">
-                    <h2><span class="oi oi-arrow-circle-bottom"></span> Aging Hutang</h2>
-                    <a href="/ModuleHutang/LaporanAgingHutang" class="btn btn-sm btn-outline-primary">Open detail</a>
-                </div>
-                <div class="dashboard-aging-list">
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>Current</span><strong>@apCurrent.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-success" style="width: @(GetPercent(apCurrent, apMax))%;"></div></div>
-                    </div>
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>1 - 30 Hari</span><strong>@ap30.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-info" style="width: @(GetPercent(ap30, apMax))%;"></div></div>
-                    </div>
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>31 - 60 Hari</span><strong>@ap60.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-warning" style="width: @(GetPercent(ap60, apMax))%;"></div></div>
-                    </div>
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>61 - 90 Hari</span><strong>@ap90.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-danger" style="width: @(GetPercent(ap90, apMax))%;"></div></div>
-                    </div>
-                    <div class="dashboard-aging-item">
-                        <div class="dashboard-aging-label-row"><span>&gt; 90 Hari</span><strong>@apOver.ToString("N0")</strong></div>
-                        <div class="progress dashboard-progress"><div class="progress-bar bg-dark" style="width: @(GetPercent(apOver, apMax))%;"></div></div>
-                    </div>
-                    @if (jumlahDokValas > 0)
-                    {
-                        <div class="dashboard-warning-note">
-                            <span class="oi oi-info"></span> Hutang telah dikonversi ke rupiah untuk @jumlahDokValas dokumen valas.
-                        </div>
-                    }
-                </div>
-            </article>
-
-            <article class="dashboard-panel-card">
-                <div class="dashboard-panel-header-row">
-                    <h2><span class="oi oi-graph"></span> Piutang vs Hutang</h2>
-                    <span class="dashboard-pill">Kurs sudah diperhitungkan</span>
-                </div>
-                <div class="dashboard-aging-item">
-                    <div class="dashboard-aging-label-row"><span>Piutang</span><strong>@totalPiutang.ToString("N0")</strong></div>
-                    <div class="progress dashboard-progress dashboard-progress-lg"><div class="progress-bar bg-success" style="width: @(GetPercent(totalPiutang, Math.Max(totalPiutang, totalHutangRp)))%;">@GetPercent(totalPiutang, Math.Max(totalPiutang, totalHutangRp))%</div></div>
-                </div>
-                <div class="dashboard-aging-item">
-                    <div class="dashboard-aging-label-row"><span>Hutang</span><strong>@totalHutangRp.ToString("N0")</strong></div>
-                    <div class="progress dashboard-progress dashboard-progress-lg"><div class="progress-bar bg-danger" style="width: @(GetPercent(totalHutangRp, Math.Max(totalPiutang, totalHutangRp)))%;">@GetPercent(totalHutangRp, Math.Max(totalPiutang, totalHutangRp))%</div></div>
-                </div>
-                <div class="dashboard-comparison @(totalPiutang >= totalHutangRp ? "dashboard-comparison-positive" : "dashboard-comparison-negative")">
-                    <strong>Selisih: @((totalPiutang - totalHutangRp).ToString("N0"))</strong>
-                    <span class="badge @(totalPiutang >= totalHutangRp ? "bg-success" : "bg-danger")">@(totalPiutang >= totalHutangRp ? "Piutang Lebih Besar" : "Hutang Lebih Besar")</span>
-                </div>
-            </article>
-                    </section>
-
-                    <section class="dashboard-bank-panel dashboard-panel-card">
-            <div class="dashboard-panel-header-row">
-                <div>
-                    <h2><span class="oi oi-spreadsheet"></span> Saldo Per Rekening Bank</h2>
-                    <p class="dashboard-section-note">@bankList.Count rekening aktif dengan total saldo @totalSaldoBank.ToString("N0")</p>
-                </div>
-                <div class="dashboard-panel-actions">
-                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ToggleBankPanelCollapse">
-                        @(isBankPanelCollapsed ? "Tampilkan saldo" : "Sembunyikan saldo")
-                    </button>
-                    <a href="/ModuleBank/LaporanCashBank" class="btn btn-sm btn-outline-primary">View report</a>
                 </div>
             </div>
-            @if (!isBankPanelCollapsed)
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0 dashboard-bank-table">
-                        <thead>
-                            <tr>
-                                <th>Kode Bank</th>
-                                <th>Nama Bank</th>
-                                <th style="text-align:right">Saldo</th>
-                                <th style="width:30%">Proporsi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var bank in bankList)
-                            {
-                                var bankPct = totalSaldoBank != 0 ? Math.Abs(bank.Saldo / totalSaldoBank * 100) : 0;
-                                <tr>
-                                    <td><span class="badge bg-primary">@bank.KodeBank</span></td>
-                                    <td>@bank.NmBank</td>
-                                    <td style="text-align:right"><strong class="@(bank.Saldo >= 0 ? "text-primary" : "text-warning")">@bank.Saldo.ToString("N0")</strong></td>
-                                    <td>
-                                        <div class="progress dashboard-progress dashboard-progress-sm">
-                                            <div class="progress-bar @(bank.Saldo >= 0 ? "bg-primary" : "bg-warning")" style="@($"width:{bankPct:N0}%;")">@bankPct.ToString("N1")%</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="dashboard-collapsed-state dashboard-collapsed-state-compact">
-                    <span class="oi oi-chevron-bottom"></span>
-                    <span>Panel saldo rekening disembunyikan agar quick menu lebih cepat terlihat.</span>
-                </div>
-            }
-                    </section>
 
-                </AuthorizeView>
+            <!-- Piutang vs Hutang Comparison Bar -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100 dashboard-panel">
+                    <div class="card-header bg-white fw-bold dashboard-panel-header">
+                        <span class="oi oi-graph"></span> Perbandingan Piutang vs Hutang
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2"><span class="oi oi-info"></span> Semua nilai dalam Rupiah (hutang valas sudah dikonversi kurs)</p>
+                        @{
+                            var maxVal = Math.Max(totalPiutang, totalHutangRp);
+                            var piutangPct = maxVal > 0 ? (int)(totalPiutang / maxVal * 100) : 0;
+                            var hutangPct = maxVal > 0 ? (int)(totalHutangRp / maxVal * 100) : 0;
+                        }
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="fw-bold text-success">Piutang (Receivable)</span>
+                                <span class="fw-bold">@totalPiutang.ToString("N0")</span>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar bg-success" role="progressbar"
+                                     style="width: @(piutangPct)%;" aria-valuenow="@piutangPct"
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    @(piutangPct)%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="fw-bold text-danger">Hutang (Payable) - Rp</span>
+                                <span class="fw-bold">@totalHutangRp.ToString("N0")</span>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar bg-danger" role="progressbar"
+                                     style="width: @(hutangPct)%;" aria-valuenow="@hutangPct"
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    @(hutangPct)%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 p-2 rounded @(totalPiutang >= totalHutangRp ? "bg-success" : "bg-danger") bg-opacity-10 text-center">
+                            <strong>Selisih: @((totalPiutang - totalHutangRp).ToString("N0"))</strong>
+                            <span class="badge @(totalPiutang >= totalHutangRp ? "bg-success" : "bg-danger") ms-2">
+                                @(totalPiutang >= totalHutangRp ? "Piutang Lebih Besar" : "Hutang Lebih Besar")
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
-        }
+        </div>
+
+        <!-- ROW 3: Bank Detail -->
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm dashboard-panel">
+                    <div class="card-header bg-white fw-bold dashboard-panel-header">
+                        <span class="oi oi-spreadsheet"></span> Saldo Per Rekening Bank
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Kode Bank</th>
+                                        <th>Nama Bank</th>
+                                        <th style="text-align:right">Saldo</th>
+                                        <th style="width:30%">Proporsi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var bank in bankList)
+                                    {
+                                        var bankPct = totalSaldoBank != 0 ? Math.Abs(bank.Saldo / totalSaldoBank * 100) : 0;
+                                        var barColor = bank.Saldo >= 0 ? "bg-primary" : "bg-warning";
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-primary">@bank.KodeBank</span>
+                                            </td>
+                                            <td>@bank.NmBank</td>
+                                            <td style="text-align:right">
+                                                <strong class="@(bank.Saldo >= 0 ? "text-primary" : "text-warning")">
+                                                    @bank.Saldo.ToString("N0")
+                                                </strong>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="height: 18px;">
+                                                    <div class="progress-bar @barColor" role="progressbar"
+                                                         style="width: @((int)bankPct)%;">
+                                                        @bankPct.ToString("N1")%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-primary">
+                                    <tr>
+                                        <td colspan="2"><strong>TOTAL</strong></td>
+                                        <td style="text-align:right"><strong>@totalSaldoBank.ToString("N0")</strong></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 4: Aging Piutang & Hutang -->
+        <div class="row g-3 mb-4">
+            <!-- Aging Piutang -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100 dashboard-panel">
+                    <div class="card-header bg-white fw-bold dashboard-panel-header">
+                        <span class="oi oi-clock"></span> Aging Piutang
+                    </div>
+                    <div class="card-body">
+                        @if (agingPiutang != null && agingPiutang.Count > 0)
+                        {
+                            <div class="aging-bar-group">
+                                @AgingBar("Current", arCurrent, arMax, "bg-success")
+                                @AgingBar("31-60 hari", ar30, arMax, "bg-info")
+                                @AgingBar("61-90 hari", ar60, arMax, "bg-warning")
+                                @AgingBar("91-120 hari", ar90, arMax, "bg-orange")
+                                @AgingBar("> 120 hari", arOver, arMax, "bg-danger")
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center">Tidak ada data aging piutang</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aging Hutang (konversi Rp) -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100 dashboard-panel">
+                    <div class="card-header bg-white fw-bold dashboard-panel-header">
+                        <span class="oi oi-clock"></span> Aging Hutang <small class="text-muted fw-normal">(dalam Rp)</small>
+                    </div>
+                    <div class="card-body">
+                        @if (agingHutang != null && agingHutang.Count > 0)
+                        {
+                            <div class="aging-bar-group">
+                                @AgingBar("Current", apCurrent, apMax, "bg-success")
+                                @AgingBar("31-60 hari", ap30, apMax, "bg-info")
+                                @AgingBar("61-90 hari", ap60, apMax, "bg-warning")
+                                @AgingBar("91-120 hari", ap90, apMax, "bg-orange")
+                                @AgingBar("> 120 hari", apOver, apMax, "bg-danger")
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center">Tidak ada data aging hutang</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 5: Quick Links -->
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm dashboard-panel">
+                    <div class="card-header bg-white fw-bold dashboard-panel-header">
+                        <span class="oi oi-link-intact"></span> Akses Cepat
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-lg-3 col-md-6">
+                                <a href="/ModuleBank/LaporanCashBank" class="btn btn-outline-primary w-100 py-3 quick-link-btn">
+                                    <span class="oi oi-dollar d-block mb-1" style="font-size:1.5rem"></span>
+                                    Laporan Kas Bank
+                                </a>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <a href="/ModulePiutang/LaporanAgingPiutang" class="btn btn-outline-success w-100 py-3 quick-link-btn">
+                                    <span class="oi oi-arrow-circle-top d-block mb-1" style="font-size:1.5rem"></span>
+                                    Aging Piutang
+                                </a>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <a href="/ModuleHutang/LaporanAgingHutang" class="btn btn-outline-danger w-100 py-3 quick-link-btn">
+                                    <span class="oi oi-arrow-circle-bottom d-block mb-1" style="font-size:1.5rem"></span>
+                                    Aging Hutang
+                                </a>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <a href="/ModulePiutang/LaporanPiutang" class="btn btn-outline-warning w-100 py-3 quick-link-btn">
+                                    <span class="oi oi-target d-block mb-1" style="font-size:1.5rem"></span>
+                                    Laporan Piutang
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
-
-    <section class="dashboard-data-section dashboard-panel-card dashboard-lazy-panel">
-        <div class="dashboard-section-header dashboard-section-header-stack">
-            <div>
-                <span class="dashboard-section-kicker">Activity queue</span>
-                <h2>Transaksi operasional</h2>
-                <p class="dashboard-section-note">Bagian ini tampil langsung di halaman utama, terpisah dari dashboard ringkasan.</p>
-            </div>
-            <button type="button" class="btn btn-outline-primary dashboard-toggle-btn" @onclick="ToggleOperationalSectionAsync">
-                @(showOperationalSection ? "Sembunyikan detail" : "Tampilkan detail operasional")
-            </button>
-        </div>
-
-        @if (showOperationalSection)
-        {
-            @if (isOperationalDataLoading)
-            {
-                <div class="dashboard-loading-state">
-                    <span class="oi oi-loop-circular"></span>
-                    <span>Memuat data operasional...</span>
-                </div>
-            }
-            else
-            {
-                <div class="dashboard-section-note-row">
-                    <span class="dashboard-pill">@TransHeader.Count transaksi siap ditinjau</span>
-                    <span class="dashboard-subtle-text">Detail dimuat hanya saat diperlukan.</span>
-                </div>
-
-                <section class="dashboard-data-section">
-                    <div class="dashboard-section-header">
-                        <div>
-                            <span class="dashboard-section-kicker">Activity queue</span>
-                            <h2>Transaksi pengiriman aktif</h2>
-                        </div>
-                    </div>
-
-                    <div class="dashboard-grid-card">
-                        <DataGridVerticalComponent Items="TransHeader"
-                                                   Context="transaksi"
-                                                   GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaCust} {item.Keterangan}")"
-                                                   TotalEnabled=false
-                                                   SearchEnabled=false>
-                            <TableHeader>
-                                <th scope="col" style="width:15%">No Bukti</th>
-                                <th scope="col" style="width:20%">Customer</th>
-                                <th scope="col" style="width:20%">Keterangan</th>
-                                <th scope="col" style="width:40%">Kurir</th>
-                                <th scope="col" style="width:5%"></th>
-                            </TableHeader>
-                            <RowTemplate>
-                                @if (transaksi.Kode != "76")
-                                {
-                                    <td style="width:15%; background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
-                                        @transaksi.NoLpb
-                                        <br />
-                                        <span class="badge bg-primary">@transaksi.Tanggal.ToShortDateString()</span>
-                                        <br />
-                                        <span class="badge bg-success">@transaksi.NoPrj</span>
-                                    </td>
-                                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">@transaksi.NamaCust</td>
-                                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">@transaksi.Keterangan</td>
-                                    <td style="width:40%;text-align:right;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
-                                        <select class="form-control" @bind="transaksi.Kurir" style="width:60%; display:inline">
-                                            <option value="">&nbsp;&nbsp;---Select Kurir---&nbsp;&nbsp;</option>
-                                            @foreach (var item in kurirs)
-                                            {
-                                                <option value="@item.Kurir">[@item.Kurir]&nbsp; @item.NamaKurir</option>
-                                            }
-                                        </select>
-                                        <select class="form-control" @bind="transaksi.Salesman" style="width:60%; display:inline">
-                                            <option value="">&nbsp;&nbsp;---Select Salesman---&nbsp;&nbsp;</option>
-                                            @foreach (var item in salesmans)
-                                            {
-                                                <option value="@item.Salesman">[@item.Salesman]&nbsp; @item.NamaSales</option>
-                                            }
-                                        </select>
-                                    </td>
-                                    <td style="width:5%;background-color:@(transaksi.Jumlah == 0 ? "yellow" : "")">
-                                        <button @onclick="() => OpenDeleteDialog(transaksi)" class="btn btn-danger">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save" viewBox="0 0 16 16">
-                                                <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z" />
-                                            </svg>
-                                        </button>
-                                        <button @onclick="() => OpenPrint(transaksi.OeTransHId)" class="btn btn-info">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
-                                                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
-                                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
-                                            </svg>
-                                        </button>
-                                        <button @onclick="() => OpenDetail3(transaksi.Customer)" class="btn btn-success">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-expand" viewBox="0 0 16 16">
-                                                <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13A.5.5 0 0 1 1 8zM7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708l2-2zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10z" />
-                                            </svg>
-
-                                        </button>
-                                    </td>
-                                }
-                            </RowTemplate>
-                        </DataGridVerticalComponent>
-                    </div>
-                </section>
-
-                <section class="dashboard-data-section">
-                    <div class="dashboard-section-header">
-                        <div>
-                            <span class="dashboard-section-kicker">Sales order</span>
-                            <h2>Order yang belum diproses</h2>
-                        </div>
-                    </div>
-
-                    <div class="dashboard-grid-card">
-                        <DataGridVerticalComponent Items="TransHeader"
-                                                   Context="transaksi"
-                                                   GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaCust} {item.Keterangan}")"
-                                                   TotalEnabled=false
-                                                   SearchEnabled=false>
-                            <TableHeader>
-                                <th scope="col" style="width:15%">No Bukti</th>
-                                <th scope="col" style="width:20%">Customer</th>
-                                <th scope="col" style="width:20%">Keterangan</th>
-                                <th scope="col" style="width:40%">Kurir</th>
-                                <th scope="col" style="width:5%"></th>
-                            </TableHeader>
-                            <RowTemplate>
-                                @if (transaksi.Kode == "76")
-                                {
-                                    <td style="width:15%; background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">
-                                        @transaksi.NoLpb
-                                        <br />
-                                        <span class="badge bg-primary">@transaksi.Tanggal.ToShortDateString()</span>
-                                        <br />
-                                        <span class="badge bg-success">@transaksi.NoPrj</span>
-                                    </td>
-                                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">@transaksi.NamaCust</td>
-                                    <td style="width:20%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">@transaksi.Keterangan</td>
-                                    <td style="width:40%;text-align:right;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")"></td>
-                                    <td style="width:5%;background-color:@(transaksi.Jumlah == 0 ? "lemonchiffon" : "lemonchiffon")">
-                                        <button @onclick="() => OpenPrintOrder(transaksi.OeTransHId)" class="btn btn-info">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
-                                                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
-                                                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
-                                            </svg>
-                                        </button>
-                                    </td>
-                                }
-                            </RowTemplate>
-                        </DataGridVerticalComponent>
-                    </div>
-                </section>
-            }
-        }
-        else
-        {
-            <div class="dashboard-collapsed-state">
-                <span class="oi oi-chevron-bottom"></span>
-                <span>Klik tombol di atas bila perlu melihat transaksi aktif dan sales order.</span>
-            </div>
-        }
-    </section>
-
-    @if (isDashboardView)
-    {
-        <section class="dashboard-shortcuts-section dashboard-panel-card">
-        <div class="dashboard-panel-header-row">
-            <div>
-                <span class="dashboard-section-kicker">Quick access</span>
-                <h2>@(isDashboardView ? "Menu utama per modul" : "Home quick access")</h2>
-                <p class="dashboard-section-note">Index dibuka dalam mode Home. Ringkasan dashboard baru tampil saat tombol Dashboard dipilih.</p>
-            </div>
-        </div>
-
-        <div class="dashboard-shortcuts-grid dashboard-shortcuts-grid-bmapt">
-            <article class="dashboard-shortcut-card dashboard-shortcut-card-stock">
-                <div class="dashboard-shortcut-module-header">
-                    <span class="oi oi-layers dashboard-shortcut-icon"></span>
-                    <div class="dashboard-shortcut-header">
-                        <h3>Inventory</h3>
-                        <p>Akses cepat laporan stock dan persediaan.</p>
-                    </div>
-                </div>
-                <div class="dashboard-shortcut-actions">
-                    <a href="/ModulePersediaan/LaporanCurrentStock" class="btn btn-outline-primary">Laporan Stock</a>
-                    <a href="/ModulePersediaan/LaporanPersediaan" class="btn btn-outline-primary">Laporan Persediaan</a>
-                </div>
-            </article>
-
-            <article class="dashboard-shortcut-card dashboard-shortcut-card-sales">
-                <div class="dashboard-shortcut-module-header">
-                    <span class="oi oi-cart dashboard-shortcut-icon"></span>
-                    <div class="dashboard-shortcut-header">
-                        <h3>Penjualan</h3>
-                        <p>Ringkasan laporan penjualan yang paling sering dipakai.</p>
-                    </div>
-                </div>
-                <div class="dashboard-shortcut-actions">
-                    <a href="/ModuleJual/LaporanPenjualan" class="btn btn-outline-primary">Laporan Penjualan</a>
-                    <a href="/ModuleJual/LaporanJualPerCustomer" class="btn btn-outline-primary">Per Customer</a>
-                    <a href="/ModuleJual/LaporanJualPertahun" class="btn btn-outline-primary">Per Tahun</a>
-                </div>
-            </article>
-
-            <article class="dashboard-shortcut-card dashboard-shortcut-card-order">
-                <div class="dashboard-shortcut-module-header">
-                    <span class="oi oi-list-rich dashboard-shortcut-icon"></span>
-                    <div class="dashboard-shortcut-header">
-                        <h3>Sales Order</h3>
-                        <p>Order penjualan dan pengecekan stok.</p>
-                    </div>
-                </div>
-                <div class="dashboard-shortcut-actions">
-                    <a href="/ModuleJual/TransOrderJual" class="btn btn-outline-primary">Order Penjualan</a>
-                    <a href="/ModuleJual/CekStockSalesOrder" class="btn btn-outline-primary">Cek Stock SO</a>
-                </div>
-            </article>
-
-            <article class="dashboard-shortcut-card dashboard-shortcut-card-bank">
-                <div class="dashboard-shortcut-module-header">
-                    <span class="oi oi-briefcase dashboard-shortcut-icon"></span>
-                    <div class="dashboard-shortcut-header">
-                        <h3>Cash Bank</h3>
-                        <p>Masuk ke laporan saldo dan rekap kas bank.</p>
-                    </div>
-                </div>
-                <div class="dashboard-shortcut-actions">
-                    <a href="/ModuleBank/LaporanCashBank" class="btn btn-outline-primary">Laporan Cash Bank</a>
-                </div>
-            </article>
-
-            <article class="dashboard-shortcut-card dashboard-shortcut-card-ar">
-                <div class="dashboard-shortcut-module-header">
-                    <span class="oi oi-dollar dashboard-shortcut-icon"></span>
-                    <div class="dashboard-shortcut-header">
-                        <h3>Piutang</h3>
-                        <p>Akses aging, laporan piutang, dan forecast.</p>
-                    </div>
-                </div>
-                <div class="dashboard-shortcut-actions">
-                    <a href="/ModulePiutang/AgingPiutangDashboard" class="btn btn-outline-primary">Aging Dashboard</a>
-                    <a href="/ModulePiutang/LaporanPiutang" class="btn btn-outline-primary">Laporan Piutang</a>
-                    <a href="/ModulePiutang/LaporanForecastPiutang" class="btn btn-outline-primary">Forecast Piutang</a>
-                </div>
-            </article>
-
-            <article class="dashboard-shortcut-card dashboard-shortcut-card-ap">
-                <div class="dashboard-shortcut-module-header">
-                    <span class="oi oi-credit-card dashboard-shortcut-icon"></span>
-                    <div class="dashboard-shortcut-header">
-                        <h3>Hutang</h3>
-                        <p>Akses aging dan laporan hutang vendor.</p>
-                    </div>
-                </div>
-                <div class="dashboard-shortcut-actions">
-                    <a href="/ModuleHutang/LaporanAgingHutang" class="btn btn-outline-primary">Aging Hutang</a>
-                    <a href="/ModuleHutang/LaporanHutang" class="btn btn-outline-primary">Laporan Hutang</a>
-                </div>
-            </article>
-
-            <article class="dashboard-shortcut-card dashboard-shortcut-card-purchase">
-                <div class="dashboard-shortcut-module-header">
-                    <span class="oi oi-basket dashboard-shortcut-icon"></span>
-                    <div class="dashboard-shortcut-header">
-                        <h3>Pembelian</h3>
-                        <p>Laporan pembelian dan order currency.</p>
-                    </div>
-                </div>
-                <div class="dashboard-shortcut-actions">
-                    <a href="/ModuleBeli/LaporanPembelian" class="btn btn-outline-primary">Laporan Pembelian</a>
-                    <a href="/ModuleBeli/LaporanOrderCurrency" class="btn btn-outline-primary">Laporan Item/Order</a>
-                </div>
-            </article>
-        </div>
-    </section>
 }
-
-</div>
 
 @if (DetailOpen3)
 {
@@ -711,17 +643,17 @@
     public string textDelete { get; set; } = "Do you want to delete this entry?";
     private List<OeKurir> kurirs = new List<OeKurir>();
     private List<OeSalesman> salesmans = new List<OeSalesman>();
-    private List<CbBank> bankList = new();
-    private List<ArAgingView> agingPiutang = new();
-    private List<ApAgingView> agingHutang = new();
-
-    private List<PoTransH> poTransh = new();
     public List<OeTrans> TransDetail2 = new();
-
-    public bool NullDialogOpen { get; set; }
     public bool DetailOpen3 { get; set; }
 
+    private bool isShowDashboard = false;
+    private bool isDashboardLoading = false;
+    private bool isLoaded = false;
     private DateTime? lastLoadedAt;
+    private bool showTransactionDetail = false;
+    private bool isLoadingTransactions = false;
+
+    private List<CbBank> bankList = new();
     private decimal totalSaldoBank;
     private decimal totalPiutang;
     private decimal totalHutangRp;
@@ -740,37 +672,22 @@
     private decimal ap90;
     private decimal apOver;
     private decimal apMax;
-    private bool isDashboardView;
-    private bool isHeroCollapsed;
-    private bool isBankPanelCollapsed = true;
-    private bool isDashboardSummaryLoaded;
-    private bool isDashboardSummaryLoading;
-    private bool showOperationalSection = true;
-    private bool isOperationalDataLoaded;
-    private bool isOperationalDataLoading;
+
+    private List<ArAgingView> agingPiutang = new();
+    private List<ApAgingView> agingHutang = new();
 
     string currentUri;
+
     protected override async Task OnInitializedAsync()
     {
-        // base.OnInitialized();
         currentUri = navigationmanager.Uri;
-
         LoadCek();
         await Task.CompletedTask;
-
     }
-
 
     private void LoadCek()
     {
-       service.SeedUserRole();
-    }
-
-    void LoadpoTransAktif()
-    {
-
-        poTransh = serviceOrderSales.GetTransHAktif();
-
+        service.SeedUserRole();
     }
 
     public void Dispose()
@@ -778,149 +695,62 @@
         // GC.SuppressFinalize(this);
     }
 
-    private void ToggleHeroCollapse()
+    private async Task ShowDashboardAsync()
     {
-        isHeroCollapsed = !isHeroCollapsed;
-    }
+        isShowDashboard = true;
 
-    private string GetLandingViewButtonClass(bool dashboardView)
-    {
-        return isDashboardView == dashboardView ? "active" : string.Empty;
-    }
-
-    private Task ShowHomeView()
-    {
-        isDashboardView = false;
-        return Task.CompletedTask;
-    }
-
-    private async Task ShowDashboardViewAsync()
-    {
-        isDashboardView = true;
-
-        if (!isDashboardSummaryLoaded)
+        if (!isDashboardLoading)
         {
-            await LoadDashboardSummaryOnDemandAsync();
-        }
-
-        if (!isOperationalDataLoaded)
-        {
-            await LoadOperationalDataAsync();
+            isDashboardLoading = true;
+            try
+            {
+                await LoadDashboardDataAsync();
+            }
+            finally
+            {
+                isDashboardLoading = false;
+            }
         }
     }
 
-    private async Task LoadDashboardSummaryOnDemandAsync()
+    private async Task LoadDashboardDataAsync()
     {
-        if (isDashboardSummaryLoading)
+        await Task.Run(() =>
         {
-            return;
-        }
+            // Load Bank Data
+            bankList = serviceBank.GetBank() ?? new List<CbBank>();
+            totalSaldoBank = bankList.Sum(x => x.Saldo);
 
-        isDashboardSummaryLoading = true;
+            // Load Piutang Data
+            agingPiutang = serviceAR.GetAgingSchedule() ?? new List<ArAgingView>();
+            totalPiutang = agingPiutang.Sum(x => x.Sisa);
+            jumlahDokPiutang = agingPiutang.Count;
 
-        try
-        {
-            await LoadDashboardSummaryAsync();
-            isDashboardSummaryLoaded = true;
-        }
-        finally
-        {
-            isDashboardSummaryLoading = false;
-        }
-    }
+            arCurrent = agingPiutang.Sum(x => x.Jumlah1);
+            ar30 = agingPiutang.Sum(x => x.Jumlah2);
+            ar60 = agingPiutang.Sum(x => x.Jumlah3);
+            ar90 = agingPiutang.Sum(x => x.Jumlah4);
+            arOver = agingPiutang.Sum(x => x.Jumlah5);
+            arMax = new[] { arCurrent, ar30, ar60, ar90, arOver }.DefaultIfEmpty().Max();
 
-    private void ToggleBankPanelCollapse()
-    {
-        isBankPanelCollapsed = !isBankPanelCollapsed;
-    }
+            // Load Hutang Data
+            agingHutang = serviceAP.GetAgingSchedule() ?? new List<ApAgingView>();
+            jumlahDokHutang = agingHutang.Count;
+            jumlahDokValas = agingHutang.Count(x => x.Kurs > 1);
+            totalHutangRp = agingHutang.Sum(x => x.Sisa * KursEfektif(x));
 
-    private async Task ToggleOperationalSectionAsync()
-    {
-        showOperationalSection = !showOperationalSection;
+            apCurrent = agingHutang.Sum(x => x.Jumlah1 * KursEfektif(x));
+            ap30 = agingHutang.Sum(x => x.Jumlah2 * KursEfektif(x));
+            ap60 = agingHutang.Sum(x => x.Jumlah3 * KursEfektif(x));
+            ap90 = agingHutang.Sum(x => x.Jumlah4 * KursEfektif(x));
+            apOver = agingHutang.Sum(x => x.Jumlah5 * KursEfektif(x));
+            apMax = new[] { apCurrent, ap30, ap60, ap90, apOver }.DefaultIfEmpty().Max();
 
-        if (showOperationalSection && !isOperationalDataLoaded)
-        {
-            await LoadOperationalDataAsync();
-        }
-    }
+            lastLoadedAt = DateTime.Now;
+            isLoaded = true;
+        });
 
-    private async Task LoadOperationalDataAsync()
-    {
-        if (isOperationalDataLoading)
-        {
-            return;
-        }
-
-        isOperationalDataLoading = true;
-
-        try
-        {
-            await LoadGetAsync();
-            LoadKurirs();
-            LoadSalesmans();
-            isOperationalDataLoaded = true;
-        }
-        finally
-        {
-            isOperationalDataLoading = false;
-        }
-    }
-
-    private async Task LoadGetAsync()
-    {
-
-        TransHeader = await serviceSales.GetTransKurirAsync();
-        LoadpoTransAktif();
-        foreach (var aktif in poTransh)
-        {
-            TransHeader.Add(
-                new OeTransH()
-                    {
-                        OeTransHId = aktif.PoTransHId,
-                        Tanggal = aktif.Tanggal,
-                        Kode = aktif.Kode,
-                        NoLpb = aktif.NoLpb,
-                        NoPrj = aktif.NoPrj,
-                        Customer = aktif.Vendor,
-                        NamaCust = aktif.NamaVendor,
-                        Keterangan = aktif.Keterangan
-                    }
-            );
-        }
         StateHasChanged();
-    }
-
-    private Task LoadDashboardSummaryAsync()
-    {
-        bankList = serviceBank.GetBank() ?? new List<CbBank>();
-        totalSaldoBank = bankList.Sum(x => x.Saldo);
-
-        agingPiutang = serviceAR.GetAgingSchedule() ?? new List<ArAgingView>();
-        totalPiutang = agingPiutang.Sum(x => x.Sisa);
-        jumlahDokPiutang = agingPiutang.Count;
-
-        arCurrent = agingPiutang.Sum(x => x.Jumlah1);
-        ar30 = agingPiutang.Sum(x => x.Jumlah2);
-        ar60 = agingPiutang.Sum(x => x.Jumlah3);
-        ar90 = agingPiutang.Sum(x => x.Jumlah4);
-        arOver = agingPiutang.Sum(x => x.Jumlah5);
-        arMax = new[] { arCurrent, ar30, ar60, ar90, arOver }.DefaultIfEmpty().Max();
-
-        agingHutang = serviceAP.GetAgingSchedule() ?? new List<ApAgingView>();
-        jumlahDokHutang = agingHutang.Count;
-        jumlahDokValas = agingHutang.Count(x => x.Kurs > 1);
-        totalHutangRp = agingHutang.Sum(x => x.Sisa * KursEfektif(x));
-
-        apCurrent = agingHutang.Sum(x => x.Jumlah1 * KursEfektif(x));
-        ap30 = agingHutang.Sum(x => x.Jumlah2 * KursEfektif(x));
-        ap60 = agingHutang.Sum(x => x.Jumlah3 * KursEfektif(x));
-        ap90 = agingHutang.Sum(x => x.Jumlah4 * KursEfektif(x));
-        apOver = agingHutang.Sum(x => x.Jumlah5 * KursEfektif(x));
-        apMax = new[] { apCurrent, ap30, ap60, ap90, apOver }.DefaultIfEmpty().Max();
-
-        lastLoadedAt = DateTime.Now;
-
-        return Task.CompletedTask;
     }
 
     private static decimal KursEfektif(ApAgingView item)
@@ -928,24 +758,59 @@
         return item.Kurs > 0 ? item.Kurs : 1;
     }
 
-    private string GetLastRefreshLabel()
-    {
-        return lastLoadedAt?.ToString("dd MMM yyyy HH:mm") ?? "Belum dimuat";
-    }
-
     private static int GetPercent(decimal value, decimal max)
     {
         if (max <= 0)
-        {
             return 0;
-        }
-
         return (int)Math.Round((value / max) * 100, MidpointRounding.AwayFromZero);
+    }
+
+    private async Task showTransactionDetailAsync()
+    {
+        showTransactionDetail = !showTransactionDetail;
+
+        if (showTransactionDetail && TransHeader.Count == 0)
+        {
+            isLoadingTransactions = true;
+            try
+            {
+                await LoadGetAsync();
+                LoadKurirs();
+                LoadSalesmans();
+            }
+            finally
+            {
+                isLoadingTransactions = false;
+            }
+        }
+    }
+
+    private async Task LoadGetAsync()
+    {
+        TransHeader = await serviceSales.GetTransKurirAsync();
+        var poTransh = serviceOrderSales.GetTransHAktif();
+
+        foreach (var aktif in poTransh)
+        {
+            TransHeader.Add(
+                new OeTransH()
+                {
+                    OeTransHId = aktif.PoTransHId,
+                    Tanggal = aktif.Tanggal,
+                    Kode = aktif.Kode,
+                    NoLpb = aktif.NoLpb,
+                    NoPrj = aktif.NoPrj,
+                    Customer = aktif.Vendor,
+                    NamaCust = aktif.NamaVendor,
+                    Keterangan = aktif.Keterangan
+                }
+            );
+        }
+        StateHasChanged();
     }
 
     private void OpenPrint(int xKdBank)
     {
-
         navigationmanager.NavigateTo($"/ModulePrinting/PrintSuratJalan/{xKdBank}?prevUri = {Uri.EscapeDataString(currentUri)}");
     }
 
@@ -953,18 +818,13 @@
     {
         if (accepted)
         {
-
             await serviceSales.DelTransH(_bankToDelete.OeTransHId);
-
-
             _bankToDelete = null;
         }
 
         DeleteDialogOpen = false;
         await LoadGetAsync();
-
         StateHasChanged();
-
     }
 
     private void OpenDeleteDialog(OeTransH bank)
@@ -975,24 +835,16 @@
         }
         catch
         {
-
-        };
-
-
-
-        //Console.WriteLine(bank.NoLpb);
-        //Console.WriteLine(bank.Kurir);
-        //System.Console.WriteLine(bank.Keterangan);
+        }
         _ = LoadGetAsync();
         StateHasChanged();
     }
 
     private void LoadKurirs()
     {
-
         kurirs = serviceSales.GetKurir();
-
     }
+
     private void LoadSalesmans()
     {
         salesmans = serviceSales.GetSalesman();
@@ -1000,7 +852,6 @@
 
     private void OpenPrintOrder(int xKdBank)
     {
-
         navigationmanager.NavigateTo($"/ModulePrinting/PrintOrderSales/{xKdBank}");
     }
 
@@ -1008,26 +859,39 @@
     {
         try
         {
-
-
             TransDetail2 = serviceSales.Detail3Index(xKdBank);
             DetailOpen3 = !DetailOpen3;
-            //  navigationmanager.NavigateTo($"/ModuleJual/EditTransJual/{xKdBank}");
             StateHasChanged();
         }
         catch
         {
-
-        };
+        }
     }
 
     private void OnSearchClose(bool accepted)
     {
-
-
         DetailOpen3 = false;
-
         StateHasChanged();
-
     }
+
+    private string GetLastRefreshLabel() => lastLoadedAt?.ToString("dd MMM yyyy HH:mm") ?? "Belum dimuat";
+
+    private RenderFragment AgingBar(string Label, decimal Value, decimal Max, string Color) => __builder =>
+    {
+        var pct = Max > 0 ? (int)(Value / Max * 100) : 0;
+        <div class="mb-2">
+            <div class="d-flex justify-content-between small mb-1">
+                <span>@Label</span>
+                <strong>@Value.ToString("N0")</strong>
+            </div>
+            <div class="progress" style="height: 20px;">
+                <div class="progress-bar @Color" role="progressbar"
+                     style="width: @(pct)%;" aria-valuenow="@pct"
+                     aria-valuemin="0" aria-valuemax="100">
+                </div>
+            </div>
+        </div>
+    };
+
+}
 }
