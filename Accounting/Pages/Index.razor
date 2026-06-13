@@ -178,65 +178,65 @@
     </AuthorizeView>
 </div>
 
-    <!-- Sales & Order Transactions Section -->
-    <section style="margin-top: 30px;">
-        <div style="margin-bottom: 15px;">
-            <h4>Transaksi Penjualan & Sales Order</h4>
-            <button class="btn btn-outline-primary btn-sm" @onclick="() => showTransactionDetailAsync()">
-                @(showTransactionDetail ? "Sembunyikan Detail" : "Tampilkan Detail")
-            </button>
-        </div>
+<!-- Sales & Order Transactions Section -->
+<section style="margin-top: 30px;">
+    <div style="margin-bottom: 15px;">
+        <h4>Transaksi Penjualan & Sales Order</h4>
+        <button class="btn btn-outline-primary btn-sm" @onclick="() => showTransactionDetailAsync()">
+            @(showTransactionDetail ? "Sembunyikan Detail" : "Tampilkan Detail")
+        </button>
+    </div>
 
-        @if (showTransactionDetail)
+    @if (showTransactionDetail)
+    {
+        @if (isLoadingTransactions)
         {
-            @if (isLoadingTransactions)
-            {
-                <div class="alert alert-info">Memuat data transaksi...</div>
-            }
-            else if (TransHeader != null && TransHeader.Count > 0)
-            {
-                <div class="card" style="margin-top: 15px;">
-                    <div class="card-body">
-                        <h5>Daftar Transaksi</h5>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
+            <div class="alert alert-info">Memuat data transaksi...</div>
+        }
+        else if (TransHeader != null && TransHeader.Count > 0)
+        {
+            <div class="card" style="margin-top: 15px;">
+                <div class="card-body">
+                    <h5>Daftar Transaksi</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>No Bukti</th>
+                                    <th>Tanggal</th>
+                                    <th>Customer</th>
+                                    <th>Keterangan</th>
+                                    <th>Tipe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var trans in TransHeader.Take(10))
+                                {
                                     <tr>
-                                        <th>No Bukti</th>
-                                        <th>Tanggal</th>
-                                        <th>Customer</th>
-                                        <th>Keterangan</th>
-                                        <th>Tipe</th>
+                                        <td>@trans.NoLpb</td>
+                                        <td>@trans.Tanggal.ToShortDateString()</td>
+                                        <td>@trans.NamaCust</td>
+                                        <td>@trans.Keterangan</td>
+                                        <td>
+                                            @if (trans.Kode == "76")
+                                            {
+                                                <span class="badge bg-info">Sales Order</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">Penjualan</span>
+                                            }
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var trans in TransHeader.Take(10))
-                                    {
-                                        <tr>
-                                            <td>@trans.NoLpb</td>
-                                            <td>@trans.Tanggal.ToShortDateString()</td>
-                                            <td>@trans.NamaCust</td>
-                                            <td>@trans.Keterangan</td>
-                                            <td>
-                                                @if (trans.Kode == "76")
-                                                {
-                                                    <span class="badge bg-info">Sales Order</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-success">Penjualan</span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                                }
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            }
+            </div>
         }
-    </section>
+    }
+</section>
 }
 else
 {
@@ -893,5 +893,4 @@ else
         </div>
     };
 
-}
 }
