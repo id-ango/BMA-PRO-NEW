@@ -207,6 +207,7 @@
                                     <th>Customer</th>
                                     <th>Keterangan</th>
                                     <th>Tipe</th>
+                                    <th style="width: 200px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -227,6 +228,14 @@
                                                 <span class="badge bg-success">Penjualan</span>
                                             }
                                         </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenAssignKurirDialog(trans)">
+                                                <span class="oi oi-person"></span> Assign Kurir
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenDetail3(trans.NoLpb)">
+                                                <span class="oi oi-layers"></span> Detail
+                                            </button>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -234,6 +243,62 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Form Assign Kurir & Salesman -->
+            @if (selectedTransaction != null)
+            {
+                <div class="card" style="margin-top: 15px; border: 2px solid #007bff;">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <span class="oi oi-pencil"></span> Assign Kurir & Salesman - @selectedTransaction.NoLpb
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Pilih Kurir</label>
+                                    <select class="form-control" @onchange="(e) => selectedTransaction.Kurir = e.Value?.ToString()">
+                                        <option value="">-- Pilih Kurir --</option>
+                                        @foreach (var kurir in kurirs)
+                                        {
+                                            <option value="@kurir.Kurir">@kurir.NamaKurir</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Pilih Salesman</label>
+                                    <select class="form-control" @onchange="(e) => selectedTransaction.Salesman = e.Value?.ToString()">
+                                        <option value="">-- Pilih Salesman --</option>
+                                        @foreach (var salesman in salesmans)
+                                        {
+                                            <option value="@salesman.Salesman">@salesman.NamaSales</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Catatan (Opsional)</label>
+                            <textarea class="form-control" rows="2" @bind="selectedTransaction.Keterangan" placeholder="Tambahkan catatan atau instruksi khusus"></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success" @onclick="() => SaveKurirAndSalesman()">
+                                <span class="oi oi-check"></span> Simpan & Cetak
+                            </button>
+                            <button class="btn btn-outline-secondary" @onclick="() => selectedTransaction = null">
+                                <span class="oi oi-x"></span> Batal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="alert alert-info">Tidak ada transaksi yang perlu diproses.</div>
         }
     }
 </section>
@@ -645,6 +710,7 @@ else
     private List<OeSalesman> salesmans = new List<OeSalesman>();
     public List<OeTrans> TransDetail2 = new();
     public bool DetailOpen3 { get; set; }
+    private OeTransH selectedTransaction = null;
 
     private bool isShowDashboard = false;
     private bool isDashboardLoading = false;
@@ -868,10 +934,38 @@ else
         }
     }
 
-    private void OnSearchClose(bool accepted)
+     private void OnSearchClose(bool accepted)
     {
         DetailOpen3 = false;
         StateHasChanged();
+    }
+
+    private void OpenAssignKurirDialog(OeTransH trans)
+    {
+        selectedTransaction = trans;
+        StateHasChanged();
+    }
+
+    private async Task SaveKurirAndSalesman()
+    {
+        if (selectedTransaction != null)
+        {
+            try
+            {
+                // Save kurir dan salesman ke transaksi
+                serviceSales.SimpanKurir(selectedTransaction);
+
+                // Refresh data dan clear form
+                selectedTransaction = null;
+                await LoadGetAsync();
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving kurir: {ex.Message}");
+            }
+        }
     }
 
     private string GetLastRefreshLabel() => lastLoadedAt?.ToString("dd MMM yyyy HH:mm") ?? "Belum dimuat";
