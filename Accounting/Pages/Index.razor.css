@@ -1086,3 +1086,18 @@
         min-width: 0;
     }
 }
+
+/* Modal Styling */
+:global(.modal-backdrop.fade.show) {
+    display: block !important;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+:global(.modal.fade.show) {
+    display: block !important;
+}
+
+:global(.modal.show) {
+    padding-right: 0 !important;
+}
+

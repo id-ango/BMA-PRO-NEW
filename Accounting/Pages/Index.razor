@@ -921,17 +921,60 @@ else
         navigationmanager.NavigateTo($"/ModulePrinting/PrintOrderSales/{xKdBank}");
     }
 
-    private void OpenDetail3(string xKdBank)
+    private async Task OpenDetail3Async(string xKdBank)
     {
         try
         {
-            TransDetail2 = serviceSales.Detail3Index(xKdBank);
-            DetailOpen3 = !DetailOpen3;
+            if (string.IsNullOrEmpty(xKdBank))
+            {
+                Console.WriteLine("Error: NoLpb is empty");
+                return;
+            }
+
+            Console.WriteLine($"[Detail] Loading detail for NoLpb: {xKdBank}");
+
+            // Load data in background task
+            var details = await Task.Run(() =>
+            {
+                try
+                {
+                    return serviceSales.Detail3Index(xKdBank);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Detail] Service error: {ex.Message}");
+                    return null;
+                }
+            });
+
+            if (details != null)
+            {
+                TransDetail2 = details;
+                Console.WriteLine($"[Detail] Loaded {details.Count} items");
+            }
+            else
+            {
+                TransDetail2 = new List<OeTrans>();
+                Console.WriteLine("[Detail] Service returned null");
+            }
+
+            DetailOpen3 = true;
+            StateHasChanged();
+            Console.WriteLine($"[Detail] Modal state changed. DetailOpen3={DetailOpen3}, Items count={TransDetail2.Count}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Detail] Exception: {ex.Message}");
+            Console.WriteLine($"[Detail] Stack: {ex.StackTrace}");
+            TransDetail2 = new List<OeTrans>();
+            DetailOpen3 = false;
             StateHasChanged();
         }
-        catch
-        {
-        }
+    }
+
+    private void OpenDetail3(string xKdBank)
+    {
+        _ = OpenDetail3Async(xKdBank);
     }
 
      private void OnSearchClose(bool accepted)

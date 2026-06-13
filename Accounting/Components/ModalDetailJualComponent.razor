@@ -2,10 +2,10 @@
 @using System.Collections.Generic
 @using System.Linq
 
+<div class="modal-backdrop fade show" style="display:block; z-index: 1040; position: fixed; top: 0; left: 0; width: 100%; height: 100%;" @onclick="@ModalCancel"></div>
 
-
-<div class="modal fade show" tabindex="-1" role="dialog" style="display:block">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+<div class="modal fade show" tabindex="-1" role="dialog" style="display:block; z-index: 1050; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding: 0; margin: 0; overflow-y: auto;">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document" style="margin: 30px auto; max-height: calc(100vh - 60px); margin-top: 2rem;">
         <div class="modal-content">
 
             <div class="modal-header alert-success">
