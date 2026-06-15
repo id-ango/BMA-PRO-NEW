@@ -274,20 +274,22 @@
             </div>
 
             <!-- Modal Assign Kurir & Salesman -->
-            @if (showAssignKurirModal)
+            @if (showAssignKurirModal && selectedTransaction != null)
             {
-                <div class="modal-backdrop-assign fade show"></div>
-                <div class="modal-assign fade show">
-                    <div class="modal-content-assign">
-                        <div class="modal-header-assign bg-primary text-white">
-                            <h5 class="mb-0">
-                                <span class="oi oi-pencil"></span> Assign Kurir & Salesman
-                            </h5>
-                            <button type="button" class="btn-close-assign" @onclick="() => CloseAssignKurirModal()"></button>
-                        </div>
-                        <div class="modal-body-assign">
-                            @if (selectedTransaction != null)
-                            {
+                <div class="modal-backdrop fade show" style="display:block; z-index: 1040; position: fixed; top: 0; left: 0; width: 100%; height: 100%;" @onclick="() => CloseAssignKurirModal()"></div>
+
+                <div class="modal fade show" tabindex="-1" role="dialog" style="display:block; z-index: 1050; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding: 0; margin: 0; overflow-y: auto;">
+                    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document" style="margin: 30px auto; max-height: calc(100vh - 60px); margin-top: 2rem;">
+                        <div class="modal-content">
+                            <div class="modal-header alert-primary">
+                                <h5 class="modal-title">
+                                    <span class="oi oi-pencil"></span> Assign Kurir & Salesman - @selectedTransaction.NoLpb
+                                </h5>
+                                <button type="button" class="close" aria-label="Close" @onclick="() => CloseAssignKurirModal()">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
                                 <div class="mb-3">
                                     <p class="text-muted"><strong>No Bukti:</strong> @selectedTransaction.NoLpb</p>
                                 </div>
@@ -321,15 +323,15 @@
                                     <label class="form-label fw-bold">Catatan (Opsional)</label>
                                     <textarea class="form-control" rows="2" @bind="selectedTransaction.Keterangan" placeholder="Tambahkan catatan atau instruksi khusus"></textarea>
                                 </div>
-                            }
-                        </div>
-                        <div class="modal-footer-assign">
-                            <button class="btn btn-success" @onclick="() => SaveKurirAndSalesman()">
-                                <span class="oi oi-check"></span> Simpan & Cetak
-                            </button>
-                            <button class="btn btn-outline-secondary" @onclick="() => CloseAssignKurirModal()">
-                                <span class="oi oi-x"></span> Batal
-                            </button>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-success" @onclick="() => SaveKurirAndSalesman()">
+                                    <span class="oi oi-check"></span> Simpan & Cetak
+                                </button>
+                                <button class="btn btn-outline-secondary" @onclick="() => CloseAssignKurirModal()">
+                                    <span class="oi oi-x"></span> Batal
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
