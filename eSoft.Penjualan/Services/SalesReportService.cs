@@ -147,7 +147,7 @@ namespace eSoft.Penjualan.Services
         {
             return (from header in _context.OeTransHs.AsNoTracking()
                     join detail in _context.OeTransDs.AsNoTracking() on header.OeTransHId equals detail.OeTransHId
-                    where header.Customer == xKdHeader
+                    where header.NoLpb == xKdHeader
                     select new OeTrans
                     {
                         ItemCode = detail.ItemCode,
