@@ -2,7 +2,7 @@
 
 ## Development (Lokal)
 
-Connection string untuk development disimpan di `appsettings.Development.json` (tidak di-commit ke git).
+Connection string untuk development disimpan di `appsettings.Development.json` (tidak dikomit ke git).
 
 Buat/edit file `Accounting/appsettings.Development.json` dengan isi:
 
