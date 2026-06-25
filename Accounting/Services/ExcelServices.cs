@@ -734,11 +734,13 @@ namespace Accounting.Services
                 var totalPo = activePurchaseQtyByItem.TryGetValue(item.ItemCode, out var qtyPo2) ? qtyPo2 : 0m;
                 var sisa = item.QtyStock + totalPo - totalDipesan;
                 var kekurangan = sisa < 0 ? Math.Abs(sisa) : 0;
-                var noPi = string.Join(", ", matrix.Rows
-                    .Where(r => r.Cells.Any(c4 => c4.ItemCode == item.ItemCode && c4.IsOrdered))
-                    .Select(r => r.NoPrj)
+                var noPi = string.Join(", ", activePurchaseOrders
+                    .Where(h => !string.IsNullOrWhiteSpace(h.NoPrj) && (h.PoTransDs?.Any(d =>
+                        string.Equals(d.ItemCode, item.ItemCode, StringComparison.OrdinalIgnoreCase)) ?? false))
+                    .Select(h => h.NoPrj)
                     .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Distinct(StringComparer.OrdinalIgnoreCase));
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(x => x));
                 var status = totalDipesan <= item.QtyStock
                     ? "Cukup dari stock"
                     : totalPo >= Math.Max(totalDipesan - item.QtyStock, 0)
