@@ -584,6 +584,13 @@
                 allText = await reader.ReadToEndAsync();
             }
 
+            // Auto-detect statement period date from PT CSV header, e.g. "Periode : 25/06/2026 - 25/06/2026"
+            var detectedDate = DetectStatementDate(allText);
+            if (detectedDate.HasValue)
+            {
+                formModel.Date = detectedDate.Value;
+            }
+
             var lines = allText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
             // Try detect header line for 'Tanggal Transaksi' (Indonesian export)
@@ -756,7 +763,7 @@
 
             return new BankTransactionView
             {
-                Date = rawDate,
+                Date = tanggal.ToString("dd/MM/yyyy"),
                 Description = rawDesc,
                 Branch = rawBranch,
                 Amount = amount,
@@ -771,6 +778,27 @@
             Console.Error.WriteLine($"Error parsing transaction: {ex.Message}");
             return null;
         }
+    }
+
+    private static DateTime? DetectStatementDate(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(text, @"Periode\s*:\s*(?<date>\d{1,2}/\d{1,2}/\d{4})\s*-", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        if (DateTime.TryParseExact(match.Groups["date"].Value, new[] { "dd/MM/yyyy", "d/M/yyyy" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result))
+        {
+            return result.Date;
+        }
+
+        return null;
     }
 
     private static List<string> SplitCsvLine(string line)
