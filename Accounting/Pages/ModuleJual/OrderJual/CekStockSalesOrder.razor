@@ -1,10 +1,12 @@
 @page "/ModuleJual/CekStockSalesOrder"
 @using eSoft.Order.Services
+@using eSoft.Order.Model
 @using eSoft.Order.View
 @using Accounting.Services
 @using System.IO
 
 @inject IOrderSalesServices service
+@inject IOrderPurchaseServices purchaseService
 @inject IExcelServices serviceXL
 @inject IJSRuntime JS
 
@@ -28,6 +30,9 @@
         <div class="col-auto">
             <span class="badge bg-warning text-dark p-2">&#9632; SO Lengkap (semua item ready)</span>
         </div>
+        <div class="col-auto">
+            <span class="badge bg-primary p-2">&#9632; Order Beli Tercatat</span>
+        </div>
         @if (Matrix != null && Matrix.Rows.Any())
         {
             <div class="col-auto ms-3">
@@ -44,7 +49,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bar-chart-line me-1" viewBox="0 0 16 16">
                         <path d="M11 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h1V7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h1V2z"/>
                     </svg>
-                    @(ShowSummary ? "Sembunyikan Summary" : "Lihat Summary Item")
+                    @(ShowSummary ? "Sembunyikan Analisa SO vs PO" : "Lihat Analisa SO vs PO")
                 </button>
             </div>
         }
@@ -116,6 +121,9 @@ else
                                 <div class="text-warning" style="font-size:0.75rem;">@item.NamaItem</div>
                                 <div class="badge bg-info text-dark" style="font-size:0.7rem;">
                                     Stk Awal: @item.QtyStock.ToString("N0") @item.Satuan
+                                </div>
+                                <div class="badge bg-primary text-white" style="font-size:0.7rem; margin-top:0.25rem;">
+                                    PO Rencana: @GetPlannedPurchaseQty(item.ItemCode).ToString("N0")
                                 </div>
                             </th>
                         }
@@ -195,10 +203,10 @@ else
 
     <div class="container-fluid mt-3">
         <div class="card">
-            <div class="card-header"><strong>Ringkasan</strong></div>
+            <div class="card-header"><strong>Ringkasan SO &amp; PO</strong></div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-white bg-primary mb-2">
                             <div class="card-body p-2 text-center">
                                 <h5 class="card-title mb-0">@FilteredRows.Count</h5>
@@ -206,7 +214,7 @@ else
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-dark bg-warning mb-2">
                             <div class="card-body p-2 text-center">
                                 <h5 class="card-title mb-0">@FilteredRows.Count(r => r.IsComplete)</h5>
@@ -214,7 +222,7 @@ else
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-white bg-secondary mb-2">
                             <div class="card-body p-2 text-center">
                                 <h5 class="card-title mb-0">@FilteredRows.Count(r => !r.IsComplete)</h5>
@@ -222,7 +230,7 @@ else
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-white bg-info mb-2">
                             <div class="card-body p-2 text-center">
                                 <h5 class="card-title mb-0">@VisibleHeaders.Count</h5>
@@ -230,6 +238,25 @@ else
                             </div>
                         </div>
                     </div>
+                    <div class="col-md-2">
+                        <div class="card text-white bg-primary mb-2">
+                            <div class="card-body p-2 text-center">
+                                <h5 class="card-title mb-0">@VisibleHeaders.Count(i => GetPlannedPurchaseQty(i.ItemCode) > 0)</h5>
+                                <small>Item Sudah Ada PO</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-dark bg-light mb-2 border">
+                            <div class="card-body p-2 text-center">
+                                <h5 class="card-title mb-0">@VisibleHeaders.Count(i => GetPlannedPurchaseQty(i.ItemCode) == 0)</h5>
+                                <small>Item Belum Ada PO</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-muted mt-2" style="font-size:0.85rem;">
+                    PO dihitung dari order beli yang tercatat di sistem, sehingga user bisa langsung melihat apakah barang untuk SO ini sudah masuk rencana pembelian.
                 </div>
             </div>
         </div>
@@ -239,9 +266,9 @@ else
     {
         <div class="container-fluid mt-3 so-summary-host">
             <div class="card border-info">
-                <div class="card-header bg-info text-white">
-                    <strong>&#128202; Summary Kebutuhan Stock per Item</strong>
-                    <span class="ms-2 text-white-50" style="font-size:0.85rem;">Berdasarkan semua SO aktif (urutan FIFO)</span>
+                <div class="card-header bg-primary text-white">
+                    <strong>&#128202; Analisa Sales Order vs Order Beli per Item</strong>
+                    <span class="ms-2 text-white-50" style="font-size:0.85rem;">Dibandingkan antara kebutuhan SO, stock tersedia, dan PO yang sudah tercatat</span>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-bordered table-sm mb-0" style="font-size:0.875rem;">
@@ -251,23 +278,30 @@ else
                                 <th style="width:10%;">Kode Item</th>
                                 <th style="width:22%;">Nama Item</th>
                                 <th style="width:6%; text-align:center;">Satuan</th>
-                                <th style="width:10%; text-align:center;">Stock Tersedia</th>
-                                <th style="width:12%; text-align:center;">Total Dipesan (SO)</th>
-                                <th style="width:10%; text-align:center;">Sisa Stock</th>
-                                <th style="width:10%; text-align:center;">Kekurangan</th>
-                                <th style="width:17%; text-align:center;">Saran Pemesanan</th>
+                                <th style="width:10%; text-align:center;">Stock</th>
+                                <th style="width:10%; text-align:center;">Total SO</th>
+                                <th style="width:10%; text-align:center;">Total PO</th>
+                                <th style="width:10%; text-align:center;">Proyeksi</th>
+                                <th style="width:20%; text-align:center;">Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             @{ int noUrut = 1; }
                             @foreach (var item in VisibleHeaders)
                             {
-                                var totalDipesan = FilteredRows.SelectMany(r => r.Cells)
-                                    .Where(c => c.ItemCode == item.ItemCode)
-                                    .Sum(c => c.QtyOrder);
-                                var sisa = item.QtyStock - totalDipesan;
-                                var kekurangan = sisa < 0 ? Math.Abs(sisa) : 0;
-                                var rowBg = kekurangan > 0 ? "#f8d7da" : "#d1e7dd";
+                                var totalSo = GetTotalSalesOrderQty(item.ItemCode);
+                                var totalPo = GetPlannedPurchaseQty(item.ItemCode);
+                                var proyeksi = item.QtyStock + totalPo - totalSo;
+                                var kebutuhanTambahanPo = Math.Max(totalSo - item.QtyStock, 0);
+                                var poKurang = Math.Max(kebutuhanTambahanPo - totalPo, 0);
+                                var statusText = totalSo <= item.QtyStock
+                                    ? "Cukup dari stock"
+                                    : totalPo >= kebutuhanTambahanPo
+                                        ? "SO sudah tertutup oleh PO"
+                                        : totalPo > 0
+                                            ? "PO ada, tapi belum cukup"
+                                            : "Belum ada PO";
+                                var rowBg = totalSo <= item.QtyStock ? "#d1e7dd" : totalPo >= kebutuhanTambahanPo ? "#cfe2ff" : "#f8d7da";
 
                                 <tr style="background-color:@rowBg;">
                                     <td>@noUrut</td>
@@ -275,21 +309,31 @@ else
                                     <td>@item.NamaItem</td>
                                     <td style="text-align:center;">@item.Satuan</td>
                                     <td style="text-align:center; font-weight:bold;">@item.QtyStock.ToString("N0")</td>
-                                    <td style="text-align:center;">@totalDipesan.ToString("N0")</td>
-                                    <td style="text-align:center; font-weight:bold; color:@(sisa < 0 ? "#dc3545" : "#198754");">
-                                        @sisa.ToString("N0")
-                                    </td>
-                                    <td style="text-align:center; font-weight:bold; color:@(kekurangan > 0 ? "#dc3545" : "#6c757d");">
-                                        @(kekurangan > 0 ? kekurangan.ToString("N0") : "-")
+                                    <td style="text-align:center;">@totalSo.ToString("N0")</td>
+                                    <td style="text-align:center;">@totalPo.ToString("N0")</td>
+                                    <td style="text-align:center; font-weight:bold; color:@(proyeksi < 0 ? "#dc3545" : "#198754");">
+                                        @proyeksi.ToString("N0")
                                     </td>
                                     <td style="text-align:center;">
-                                        @if (kekurangan > 0)
+                                        @if (totalSo <= item.QtyStock)
                                         {
-                                            <span class="badge bg-danger">&#9888; Perlu pesan min. @kekurangan.ToString("N0") @item.Satuan</span>
+                                            <span class="badge bg-success">&#10003; Cukup dari stock</span>
+                                            <div class="mt-1" style="font-size:0.75rem; color:#198754;">Tidak perlu PO tambahan</div>
+                                        }
+                                        else if (totalPo >= kebutuhanTambahanPo)
+                                        {
+                                            <span class="badge bg-primary">&#10003; Tertutup oleh PO</span>
+                                            <div class="mt-1" style="font-size:0.75rem; color:#0d6efd;">Sisa kebutuhan: 0</div>
+                                        }
+                                        else if (totalPo > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark">&#9888; PO belum cukup</span>
+                                            <div class="mt-1" style="font-size:0.75rem; color:#856404;">Masih kurang @poKurang.ToString("N0") @item.Satuan</div>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-success">&#10003; Cukup</span>
+                                            <span class="badge bg-danger">&#9888; Belum ada PO</span>
+                                            <div class="mt-1" style="font-size:0.75rem; color:#dc3545;">Perlu pesan min. @kebutuhanTambahanPo.ToString("N0") @item.Satuan</div>
                                         }
                                     </td>
                                 </tr>
@@ -303,9 +347,15 @@ else
                                     @VisibleHeaders.Sum(i => i.QtyStock).ToString("N0")
                                 </td>
                                 <td style="text-align:center; font-weight:bold;">
-                                    @VisibleHeaders.Sum(i => FilteredRows.SelectMany(r => r.Cells).Where(c => c.ItemCode == i.ItemCode).Sum(c => c.QtyOrder)).ToString("N0")
+                                    @VisibleHeaders.Sum(i => GetTotalSalesOrderQty(i.ItemCode)).ToString("N0")
                                 </td>
-                                <td colspan="3"></td>
+                                <td style="text-align:center; font-weight:bold;">
+                                    @VisibleHeaders.Sum(i => GetPlannedPurchaseQty(i.ItemCode)).ToString("N0")
+                                </td>
+                                <td style="text-align:center; font-weight:bold;">
+                                    @VisibleHeaders.Sum(i => i.QtyStock + GetPlannedPurchaseQty(i.ItemCode) - GetTotalSalesOrderQty(i.ItemCode)).ToString("N0")
+                                </td>
+                                <td></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -319,6 +369,9 @@ else
 
 @code {
     private SalesOrderStockMatrixView Matrix;
+    private List<PoTransH> PurchaseHeaders = new();
+    private List<PoTransD> PurchaseDetails = new();
+    private Dictionary<string, decimal> PurchaseQtyByItem = new(StringComparer.OrdinalIgnoreCase);
     private bool ShowSummary = false;
     private string SearchText = string.Empty;
     private string StatusFilter = "Semua";
@@ -339,10 +392,35 @@ else
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        Matrix = service.GetSalesOrderStockMatrix();
+        LoadData();
     }
 
     private void ToggleSummary() => ShowSummary = !ShowSummary;
+
+    private void LoadData()
+    {
+        Matrix = service.GetSalesOrderStockMatrix();
+        LoadPurchaseSummary();
+    }
+
+    private void LoadPurchaseSummary()
+    {
+        PurchaseHeaders = purchaseService.GetTransH() ?? new List<PoTransH>();
+
+        var purchaseDocNos = PurchaseHeaders
+            .Where(x => !string.IsNullOrWhiteSpace(x.NoLpb))
+            .Select(x => x.NoLpb)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        PurchaseDetails = purchaseService.GetTransD()
+            .Where(d => d != null && !string.IsNullOrWhiteSpace(d.NoLpb) && purchaseDocNos.Contains(d.NoLpb))
+            .ToList();
+
+        PurchaseQtyByItem = PurchaseDetails
+            .Where(d => !string.IsNullOrWhiteSpace(d.ItemCode))
+            .GroupBy(d => d.ItemCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Qty), StringComparer.OrdinalIgnoreCase);
+    }
 
     private void ResetFilter()
     {
@@ -367,6 +445,29 @@ else
             || row.Cells.Any(c => c.ItemCode == SelectedItemCode && c.IsOrdered);
 
         return matchSearch && matchStatus && matchItem;
+    }
+
+    private decimal GetTotalSalesOrderQty(string itemCode)
+    {
+        if (string.IsNullOrWhiteSpace(itemCode))
+        {
+            return 0;
+        }
+
+        return FilteredRows
+            .SelectMany(r => r.Cells)
+            .Where(c => string.Equals(c.ItemCode, itemCode, StringComparison.OrdinalIgnoreCase) && c.IsOrdered)
+            .Sum(c => c.QtyOrder);
+    }
+
+    private decimal GetPlannedPurchaseQty(string itemCode)
+    {
+        if (string.IsNullOrWhiteSpace(itemCode))
+        {
+            return 0;
+        }
+
+        return PurchaseQtyByItem.TryGetValue(itemCode, out var qty) ? qty : 0;
     }
 
     private IEnumerable<SalesOrderMatrixCell> GetVisibleCells(SalesOrderMatrixRow row)

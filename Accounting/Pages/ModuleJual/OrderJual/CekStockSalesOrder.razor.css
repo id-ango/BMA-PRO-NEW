@@ -85,7 +85,7 @@ thead .so-sticky-col-6 {
 }
 
 .so-summary-host {
-    max-height: 28vh;
+    max-height: 34vh;
     overflow: auto;
     overscroll-behavior: contain;
 }
