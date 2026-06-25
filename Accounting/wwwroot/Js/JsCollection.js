@@ -41,3 +41,16 @@ function drop(ev) {
     var data = ev.dataTransfer.getData("text");
     ev.target.appendChild(document.getElementById(data));
 }
+
+async function showSuccessMessage() {
+    alert("Transaction submission was successful!");
+}
+
+window.BlazorDownloadFile = (filename, contentBase64) => {
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = "data:application/octet-stream;base64," + contentBase64;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};

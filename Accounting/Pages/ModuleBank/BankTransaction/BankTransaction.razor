@@ -6,22 +6,112 @@
 @using eSoft.CashBank.View
 @using eSoft.CashBank.Model
 @using eSoft.CashBank.Services
+@using eSoft.Piutang.Services
+@using eSoft.Hutang.Services
+@using eSoft.Piutang.Model
+@using eSoft.Hutang.Model
 
 @inject ICashBankServices service
 @inject NavigationManager navigationmanager
 @inject IJSRuntime JS
+@inject IReceivableServices receivableService
+@inject IPayableServices payableService
 
 <style>
     .textarea-auto-height {
-        height: 100px;
+        height: 80px;
         width: 100%;
         overflow-y: auto;
-        resize: none;
+        resize: vertical;
     }
 
-    .small-width {
-        width: 270px;
+    .alloc-badge {
+        display: inline-block;
+        font-size: 0.78rem;
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+        border-radius: 12px;
+        padding: 2px 10px;
     }
+
+        .alloc-badge.warn {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffc107;
+        }
+
+        .alloc-badge.over {
+            background: #f8d7da;
+            color: #842029;
+            border-color: #f5c2c7;
+        }
+
+        .alloc-badge.exact {
+            background: #d1e7dd;
+            color: #0a3622;
+            border-color: #a3cfbb;
+        }
+
+    .trx-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+    }
+
+        .trx-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #343a40;
+            color: #fff;
+            padding: 6px 8px;
+            white-space: nowrap;
+        }
+
+        .trx-table tbody td {
+            padding: 6px 8px;
+            vertical-align: top;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+    .trx-main-row:hover > td {
+        background: #f0f4ff;
+    }
+
+    .trx-detail-row > td {
+        background: #f0f7ff !important;
+        border-top: none !important;
+        padding: 10px 14px !important;
+    }
+
+    .dup-row > td {
+        background: #fff3cd !important;
+    }
+
+    .doc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+    }
+
+        .doc-table th {
+            background: #e9ecef;
+            padding: 4px 8px;
+            text-align: left;
+            font-size: 0.75rem;
+            color: #495057;
+        }
+
+        .doc-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: middle;
+        }
+
+        .doc-table tr.selected-doc > td {
+            background: #d4edda;
+        }
 </style>
 
 <div class="top-row px-4" style="z-index:5">
@@ -51,61 +141,284 @@
         <br />
         <div class="form-group">
             <label>Upload CSV:</label>
-            <InputFile OnChange="HandleFileSelected" />
+            <InputFile OnChange="HandleFileSelected" disabled="@isProcessing" />
         </div>
 
         <div class="float-md-right">
-            <button class="btn-success" type="submit">Submit</button>
+            <button class="btn btn-primary" type="submit" disabled="@isProcessing">
+                @if (isProcessing)
+                {
+                    <span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>
+                    <span>Processing...</span>
+                }
+                else
+                {
+                    <span><i class="bi bi-save"></i> Submit</span>
+                }
+            </button>
         </div>
     </EditForm>
 </div>
 
+@* Confirmation modal *@
+@if (showConfirm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.4);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Konfirmasi Simpan</h5>
+                    <button type="button" class="close" @onclick="() => showConfirm = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Anda akan menyimpan <strong>@SelectedCount</strong> transaksi.</p>
+                    @if (!string.IsNullOrEmpty(confirmMessage))
+                    {
+                        <pre style="white-space:pre-wrap;">@confirmMessage</pre>
+                    }
+                    else
+                    {
+                        <p>Apakah anda yakin ingin melanjutkan?</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showConfirm = false" disabled="@isProcessing">Batal</button>
+                    <button class="btn btn-primary" @onclick="ConfirmSave" disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>
+                            <span>Menyimpan...</span>
+                        }
+                        else
+                        {
+                            <span>Simpan</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <div class="container">
+    @if (showErrorDetails && !string.IsNullOrEmpty(lastErrorDetails))
+    {
+        <div class="alert alert-danger alert-dismissible">
+            <button type="button" class="close" aria-label="Close" @onclick="() => { showErrorDetails = false; lastErrorDetails = string.Empty; }">&times;</button>
+            <strong>Error saat menyimpan:</strong>
+            <pre style="white-space:pre-wrap; max-height:360px; overflow:auto;">@lastErrorDetails</pre>
+            <div>
+                <button class="btn btn-sm btn-outline-light" @onclick="CopyLastError">Copy Error</button>
+            </div>
+        </div>
+    }
     @if (transactions != null && transactions.Any())
     {
         <h4>Transaction Data</h4>
-        <button class="btn btn-danger" @onclick="DeleteSelectedTransactions">Delete Selected</button>
-        <DataGridGeneralComponent TItem="BankTransactionView" Items="transactions" PageSize="700" TotalEnabled="false" SearchEnabled="true" GetFilterableText="@(item => $"{item.Date} {item.Description} {item.Branch} {item.Amount:N2} {item.Amount} {item.Type} {item.Balance:N2} {item.Balance} {item.Tanggal:dd/MM/yyyy} {item.SrcCode}")">
-            <TableHeader>
-                <th><input type="checkbox" @onclick="SelectAllCheckboxes" /></th>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Balance</th>
-                <th>Transaction Date</th>
-            </TableHeader>
-            <RowTemplate>
-                <td>
-                    <input type="checkbox" @bind="@context.IsSelected" />
-                </td>
-                <td>@context.Date</td>
-                <td>
-                    <textarea class="form-control textarea-auto-height">@context.Description</textarea>
-                </td>
-                <td>@context.Amount.ToString("N2")</td>
-                <td>@context.Balance.ToString("N2")</td>
-                <td>
-                    <input type="date" @bind="context.Tanggal" class="form-control small-width" />
-                    <select class="form-control" @bind="context.SrcCode" style="width:60%; display:inline">
-                        <option value="">&nbsp;&nbsp;---Select Salesman---&nbsp;&nbsp;</option>
-                        @foreach (var item in SourceCode)
+        @if (parseErrors != null && parseErrors.Any())
+        {
+            <div class="alert alert-warning alert-dismissible mt-2 mb-2" style="font-size:0.88rem;">
+                <button type="button" class="close" @onclick="() => parseErrors.Clear()">&times;</button>
+                <strong>⚠ @parseErrors.Count baris dilewati saat parsing</strong>
+                <pre style="white-space:pre-wrap; max-height:100px; overflow:auto; font-size:0.75rem; margin:4px 0 0 0;">@string.Join("\n", parseErrors)</pre>
+                <button class="btn btn-sm btn-outline-secondary mt-1" @onclick="CopyErrors">Copy Errors</button>
+            </div>
+        }
+        <div class="d-flex flex-wrap gap-1 mb-2">
+            <button class="btn btn-danger btn-sm" @onclick="DeleteSelectedTransactions"><i class="bi bi-trash"></i> Delete Selected</button>
+            <button class="btn btn-secondary btn-sm" @onclick="SelectAllRows"><i class="bi bi-check-all"></i> Select All</button>
+            <button class="btn btn-info btn-sm" @onclick="SelectNonDuplicateRows">Select Non-Duplicates</button>
+            <button class="btn btn-warning btn-sm" @onclick="UncheckDuplicates">Uncheck Duplicates</button>
+            <span class="badge bg-primary align-self-center ms-2">@SelectedCount dipilih</span>
+        </div>
+        <div class="mb-2 d-flex align-items-center gap-2">
+            <input class="form-control form-control-sm" style="max-width:320px;" placeholder="🔍 Cari deskripsi / tipe..." @bind="searchText" @bind:event="oninput" />
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="trx-table">
+                <thead>
+                    <tr>
+                        <th style="width:32px"><input type="checkbox" checked="@selectAll" @onchange="SelectAllChanged" /></th>
+                        <th style="width:80px">Target</th>
+                        <th style="width:68px">Dup</th>
+                        <th style="width:88px">Tanggal</th>
+                        <th>Deskripsi</th>
+                        <th style="width:110px; text-align:right">Jumlah</th>
+                        <th style="width:110px; text-align:right">Saldo</th>
+                        <th style="width:130px">Tgl Transaksi</th>
+                        <th style="width:170px">Source Code</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ctx in FilteredTransactions)
+                    {
+                        <tr class="trx-main-row @(ctx.IsDuplicate ? "dup-row" : "")" @key="ctx">
+                            <td style="padding-top:10px;">
+                                <input type="checkbox" checked="@ctx.IsSelected" @onchange="@(e => ToggleSelection(ctx, e))" />
+                            </td>
+                            <td>
+                                <InputSelect class="form-control form-control-sm" @bind-Value="ctx.Target">
+                                    <option value="CB">CB</option>
+                                    <option value="AP">AP</option>
+                                    <option value="AR">AR</option>
+                                </InputSelect>
+                            </td>
+                            <td style="padding-top:10px;">
+                                @if (ctx.IsDuplicate)
+                                {
+                                    <span class="badge bg-warning text-dark">Duplikat</span>
+                                }
+                            </td>
+                            <td style="padding-top:10px; white-space:nowrap; font-size:0.85rem;">@ctx.Date</td>
+                            <td>
+                                <textarea class="form-control textarea-auto-height" @bind="ctx.Description" @bind:event="oninput"></textarea>
+                            </td>
+                            <td style="padding-top:10px; text-align:right; white-space:nowrap; font-size:0.9rem;">
+                                @{
+                                    var amtStyle = ctx.Amount < 0 ? "color:#dc3545;" : ctx.Amount > 0 ? "color:#198754;" : "";
+                                }
+                                <span style="@amtStyle">@ctx.Amount.ToString("N2")</span>
+                            </td>
+                            <td style="padding-top:10px; text-align:right; white-space:nowrap; font-size:0.9rem;">@ctx.Balance.ToString("N2")</td>
+                            <td>
+                                <input type="date" @bind="ctx.Tanggal" class="form-control form-control-sm" />
+                            </td>
+                            <td>
+                                <InputSelect class="form-control form-control-sm" @bind-Value="ctx.SrcCode">
+                                    <option value="">--- Select SrcCode ---</option>
+                                    @foreach (var item in SourceCode)
+                                    {
+                                        <option value="@item.SrcCode">[@item.SrcCode] @item.NamaSrc</option>
+                                    }
+                                </InputSelect>
+                            </td>
+                        </tr>
+                        @if (ctx.Target == "AR" || ctx.Target == "AP")
                         {
-                            <option value="@item.SrcCode">[@item.SrcCode]&nbsp; @item.NamaSrc</option>
+                            <tr class="trx-detail-row">
+                                <td colspan="9">
+                                    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;">
+                                        @if (ctx.Target == "AR")
+                                        {
+                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Customer</label>
+                                            <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
+                                                    @onchange="@(async (ChangeEventArgs e) => await PartySelectionChanged(ctx, e))">
+                                                <option value="">--- Pilih Customer ---</option>
+                                                @foreach (var c in customers)
+                                                {
+                                                    <option value="@c.Customer">[@c.Customer] @c.NamaCust</option>
+                                                }
+                                            </select>
+                                        }
+                                        else
+                                        {
+                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Supplier</label>
+                                            <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
+                                                    @onchange="@(async (ChangeEventArgs e) => await PartySelectionChanged(ctx, e))">
+                                                <option value="">--- Pilih Supplier ---</option>
+                                                @foreach (var s in suppliers)
+                                                {
+                                                    <option value="@s.Supplier">[@s.Supplier] @s.NamaSup</option>
+                                                }
+                                            </select>
+                                        }
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => AllocateAmount(ctx)">
+                                            <i class="bi bi-lightning-charge"></i> Auto Alokasi
+                                        </button>
+                                        @if (!string.IsNullOrEmpty(ctx.PartyCode))
+                                        {
+                                            var allocDocs = ctx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
+                                            var totalBayar = allocDocs?.Sum(d => d.Bayar * (d.Kurs > 1 ? d.Kurs : 1m)) ?? 0m;
+                                            var totalDiscount = allocDocs?.Sum(d => d.Discount * (d.Kurs > 1 ? d.Kurs : 1m)) ?? 0m;
+                                            var srcAmt = Math.Abs(ctx.Amount);
+                                            var selisih = srcAmt - totalBayar;
+                                            var isShortfall = selisih > 0.01m;
+                                            var isOver = selisih < -0.01m;
+                                            <span class="alloc-badge @(isShortfall ? "warn" : isOver ? "over" : "exact")">
+                                                @(allocDocs?.Count ?? 0) dok | Bayar @totalBayar.ToString("N2") / @srcAmt.ToString("N2") | Disc @totalDiscount.ToString("N2")
+                                                @if (isShortfall)
+                                                {
+                                                    <text> ⚠ Selisih: @selisih.ToString("N2")</text>
+                                                }
+                                                @if (isOver)
+                                                {
+                                                    <text> ❌ Lebih: @((-selisih).ToString("N2"))</text>
+                                                }
+                                                @if (!isShortfall && !isOver)
+                                                {
+                                                    <text> ✓</text>
+                                                }
+                                            </span>
+                                        }
+                                    </div>
+                                    @if (ctx.OutstandingDocs != null && ctx.OutstandingDocs.Any())
+                                    {
+                                        <table class="doc-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:32px"></th>
+                                                    <th>Dokumen</th>
+                                                    <th style="width:90px">Tgl/Due</th>
+                                                    <th style="width:60px">Tipe</th>
+                                                    <th style="width:110px; text-align:right">Sisa</th>
+                                                    @if (ctx.Target == "AP")
+                                                    {
+                                                        <th style="width:130px; text-align:right">Sisa IDR</th>
+                                                    }
+                                                    <th style="width:120px; text-align:right">Bayar</th>
+                                                    <th style="width:120px; text-align:right">Discount</th>
+                                                    <th style="width:140px; text-align:right">Sisa</th>
+                                                    <th style="width:170px">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var d in ctx.OutstandingDocs)
+                                                {
+                                                    <tr class="@(d.IsSelected || d.Bayar > 0 || d.Discount > 0 ? "selected-doc" : "")" @key="d">
+                                                        <td><input type="checkbox" checked="@d.IsSelected" @onchange="@(e => ToggleOutstandingSelected(ctx, d, e))" /></td>
+                                                        <td>
+                                                            <div><strong>@d.Dokumen</strong></div>
+                                                            <div style="font-size:0.78rem; color:#6c757d;">@d.Label</div>
+                                                        </td>
+                                                        <td style="white-space:nowrap; font-size:0.82rem;">@(d.DueDate?.ToString("dd/MM/yy") ?? d.Tanggal.ToString("dd/MM/yy"))</td>
+                                                        <td style="font-size:0.82rem;">@d.KodeTran</td>
+                                                        <td style="text-align:right; font-size:0.82rem;">@d.Sisa.ToString("N2")</td>
+                                                        @if (ctx.Target == "AP")
+                                                        {
+                                                            <td style="text-align:right; font-size:0.82rem; color:#198754;">@d.SisaIDR.ToString("N2")</td>
+                                                        }
+                                                        <td>
+                                                            <InputNumber class="form-control form-control-sm" @bind-Value="d.Bayar" @bind-Value:after="@(() => NormalizeDocAllocation(ctx, d))" step="0.01" />
+                                                        </td>
+                                                        <td>
+                                                            <InputNumber class="form-control form-control-sm" @bind-Value="d.Discount" @bind-Value:after="@(() => NormalizeDocAllocation(ctx, d))" step="0.01" />
+                                                        </td>
+                                                        <td style="text-align:right; font-size:0.8rem; white-space:nowrap;">
+                                                            <div>Dok: @GetDocRemaining(d).ToString("N2")</div>
+                                                            <div style="color:#0d6efd;">Trx: @GetTransactionRemainingIdr(ctx).ToString("N2")</div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="d-flex gap-1">
+                                                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => AllocateToRow(ctx, d, false)">Isi Bayar</button>
+                                                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => AllocateToRow(ctx, d, true)">Isi Disc</button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    }
+                                    else if (!string.IsNullOrEmpty(ctx.PartyCode))
+                                    {
+                                        <div style="color:#888; font-size:0.85rem; padding:4px 0;">Tidak ada dokumen outstanding</div>
+                                    }
+                                </td>
+                            </tr>
                         }
-
-                    </select>
-                   @*  <InputDate @bind-Value="@context.Tanggal" class="form-control small-width" />
-
-                    <InputSelect @bind-Value="@context.SrcCode" class="form-control small-width">
-                        <option value="">--- Select ---</option>
-                        @foreach (var item in SourceCode)
-                        {
-                            <option value="@item.SrcCode">@item.NamaSrc</option>
-                        }
-                    </InputSelect> *@
-                </td>
-            </RowTemplate>
-        </DataGridGeneralComponent>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 </div>
 
@@ -114,11 +427,143 @@
     private List<BankTransactionView> transactions = new();
     private List<CbBank> banks = new();
     private List<CbSrcCode> SourceCode = new();
+    private List<ApSuppl> suppliers = new();
+    private List<ArCust> customers = new();
+    private List<string> parseErrors = new();
+    private bool selectAll = true;
+    private bool isProcessing = false;
+    private bool showConfirm = false;
+    private string confirmMessage = string.Empty;
+    private string lastErrorDetails = string.Empty;
+    private bool showErrorDetails = false;
+
+    private int SelectedCount => transactions?.Count(t => t.IsSelected) ?? 0;
+    private string searchText = string.Empty;
+    private IEnumerable<BankTransactionView> FilteredTransactions =>
+        string.IsNullOrWhiteSpace(searchText)
+            ? transactions
+            : transactions.Where(t => (t.Description ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
+                                   || (t.Type ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase));
+
+    private async Task PartySelectionChanged(BankTransactionView ctx, ChangeEventArgs e)
+    {
+        if (ctx == null) return;
+        ctx.PartyCode = e?.Value?.ToString();
+        if (string.IsNullOrEmpty(ctx.PartyCode)) return;
+        if (ctx.Target == "AP")
+        {
+            await OnSupplierChanged(ctx, e);
+        }
+        else if (ctx.Target == "AR")
+        {
+            await OnCustomerChanged(ctx, e);
+        }
+        StateHasChanged();
+    }
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
         LoadBank();
+        LoadParties();
+    }
+
+    void LoadParties()
+    {
+        try
+        {
+            customers = receivableService.GetCustomer();
+        }
+        catch { customers = new List<ArCust>(); }
+        try
+        {
+            suppliers = payableService.GetSupplier();
+        }
+        catch { suppliers = new List<ApSuppl>(); }
+    }
+
+    private async Task OnCustomerChanged(BankTransactionView ctx, ChangeEventArgs e)
+    {
+        if (ctx == null) return;
+        ctx.OutstandingDocs.Clear();
+        // ensure PartyCode is updated when called from onchange
+        if (e != null)
+        {
+            ctx.PartyCode = e?.Value?.ToString();
+        }
+        if (string.IsNullOrEmpty(ctx.PartyCode)) return;
+        try
+        {
+            var docs = receivableService.Detail1(ctx.PartyCode);
+            if (docs != null)
+            {
+                foreach (var d in docs.Where(x => x.Sisa != 0))
+                {
+                    ctx.OutstandingDocs.Add(new BankTransactionView.OutstandingDocView
+                    {
+                        Dokumen = d.Dokumen,
+                        Tanggal = d.Tanggal,
+                        DueDate = d.DueDate,
+                        KodeTran = d.KodeTran,
+                        Sisa = d.Sisa,
+                        Bayar = 0,
+                        Discount = 0,
+                        IsSelected = false
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading customer docs: {ex.Message}");
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnSupplierChanged(BankTransactionView ctx, ChangeEventArgs e)
+    {
+        if (ctx == null) return;
+        ctx.OutstandingDocs.Clear();
+        if (e != null)
+        {
+            ctx.PartyCode = e?.Value?.ToString();
+        }
+        if (string.IsNullOrEmpty(ctx.PartyCode)) return;
+        try
+        {
+            var docs = payableService.GetAllApHutangBySupplier(ctx.PartyCode, DateTime.Today);
+            if (docs != null)
+            {
+                foreach (var d in docs.Where(x => x.Sisa != 0))
+                {
+                    var kurs = d.Kurs > 1 ? d.Kurs : 1m;
+                    ctx.OutstandingDocs.Add(new BankTransactionView.OutstandingDocView
+                    {
+                        Dokumen = d.Dokumen,
+                        Tanggal = d.Tanggal,
+                        DueDate = d.DueDate,
+                        KodeTran = d.KodeTran,
+                        Kurs = kurs,
+                        Sisa = d.Sisa,
+                        Bayar = 0,
+                        Discount = 0,
+                        IsSelected = false
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading supplier docs: {ex.Message}");
+        }
+        StateHasChanged();
+    }
+
+    private void ToggleOutstandingSelected(BankTransactionView ctx, eSoft.CashBank.View.BankTransactionView.OutstandingDocView doc, ChangeEventArgs e)
+    {
+        if (ctx == null || doc == null) return;
+        doc.IsSelected = e?.Value as bool? ?? false;
+        StateHasChanged();
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
@@ -127,14 +572,118 @@
         var file = e.File;
         try
         {
-            using var reader = new StreamReader(file.OpenReadStream());
-            string line;
-            while ((line = await reader.ReadLineAsync()) != null)
+            // Read all lines first to detect header style
+            var allText = string.Empty;
+            using (var reader = new StreamReader(file.OpenReadStream()))
             {
-                var transaction = ParseTransaction(line);
-                if (transaction != null)
+                allText = await reader.ReadToEndAsync();
+            }
+
+            var lines = allText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+            // Try detect header line for 'Tanggal Transaksi' (Indonesian export)
+            int startIndex = -1;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (lines[i].IndexOf("Tanggal Transaksi", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    lines[i].IndexOf("Tanggal transaksi", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    transactions.Add(transaction);
+                    startIndex = i + 1; // start after header
+                    break;
+                }
+            }
+
+            List<string> dataLines = new();
+
+            if (startIndex >= 0)
+            {
+                // collect lines after header until Saldo Awal or similar
+                for (int i = startIndex; i < lines.Count; i++)
+                {
+                    var l = lines[i].Trim();
+                    if (string.IsNullOrWhiteSpace(l)) continue;
+                    if (l.StartsWith("Saldo Awal", StringComparison.OrdinalIgnoreCase) || l.StartsWith("\"Saldo Awal", StringComparison.OrdinalIgnoreCase))
+                        break;
+                    dataLines.Add(l);
+                }
+            }
+            else
+            {
+                // fallback: many exports have 4 header lines then data
+                if (lines.Count > 4)
+                {
+                    dataLines = lines.Skip(4).ToList();
+                }
+                else
+                {
+                    dataLines = lines;
+                }
+            }
+
+            parseErrors.Clear();
+            int row = startIndex >= 0 ? startIndex + 1 : 5;
+            foreach (var line in dataLines)
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        row++;
+                        continue;
+                    }
+
+                    // skip summary lines
+                    if (line.StartsWith("Starting Balance", StringComparison.OrdinalIgnoreCase)
+                        || line.StartsWith("Credit", StringComparison.OrdinalIgnoreCase)
+                        || line.StartsWith("Debet", StringComparison.OrdinalIgnoreCase)
+                        || line.StartsWith("Ending Balance", StringComparison.OrdinalIgnoreCase))
+                    {
+                        row++;
+                        continue;
+                    }
+
+                    var values = SplitCsvLine(line);
+                    if (values.Count < 5)
+                    {
+                        // not enough columns
+                        var msg = $"Line {row} skipped: columns={values.Count} | Raw: {line}";
+                        Console.Error.WriteLine(msg);
+                        parseErrors.Add(msg);
+                        row++;
+                        continue;
+                    }
+
+                    var transaction = ParseTransaction(values);
+                    if (transaction != null) transactions.Add(transaction);
+                }
+                catch (Exception ex)
+                {
+                    var msg = $"Error processing line {row}: {ex.Message} | Raw: {line}";
+                    Console.Error.WriteLine(msg);
+                    parseErrors.Add(msg);
+                }
+                finally
+                {
+                    row++;
+                }
+            }
+
+            // After parsing, check duplicates if bank selected
+            if (!string.IsNullOrEmpty(formModel.BankName) && transactions.Any())
+            {
+                try
+                {
+                    var flags = await service.CheckDuplicatesAsync(transactions, formModel.BankName);
+                    for (int i = 0; i < transactions.Count && i < flags.Count; i++)
+                    {
+                        transactions[i].IsDuplicate = flags[i];
+                        // auto-uncheck duplicates so user must explicitly re-select if needed
+                        if (flags[i]) transactions[i].IsSelected = false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Error checking duplicates: {ex.Message}");
                 }
             }
         }
@@ -145,67 +694,70 @@
         StateHasChanged();
     }
 
-    private BankTransactionView ParseTransaction(string line)
+    async Task CopyErrors()
+    {
+        if (parseErrors == null || !parseErrors.Any())
+            return;
+
+        var text = string.Join("\r\n", parseErrors);
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
+
+    private BankTransactionView ParseTransaction(IList<string> values)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(line) || line.StartsWith("Starting Balance", StringComparison.OrdinalIgnoreCase))
+            // Normalize fields and handle two common formats:
+            // Format A (6 columns): Date, Description, Branch, Amount, Type, Balance
+            // Format B (5 columns): Date, Description, Branch, AmountWithSuffix(DB/CR), Balance
+
+            string rawDate = CleanField(values.ElementAtOrDefault(0));
+            string rawDesc = CleanField(values.ElementAtOrDefault(1));
+            string rawBranch = CleanField(values.ElementAtOrDefault(2));
+            string rawAmount = values.Count > 3 ? CleanField(values[3]) : string.Empty;
+            string rawType = string.Empty;
+            string rawBalance = string.Empty;
+
+            if (values.Count >= 6)
             {
-                return null;
+                rawType = CleanField(values[4]);
+                rawBalance = CleanField(values[5]);
+            }
+            else if (values.Count == 5)
+            {
+                // amount may include DB/CR suffix
+                rawBalance = CleanField(values[4]);
+                var m = System.Text.RegularExpressions.Regex.Match(rawAmount, "(.*)\\s*(DB|CR)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (m.Success)
+                {
+                    rawAmount = m.Groups[1].Value.Trim();
+                    rawType = m.Groups[2].Value.ToUpper();
+                }
             }
 
-            var values = SplitCsvLine(line)
-                .Select(value => value.Trim().Trim('"'))
-                .ToArray();
+            var amount = ParseDecimalFromString(rawAmount);
+            var balance = ParseDecimalFromString(rawBalance);
 
-            if (values.Length < 5)
+            DateTime tanggal = formModel.Date;
+            if (!string.IsNullOrEmpty(rawDate) && !rawDate.Equals("PEND", StringComparison.OrdinalIgnoreCase))
             {
-                return null;
-            }
-
-            var rawDate = values[0].Trim('\'');
-            if (!DateTime.TryParseExact(rawDate, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime tanggal))
-            {
-                return null;
-            }
-
-            var description = values[1].Trim();
-            var branch = values[2].Trim();
-
-            decimal amount;
-            string type;
-            decimal balance;
-
-            if (values.Length >= 6)
-            {
-                amount = ParseDecimal(values[3]);
-                type = values[4].Trim();
-                balance = ParseDecimal(values[5]);
-            }
-            else
-            {
-                var amountCell = values[3].Trim();
-                type = amountCell.Contains("DB", StringComparison.OrdinalIgnoreCase)
-                    ? "DB"
-                    : amountCell.Contains("CR", StringComparison.OrdinalIgnoreCase)
-                        ? "CR"
-                        : string.Empty;
-
-                amount = ParseDecimal(amountCell.Replace(" DB", string.Empty, StringComparison.OrdinalIgnoreCase)
-                    .Replace(" CR", string.Empty, StringComparison.OrdinalIgnoreCase));
-                balance = ParseDecimal(values[4]);
+                if (!DateTime.TryParseExact(rawDate, new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out tanggal))
+                {
+                    DateTime.TryParse(rawDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out tanggal);
+                }
             }
 
             return new BankTransactionView
-                {
-                    Date = rawDate,
-                    Description = description,
-                    Branch = branch,
-                    Amount = amount,
-                    Type = type,
-                    Balance = balance,
-                    Tanggal = tanggal
-                };
+            {
+                Date = rawDate,
+                Description = rawDesc,
+                Branch = rawBranch,
+                Amount = amount,
+                Type = rawType,
+                Balance = balance,
+                Tanggal = tanggal,
+                IsSelected = true
+            };
         }
         catch (Exception ex)
         {
@@ -214,41 +766,289 @@
         }
     }
 
-    private static decimal ParseDecimal(string value)
-    {
-        return decimal.Parse(value.Replace(",", string.Empty).Trim().Trim('"'), NumberStyles.Any, CultureInfo.InvariantCulture);
-    }
-
     private static List<string> SplitCsvLine(string line)
     {
-        var values = new List<string>();
+        var result = new List<string>();
+        if (line == null) return result;
+
         var current = new System.Text.StringBuilder();
-        var inQuotes = false;
-
-        foreach (var character in line)
+        bool inQuotes = false;
+        for (int i = 0; i < line.Length; i++)
         {
-            if (character == '"')
+            char c = line[i];
+            if (c == '"')
             {
-                inQuotes = !inQuotes;
-                continue;
+                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    // Escaped quote
+                    current.Append('"');
+                    i++; // skip next
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                }
             }
-
-            if (character == ',' && !inQuotes)
+            else if (c == ',' && !inQuotes)
             {
-                values.Add(current.ToString());
+                result.Add(current.ToString());
                 current.Clear();
-                continue;
             }
+            else
+            {
+                current.Append(c);
+            }
+        }
+        result.Add(current.ToString());
+        return result;
+    }
 
-            current.Append(character);
+    private static string CleanField(string s)
+    {
+        if (s == null) return string.Empty;
+        return s.Trim().Trim('"').Trim();
+    }
+
+    private static decimal ParseDecimalFromString(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return 0m;
+        s = s.Trim();
+
+        bool negative = false;
+        if (s.StartsWith("(") && s.EndsWith(")"))
+        {
+            negative = true;
+            s = s.Substring(1, s.Length - 2);
         }
 
-        values.Add(current.ToString());
-        return values;
+        // remove any non-digit, non-separator characters except - and , and .
+        s = System.Text.RegularExpressions.Regex.Replace(s, "[^0-9,\\.-]", "");
+
+        int lastDot = s.LastIndexOf('.');
+        int lastComma = s.LastIndexOf(',');
+        char? decimalSep = null;
+        if (lastDot >= 0 && lastComma >= 0)
+        {
+            decimalSep = lastDot > lastComma ? '.' : ',';
+        }
+        else if (lastDot >= 0) decimalSep = '.';
+        else if (lastComma >= 0) decimalSep = ',';
+
+        if (decimalSep.HasValue)
+        {
+            char ds = decimalSep.Value;
+            // remove thousand separators (the other char)
+            if (ds == '.') s = s.Replace(",", string.Empty);
+            else s = s.Replace(".", string.Empty);
+            // normalize decimal separator to dot
+            if (ds == ',') s = s.Replace(',', '.');
+        }
+        else
+        {
+            // no separators, leave as is
+        }
+
+        if (!decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal result))
+        {
+            result = 0m;
+        }
+        if (negative) result = -result;
+        return result;
     }
 
     private async Task HandleValidSubmit()
     {
+        // validate selection and show confirmation modal
+        if (transactions == null || !transactions.Any(t => t.IsSelected))
+        {
+            await JS.InvokeVoidAsync("alert", "Tidak ada transaksi yang dipilih untuk disimpan.");
+            return;
+        }
+
+        var (ok, msg) = ValidateSelections();
+        if (!ok)
+        {
+            await JS.InvokeVoidAsync("alert", msg);
+            return;
+        }
+
+        confirmMessage = string.Empty;
+        showConfirm = true;
+    }
+
+    private (bool, string) ValidateSelections()
+    {
+        if (transactions == null) return (true, string.Empty);
+        foreach (var t in transactions.Where(x => x.IsSelected))
+        {
+            if (t.Target != null && (t.Target.Equals("AR", StringComparison.OrdinalIgnoreCase) || t.Target.Equals("AP", StringComparison.OrdinalIgnoreCase)))
+            {
+                if (string.IsNullOrWhiteSpace(t.PartyCode))
+                    return (false, $"Baris dengan deskripsi '{t.Description}' membutuhkan Customer/Supplier pilihan.");
+
+                var sel = t.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
+                if (sel == null || !sel.Any())
+                    return (false, $"Baris dengan deskripsi '{t.Description}' harus memiliki minimal satu dokumen outstanding yang dipilih atau diisi Bayar/Discount.");
+
+                foreach (var d in sel)
+                {
+                    if (d.Bayar <= 0 && d.Discount <= 0)
+                        return (false, $"Dokumen {d.Dokumen} pada baris '{t.Description}' harus memiliki nilai Bayar atau Discount lebih besar dari 0.");
+
+                    if (d.Bayar + d.Discount > d.Sisa + 0.01m)
+                        return (false, $"Dokumen {d.Dokumen} pada baris '{t.Description}' melebihi sisa invoice ({d.Sisa:N2}). Kurangi Bayar/Discount.");
+                }
+                // convert to IDR for comparison against bank amount (handles foreign-currency AP docs)
+                var kursMap = sel.ToDictionary(d => d, d => d.Kurs > 1 ? d.Kurs : 1m);
+                var totalBayarIDR = sel.Sum(d => d.Bayar * kursMap[d]);
+                var sourceAmt = Math.Abs(t.Amount);
+                if (totalBayarIDR > sourceAmt + 0.01m)
+                    return (false, $"Total Bayar ({totalBayarIDR:N2}) melebihi jumlah transaksi ({sourceAmt:N2}) pada baris '{t.Description}'. Kurangi nilai Bayar.");
+                if (totalBayarIDR < sourceAmt - 0.01m)
+                {
+                    var selisih = sourceAmt - totalBayarIDR;
+                    return (false, $"Total Bayar ({totalBayarIDR:N2}) kurang dari jumlah transaksi ({sourceAmt:N2}) pada baris '{t.Description}'. Selisih {selisih:N2} belum dialokasikan. Tambah dokumen, sesuaikan Bayar, atau ubah Target ke CB.");
+                }
+            }
+        }
+        return (true, string.Empty);
+    }
+
+    private void AllocateAmount(BankTransactionView ctx)
+    {
+        if (ctx == null || ctx.OutstandingDocs == null || !ctx.OutstandingDocs.Any()) return;
+
+        // available amount from bank statement (IDR)
+        decimal remaining = Math.Abs(ctx.Amount);
+
+        // reset previous allocations
+        foreach (var d in ctx.OutstandingDocs)
+        {
+            d.Bayar = 0;
+            d.Discount = 0;
+            d.IsSelected = false;
+        }
+
+        // allocate in order of due date then tanggal
+        // for AP docs in foreign currency, compare SisaIDR (Sisa*Kurs) with remaining IDR
+        foreach (var d in ctx.OutstandingDocs.OrderBy(x => x.DueDate ?? x.Tanggal))
+        {
+            if (remaining <= 0) break;
+            var kurs = d.Kurs > 1 ? d.Kurs : 1m;
+            var sisaIDR = d.Sisa * kurs;
+            var canIDR = Math.Min(sisaIDR, remaining);
+            if (canIDR > 0)
+            {
+                // Bayar stored in original currency so payment service updates ApHutang correctly
+                d.Bayar = Math.Round(canIDR / kurs, 4);
+                d.IsSelected = true;
+                remaining -= canIDR;
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private static decimal GetKursFactor(BankTransactionView.OutstandingDocView doc)
+    {
+        if (doc == null) return 1m;
+        return doc.Kurs > 1 ? doc.Kurs : 1m;
+    }
+
+    private static decimal GetDocRemaining(BankTransactionView.OutstandingDocView doc)
+    {
+        if (doc == null) return 0m;
+        return Math.Max(0m, doc.Sisa - (doc.Bayar + doc.Discount));
+    }
+
+    private decimal GetTransactionAllocatedIdr(BankTransactionView ctx)
+    {
+        if (ctx?.OutstandingDocs == null) return 0m;
+        return ctx.OutstandingDocs.Sum(d => d.Bayar * GetKursFactor(d));
+    }
+
+    private decimal GetTransactionRemainingIdr(BankTransactionView ctx)
+    {
+        if (ctx == null) return 0m;
+        var sourceAmt = Math.Abs(ctx.Amount);
+        var allocated = GetTransactionAllocatedIdr(ctx);
+        return Math.Max(0m, sourceAmt - allocated);
+    }
+
+    private void NormalizeDocAllocation(BankTransactionView ctx, BankTransactionView.OutstandingDocView doc)
+    {
+        if (ctx == null || doc == null) return;
+
+        if (doc.Bayar < 0) doc.Bayar = 0;
+        if (doc.Discount < 0) doc.Discount = 0;
+
+        var maxDoc = Math.Max(0m, doc.Sisa);
+        if (doc.Bayar > maxDoc)
+        {
+            doc.Bayar = maxDoc;
+            doc.Discount = 0;
+        }
+        else if (doc.Bayar + doc.Discount > maxDoc)
+        {
+            doc.Discount = Math.Max(0m, maxDoc - doc.Bayar);
+        }
+
+        var sourceAmt = Math.Abs(ctx.Amount);
+        var totalBayarIdr = GetTransactionAllocatedIdr(ctx);
+        if (totalBayarIdr > sourceAmt)
+        {
+            var overIdr = totalBayarIdr - sourceAmt;
+            var kurs = GetKursFactor(doc);
+            var reduceBy = overIdr / kurs;
+
+            doc.Bayar = Math.Max(0m, doc.Bayar - reduceBy);
+        }
+
+        if (doc.Bayar > 0 || doc.Discount > 0)
+        {
+            doc.IsSelected = true;
+        }
+    }
+
+    private void AllocateToRow(BankTransactionView ctx, BankTransactionView.OutstandingDocView doc, bool toDiscount)
+    {
+        if (ctx == null || doc == null) return;
+
+        NormalizeDocAllocation(ctx, doc);
+
+        var kurs = GetKursFactor(doc);
+        var remainingTrxIdr = GetTransactionRemainingIdr(ctx);
+        var docRemainingIdr = GetDocRemaining(doc) * kurs;
+        var allocateIdr = toDiscount ? docRemainingIdr : Math.Min(remainingTrxIdr, docRemainingIdr);
+
+        if (allocateIdr <= 0) return;
+
+        var addAmount = Math.Round(allocateIdr / kurs, 4);
+        if (toDiscount)
+        {
+            doc.Discount += addAmount;
+        }
+        else
+        {
+            doc.Bayar += addAmount;
+        }
+
+        doc.IsSelected = true;
+        NormalizeDocAllocation(ctx, doc);
+        StateHasChanged();
+    }
+
+    private async Task ConfirmSave()
+    {
+        showConfirm = false;
+        await DoSaveAsync();
+    }
+
+    private async Task DoSaveAsync()
+    {
+        isProcessing = true;
+        StateHasChanged();
+
         try
         {
             await service.SaveTransactionsAsync(transactions, formModel.Date, formModel.BankName, "X1", "Y1");
@@ -258,9 +1058,24 @@
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error saving transactions: {ex.Message}");
+            // store full exception text so user can see stacktrace in UI
+            Console.Error.WriteLine($"Error saving transactions: {ex}");
+            lastErrorDetails = ex.ToString();
+            showErrorDetails = true;
+            parseErrors.Add($"Error saving: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", "Terjadi kesalahan saat menyimpan. Periksa pesan error.");
         }
-        StateHasChanged();
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopyLastError()
+    {
+        if (string.IsNullOrEmpty(lastErrorDetails)) return;
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", lastErrorDetails);
     }
 
     void LoadBank()
@@ -271,7 +1086,49 @@
 
     private void DeleteSelectedTransactions() => transactions.RemoveAll(t => t.IsSelected);
 
-    private void SelectAllCheckboxes() => transactions.ForEach(t => t.IsSelected = !transactions.All(x => x.IsSelected));
+    private void UncheckDuplicates()
+    {
+        if (transactions == null) return;
+        foreach (var t in transactions.Where(t => t.IsDuplicate))
+            t.IsSelected = false;
+
+        selectAll = transactions.All(x => x.IsSelected);
+        StateHasChanged();
+    }
+
+    private void SelectAllRows()
+    {
+        if (transactions == null) return;
+        foreach (var t in transactions)
+            t.IsSelected = true;
+        selectAll = true;
+        StateHasChanged();
+    }
+
+    private void SelectNonDuplicateRows()
+    {
+        if (transactions == null) return;
+        foreach (var t in transactions)
+            t.IsSelected = !t.IsDuplicate;
+        selectAll = transactions.All(x => x.IsSelected);
+        StateHasChanged();
+    }
+
+    private void SelectAllChanged(ChangeEventArgs e)
+    {
+        if (transactions == null) return;
+        selectAll = e?.Value as bool? ?? false;
+        foreach (var t in transactions)
+            t.IsSelected = selectAll;
+    }
+
+    private void ToggleSelection(BankTransactionView item, ChangeEventArgs e)
+    {
+        if (item == null || transactions == null) return;
+
+        item.IsSelected = e?.Value as bool? ?? false;
+        selectAll = transactions.All(x => x.IsSelected);
+    }
 
     public class BankTransactionFormModel
     {

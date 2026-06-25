@@ -45,6 +45,7 @@ namespace eSoft.Hutang.Services
         List<ApHutang> Detail1(string xKdHeader);
         List<ApAgingView> GetAgingSchedule();
         Task ProsesHutang();
+        List<ApHutang> GetAllApHutangBySupplier(string supplier, DateTime sampaiTanggal);
 
     }
 }

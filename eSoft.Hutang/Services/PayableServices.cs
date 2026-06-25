@@ -855,5 +855,15 @@ namespace eSoft.Hutang.Services
         }
 
         #endregion
+
+        public List<ApHutang> GetAllApHutangBySupplier(string supplier, DateTime sampaiTanggal)
+        {
+            return _context.ApHutangs
+                .Where(x => x.Supplier == supplier && x.Tanggal.Date <= sampaiTanggal.Date)
+                .OrderBy(x => x.Tanggal)
+                .ThenBy(x => x.Kode)
+                .ToList();
+        }
+
     }
 }

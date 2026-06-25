@@ -28,6 +28,32 @@ namespace eSoft.CashBank.Services
            return _context.CbBanks.OrderBy(x =>x.KodeBank).ToList();
         }
 
+        // Reflection helper removed from here and declared at namespace level below.
+
+        // Check duplicates: return list of booleans corresponding to samples order.
+        public async Task<List<bool>> CheckDuplicatesAsync(List<BankTransactionView> samples, string kodeBank)
+        {
+            var result = new List<bool>();
+            if (samples == null || !samples.Any()) return result;
+
+            foreach (var s in samples)
+            {
+                var date = s.Tanggal.Date;
+                var amt = Math.Abs(s.Amount);
+                var desc = (s.Description ?? string.Empty).Trim();
+
+                var exists = await _context.CbTransHs
+                    .Include(h => h.CbTransDs)
+                    .Where(h => h.KodeBank == kodeBank && h.Tanggal.Date == date)
+                    .SelectMany(h => h.CbTransDs)
+                    .AnyAsync(d => Math.Abs(d.Jumlah) == amt || (d.Keterangan != null && d.Keterangan.Contains(desc)));
+
+                result.Add(exists);
+            }
+
+            return result;
+        }
+
         public CbBank GetBankId(int id)
         {
             return _context.CbBanks.Where(x => x.CbBankId == id).FirstOrDefault();
