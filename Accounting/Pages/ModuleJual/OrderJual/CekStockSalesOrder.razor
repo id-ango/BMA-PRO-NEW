@@ -483,11 +483,14 @@ else
             return string.Empty;
         }
 
-        var noPiList = Matrix?.Rows
-            .Where(row => row.Cells.Any(c => string.Equals(c.ItemCode, itemCode, StringComparison.OrdinalIgnoreCase) && c.IsOrdered))
-            .Select(row => row.NoPrj)
+        var noPiList = PurchaseHeaders
+            .Where(h => !string.IsNullOrWhiteSpace(h.NoPrj) && PurchaseDetails.Any(d =>
+                string.Equals(d.ItemCode, itemCode, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(d.NoLpb, h.NoLpb, StringComparison.OrdinalIgnoreCase)))
+            .Select(h => h.NoPrj)
             .Where(noPi => !string.IsNullOrWhiteSpace(noPi))
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x)
             .ToList();
 
         return noPiList == null || noPiList.Count == 0 ? string.Empty : string.Join(", ", noPiList);
