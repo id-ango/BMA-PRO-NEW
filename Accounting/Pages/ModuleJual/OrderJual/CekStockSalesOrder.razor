@@ -268,7 +268,7 @@ else
             <div class="card border-info">
                 <div class="card-header bg-primary text-white">
                     <strong>&#128202; Analisa Sales Order vs Order Beli per Item</strong>
-                    <span class="ms-2 text-white-50" style="font-size:0.85rem;">Dibandingkan antara kebutuhan SO, stock tersedia, dan PO yang sudah tercatat</span>
+                    <span class="ms-2 text-white-50" style="font-size:0.85rem;">Dibandingkan antara kebutuhan SO, stock tersedia, dan PO aktif yang masih open</span>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-bordered table-sm mb-0" style="font-size:0.875rem;">
@@ -405,7 +405,7 @@ else
 
     private void LoadPurchaseSummary()
     {
-        PurchaseHeaders = purchaseService.GetTransH() ?? new List<PoTransH>();
+        PurchaseHeaders = purchaseService.GetTransHAktif() ?? new List<PoTransH>();
 
         var purchaseDocNos = PurchaseHeaders
             .Where(x => !string.IsNullOrWhiteSpace(x.NoLpb))
