@@ -232,7 +232,7 @@
             <span class="badge bg-primary align-self-center ms-2">@SelectedCount dipilih</span>
         </div>
         <div class="mb-2 d-flex align-items-center gap-2">
-            <input class="form-control form-control-sm" style="max-width:320px;" placeholder="🔍 Cari deskripsi / tipe / no PI..." @bind="searchText" @bind:event="oninput" />
+            <input class="form-control form-control-sm" style="max-width:320px;" placeholder="🔍 Cari deskripsi / tipe..." @bind="searchText" @bind:event="oninput" />
         </div>
         <div style="overflow-x:auto;">
             <table class="trx-table">
@@ -243,7 +243,6 @@
                         <th style="width:68px">Dup</th>
                         <th style="width:88px">Tanggal</th>
                         <th>Deskripsi</th>
-                        <th style="width:120px">No PI</th>
                         <th style="width:110px; text-align:right">Jumlah</th>
                         <th style="width:110px; text-align:right">Saldo</th>
                         <th style="width:130px">Tgl Transaksi</th>
@@ -274,9 +273,6 @@
                             <td>
                                 <textarea class="form-control textarea-auto-height" @bind="ctx.Description" @bind:event="oninput"></textarea>
                             </td>
-                            <td>
-                                <input class="form-control form-control-sm" @bind="ctx.NoPrj" placeholder="No PI" />
-                            </td>
                             <td style="padding-top:10px; text-align:right; white-space:nowrap; font-size:0.9rem;">
                                 @{
                                     var amtStyle = ctx.Amount < 0 ? "color:#dc3545;" : ctx.Amount > 0 ? "color:#198754;" : "";
@@ -300,7 +296,7 @@
                         @if (ctx.Target == "AR" || ctx.Target == "AP")
                         {
                             <tr class="trx-detail-row">
-                                <td colspan="10">
+                                <td colspan="9">
                                     <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;">
                                         @if (ctx.Target == "AR")
                                         {
