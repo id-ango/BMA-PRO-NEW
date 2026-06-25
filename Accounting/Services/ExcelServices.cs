@@ -8,6 +8,7 @@ using eSoft.Hutang.Model;
 using eSoft.Hutang.Services;
 using eSoft.Hutang.View;
 using eSoft.Order.Model;
+using eSoft.Order.Services;
 using eSoft.Order.View;
 using eSoft.Penjualan.Data;
 using eSoft.Penjualan.Model;
@@ -29,10 +30,12 @@ namespace Accounting.Services
     public class ExcelServices : IExcelServices
     {
         private readonly DbContextJual _context;
+        private readonly IOrderPurchaseServices _purchaseService;
 
-        public ExcelServices(DbContextJual context)
+        public ExcelServices(DbContextJual context, IOrderPurchaseServices purchaseService)
         {
             _context = context;
+            _purchaseService = purchaseService;
         }
 
         public string GetCSV(IEnumerable<OeTransD> list)
@@ -585,6 +588,13 @@ namespace Accounting.Services
         public byte[] CreateSalesOrderStockExcel(SalesOrderStockMatrixView matrix)
         {
             var workbook = new XLWorkbook();
+            var activePurchaseOrders = _purchaseService.GetTransHAktif() ?? new List<PoTransH>();
+
+            var activePurchaseQtyByItem = activePurchaseOrders
+                .SelectMany(x => x.PoTransDs ?? new List<PoTransD>())
+                .Where(x => !string.IsNullOrWhiteSpace(x.ItemCode))
+                .GroupBy(x => x.ItemCode, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Qty), StringComparer.OrdinalIgnoreCase);
 
             // ── Sheet 1: Matrix SO vs Item ──────────────────────────────────────
             var wsMatrix = workbook.Worksheets.Add("Matrix SO vs Item");
@@ -615,7 +625,8 @@ namespace Accounting.Services
             foreach (var item in matrix.ItemHeaders)
             {
                 var c = wsMatrix.Cell(1, col);
-                c.Value = $"{item.ItemCode}\n{item.NamaItem}\nStk Awal: {item.QtyStock:N0} {item.Satuan}";
+                var poQty = activePurchaseQtyByItem.TryGetValue(item.ItemCode, out var qtyPo) ? qtyPo : 0m;
+                c.Value = $"{item.ItemCode}\n{item.NamaItem}\nStk Awal: {item.QtyStock:N0} {item.Satuan}\nPO Aktif: {poQty:N0}";
                 c.Style.Font.Bold = true;
                 c.Style.Font.FontColor = XLColor.White;
                 c.Style.Fill.BackgroundColor = headerFill;
@@ -681,9 +692,10 @@ namespace Accounting.Services
                 var totalOrder = matrix.Rows.SelectMany(r => r.Cells)
                     .Where(c3 => c3.ItemCode == item.ItemCode)
                     .Sum(c3 => c3.QtyOrder);
-                var sisaAkhir = item.QtyStock - totalOrder;
+                var totalPo = activePurchaseQtyByItem.TryGetValue(item.ItemCode, out var qtyPo) ? qtyPo : 0m;
+                var sisaAkhir = item.QtyStock + totalPo - totalOrder;
                 var xlCell = wsMatrix.Cell(row, footerCol);
-                xlCell.Value = $"Order: {totalOrder:N0}\nSisa: {sisaAkhir:N0}";
+                xlCell.Value = $"Order: {totalOrder:N0}\nPO: {totalPo:N0}\nSisa: {sisaAkhir:N0}";
                 xlCell.Style.Font.Bold = true;
                 xlCell.Style.Alignment.WrapText = true;
                 xlCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -701,7 +713,7 @@ namespace Accounting.Services
             // ── Sheet 2: Summary per Item ────────────────────────────────────────
             var wsSummary = workbook.Worksheets.Add("Summary Kebutuhan Item");
 
-            string[] summaryHeaders = { "No", "Kode Item", "Nama Item", "Satuan", "Stock Tersedia", "Total Dipesan (SO)", "Sisa Stock", "Kekurangan", "Saran Pesan" };
+            string[] summaryHeaders = { "No", "Kode Item", "Nama Item", "Satuan", "Stock Tersedia", "Total Dipesan (SO)", "PO Aktif", "Sisa/Proyeksi", "Status", "Saran Pesan", "Keterangan No PI" };
             for (int i = 0; i < summaryHeaders.Length; i++)
             {
                 var c = wsSummary.Cell(1, i + 1);
@@ -719,8 +731,21 @@ namespace Accounting.Services
                 var totalDipesan = matrix.Rows.SelectMany(r => r.Cells)
                     .Where(c4 => c4.ItemCode == item.ItemCode)
                     .Sum(c4 => c4.QtyOrder);
-                var sisa = item.QtyStock - totalDipesan;
+                var totalPo = activePurchaseQtyByItem.TryGetValue(item.ItemCode, out var qtyPo2) ? qtyPo2 : 0m;
+                var sisa = item.QtyStock + totalPo - totalDipesan;
                 var kekurangan = sisa < 0 ? Math.Abs(sisa) : 0;
+                var noPi = string.Join(", ", matrix.Rows
+                    .Where(r => r.Cells.Any(c4 => c4.ItemCode == item.ItemCode && c4.IsOrdered))
+                    .Select(r => r.NoPrj)
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase));
+                var status = totalDipesan <= item.QtyStock
+                    ? "Cukup dari stock"
+                    : totalPo >= Math.Max(totalDipesan - item.QtyStock, 0)
+                        ? "Tertutup oleh PO"
+                        : totalPo > 0
+                            ? "PO belum cukup"
+                            : "Belum ada PO";
 
                 wsSummary.Cell(sRow, 1).Value = no++;
                 wsSummary.Cell(sRow, 2).Value = item.ItemCode;
@@ -728,34 +753,40 @@ namespace Accounting.Services
                 wsSummary.Cell(sRow, 4).Value = item.Satuan;
                 wsSummary.Cell(sRow, 5).Value = item.QtyStock;
                 wsSummary.Cell(sRow, 6).Value = totalDipesan;
-                wsSummary.Cell(sRow, 7).Value = sisa;
-                wsSummary.Cell(sRow, 8).Value = kekurangan;
-                wsSummary.Cell(sRow, 9).Value = kekurangan > 0 ? $"Perlu pesan min. {kekurangan:N0} {item.Satuan}" : "Cukup";
+                wsSummary.Cell(sRow, 7).Value = totalPo;
+                wsSummary.Cell(sRow, 8).Value = sisa;
+                wsSummary.Cell(sRow, 9).Value = status;
+                wsSummary.Cell(sRow, 10).Value = kekurangan > 0 ? $"Perlu pesan min. {kekurangan:N0} {item.Satuan}" : "Cukup";
+                wsSummary.Cell(sRow, 11).Value = string.IsNullOrWhiteSpace(noPi) ? "-" : noPi;
 
                 // warna baris
                 var bg = kekurangan > 0 ? redFill : greenFill;
-                for (int i = 1; i <= 9; i++)
+                for (int i = 1; i <= 11; i++)
                     wsSummary.Cell(sRow, i).Style.Fill.BackgroundColor = bg;
 
                 // warna khusus kolom sisa & kekurangan
-                wsSummary.Cell(sRow, 7).Style.Font.FontColor = sisa < 0 ? XLColor.FromHtml("#dc3545") : XLColor.FromHtml("#198754");
+                wsSummary.Cell(sRow, 7).Style.Font.FontColor = totalPo > 0 ? XLColor.FromHtml("#0d6efd") : XLColor.Gray;
                 wsSummary.Cell(sRow, 7).Style.Font.Bold = true;
-                wsSummary.Cell(sRow, 8).Style.Font.FontColor = kekurangan > 0 ? XLColor.FromHtml("#dc3545") : XLColor.Gray;
-                wsSummary.Cell(sRow, 9).Style.Font.Bold = kekurangan > 0;
+                wsSummary.Cell(sRow, 8).Style.Font.FontColor = sisa < 0 ? XLColor.FromHtml("#dc3545") : XLColor.FromHtml("#198754");
+                wsSummary.Cell(sRow, 8).Style.Font.Bold = true;
+                wsSummary.Cell(sRow, 9).Style.Font.Bold = true;
+                wsSummary.Cell(sRow, 10).Style.Font.Bold = kekurangan > 0;
+                wsSummary.Cell(sRow, 11).Style.Font.FontColor = XLColor.FromHtml("#0d6efd");
 
                 sRow++;
             }
 
             wsSummary.Columns().AdjustToContents();
             wsSummary.Column(3).Width = 30;
-            wsSummary.Column(9).Width = 28;
+            wsSummary.Column(10).Width = 28;
+            wsSummary.Column(11).Width = 28;
 
             // border semua sel terisi
             var matrixRange = wsMatrix.Range(1, 1, row, col - 1);
             matrixRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             matrixRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
-            var summaryRange = wsSummary.Range(1, 1, sRow - 1, 9);
+            var summaryRange = wsSummary.Range(1, 1, sRow - 1, 11);
             summaryRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             summaryRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 

@@ -179,17 +179,17 @@ else
                 <tfoot class="table-secondary">
                     <tr>
                         <td colspan="6" class="so-sticky-footer" style="font-weight:bold; background:#e9ecef;">
-                            Total Dipesan / Sisa Stock Akhir
+                            Total Dipesan / PO / Sisa Stock Akhir
                         </td>
                         @foreach (var item in VisibleHeaders)
                         {
-                            var totalOrder = FilteredRows.SelectMany(r => r.Cells)
-                                .Where(c => c.ItemCode == item.ItemCode)
-                                .Sum(c => c.QtyOrder);
-                            var sisaAkhir = item.QtyStock - totalOrder;
+                            var totalOrder = GetTotalSalesOrderQty(item.ItemCode);
+                            var totalPo = GetPlannedPurchaseQty(item.ItemCode);
+                            var sisaAkhir = item.QtyStock + totalPo - totalOrder;
                             var kurang = sisaAkhir < 0;
                             <td style="text-align:center; font-weight:bold;">
                                 <div style="color:#0d6efd;">Order: @totalOrder.ToString("N0")</div>
+                                <div style="color:#0d6efd;">PO: @totalPo.ToString("N0")</div>
                                 <div style="font-size:0.8rem; color:@(kurang ? "#dc3545" : "#198754"); font-weight:bold;">
                                     Sisa: @sisaAkhir.ToString("N0")
                                 </div>
@@ -282,7 +282,8 @@ else
                                 <th style="width:10%; text-align:center;">Total SO</th>
                                 <th style="width:10%; text-align:center;">Total PO</th>
                                 <th style="width:10%; text-align:center;">Proyeksi</th>
-                                <th style="width:20%; text-align:center;">Status</th>
+                                <th style="width:16%; text-align:center;">Status</th>
+                                <th style="width:19%; text-align:center;">Keterangan No PI</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -294,13 +295,7 @@ else
                                 var proyeksi = item.QtyStock + totalPo - totalSo;
                                 var kebutuhanTambahanPo = Math.Max(totalSo - item.QtyStock, 0);
                                 var poKurang = Math.Max(kebutuhanTambahanPo - totalPo, 0);
-                                var statusText = totalSo <= item.QtyStock
-                                    ? "Cukup dari stock"
-                                    : totalPo >= kebutuhanTambahanPo
-                                        ? "SO sudah tertutup oleh PO"
-                                        : totalPo > 0
-                                            ? "PO ada, tapi belum cukup"
-                                            : "Belum ada PO";
+                                var noPiList = GetRelatedNoPi(item.ItemCode);
                                 var rowBg = totalSo <= item.QtyStock ? "#d1e7dd" : totalPo >= kebutuhanTambahanPo ? "#cfe2ff" : "#f8d7da";
 
                                 <tr style="background-color:@rowBg;">
@@ -336,6 +331,16 @@ else
                                             <div class="mt-1" style="font-size:0.75rem; color:#dc3545;">Perlu pesan min. @kebutuhanTambahanPo.ToString("N0") @item.Satuan</div>
                                         }
                                     </td>
+                                    <td style="text-align:left; font-size:0.75rem;">
+                                        @if (!string.IsNullOrWhiteSpace(noPiList))
+                                        {
+                                            <div><strong>No PI:</strong> @noPiList</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-muted">-</div>
+                                        }
+                                    </td>
                                 </tr>
                                 noUrut++;
                             }
@@ -355,6 +360,7 @@ else
                                 <td style="text-align:center; font-weight:bold;">
                                     @VisibleHeaders.Sum(i => i.QtyStock + GetPlannedPurchaseQty(i.ItemCode) - GetTotalSalesOrderQty(i.ItemCode)).ToString("N0")
                                 </td>
+                                <td></td>
                                 <td></td>
                             </tr>
                         </tfoot>
@@ -468,6 +474,23 @@ else
         }
 
         return PurchaseQtyByItem.TryGetValue(itemCode, out var qty) ? qty : 0;
+    }
+
+    private string GetRelatedNoPi(string itemCode)
+    {
+        if (string.IsNullOrWhiteSpace(itemCode))
+        {
+            return string.Empty;
+        }
+
+        var noPiList = Matrix?.Rows
+            .Where(row => row.Cells.Any(c => string.Equals(c.ItemCode, itemCode, StringComparison.OrdinalIgnoreCase) && c.IsOrdered))
+            .Select(row => row.NoPrj)
+            .Where(noPi => !string.IsNullOrWhiteSpace(noPi))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return noPiList == null || noPiList.Count == 0 ? string.Empty : string.Join(", ", noPiList);
     }
 
     private IEnumerable<SalesOrderMatrixCell> GetVisibleCells(SalesOrderMatrixRow row)
