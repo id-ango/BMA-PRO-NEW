@@ -1176,8 +1176,13 @@ namespace eSoft.CashBank.Services
 
         public async Task SaveTransactionsAsync(List<BankTransactionView> transactions, DateTime formDate, string kodeBank, string tambah, string kurang)
         {
-            // Filter transactions that are not selected
-            var filteredTransactions = transactions.Where(t => !t.IsSelected).ToList();
+            // Filter transactions that are selected in the page
+            var filteredTransactions = transactions?.Where(t => t.IsSelected).ToList() ?? new List<BankTransactionView>();
+
+            if (!filteredTransactions.Any())
+            {
+                return;
+            }
 
             // Group transactions by date
             var groupedTransactions = filteredTransactions.GroupBy(t => t.Tanggal).ToList();
