@@ -2,6 +2,7 @@
 @using eSoft.Persediaan.Model
 @using eSoft.Persediaan.View
 @using eSoft.Persediaan.Services
+@using ClosedXML.Excel
 @using System.Text.Json;
 @using System.Web
 
@@ -74,6 +75,13 @@
         <br />
         <div class="form-group">
             <label>
+                Markup (%) :
+                <InputNumber class="form-control" @bind-Value="ExportMarkupPct" />
+            </label>
+        </div>
+        <br />
+        <div class="form-group">
+            <label>
 
                 Harga (Rp):
                 <InputNumber class="form-control" @bind-Value="Transh.Harga" />
@@ -116,6 +124,7 @@
             <button class="btn btn-warning me-2" type="button" @onclick="ProsesUlangDetail">Proses Ulang</button>
             <button class="btn btn-secondary me-2" type="button" @onclick="ClearDraftAsync">Clear</button>
             <button class="btn btn-success me-2" type="submit">Cetak</button>
+            <button class="btn btn-info me-2" type="button" @onclick="DownloadExcelAllAsync">Excel Semua</button>
             <button class="btn btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModulePersediaan/TransAdjustment", false))">Batal</button>
         </div>
 
@@ -218,6 +227,7 @@
     private List<IcLokasi> banks;
     private IcPriceDView Transd = new();
     private IcPriceDView TransK = new();
+    private decimal ExportMarkupPct { get; set; } = 20;
 
     public string kurs { get; set; } = "";
 
@@ -453,6 +463,122 @@
        // Transh.TotalCost = Transh.IcPriceDs.Sum(x => x.HargaPokok * x.Qty);
       //  Transh.GProfit = Transh.IcPriceDs.Sum(x => (x.HargaJual - x.HargaPokok) * x.Qty);
       //  Transh.Keuntungan = Transh.IcPriceDs.Sum(x => x.Qty * x.harga);
+    }
+
+    private static bool IsImportItem(IcItem item)
+    {
+        return item != null
+            && item.HrgUsd > 0
+            && !string.IsNullOrWhiteSpace(item.CurrencyCode)
+            && !string.Equals(item.CurrencyCode, "IDR", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool TryGetKurs(string currencyCode, out decimal kurs)
+    {
+        kurs = 0;
+
+        if (string.IsNullOrWhiteSpace(currencyCode))
+        {
+            return false;
+        }
+
+        if (string.Equals(currencyCode, "CNY", StringComparison.OrdinalIgnoreCase))
+        {
+            kurs = Transh.CNY;
+            return true;
+        }
+
+        if (string.Equals(currencyCode, "USD", StringComparison.OrdinalIgnoreCase))
+        {
+            kurs = Transh.USD;
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task DownloadExcelAllAsync()
+    {
+        var items = (srccode ?? new List<IcItem>())
+            .Where(IsImportItem)
+            .ToList();
+
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Harga Jual Import");
+
+        worksheet.Cell(1, 1).Value = "No";
+        worksheet.Cell(1, 2).Value = "ItemCode";
+        worksheet.Cell(1, 3).Value = "NamaItem";
+        worksheet.Cell(1, 4).Value = "Satuan";
+        worksheet.Cell(1, 5).Value = "Currency";
+        worksheet.Cell(1, 6).Value = "Harga Import";
+        worksheet.Cell(1, 7).Value = "Kurs";
+        worksheet.Cell(1, 8).Value = "Harga Pokok";
+        worksheet.Cell(1, 9).Value = "PPN Masukan";
+        worksheet.Cell(1, 10).Value = "PPh";
+        worksheet.Cell(1, 11).Value = "Forwarder";
+        worksheet.Cell(1, 12).Value = "TotalCost";
+        worksheet.Cell(1, 13).Value = "Markup (%)";
+        worksheet.Cell(1, 14).Value = "Harga Jual";
+        worksheet.Cell(1, 15).Value = "Gross Profit (%)";
+
+        var row = 2;
+        var nomor = 1;
+
+        foreach (var item in items)
+        {
+            if (!TryGetKurs(item.CurrencyCode, out var kurs) || kurs <= 0)
+            {
+                continue;
+            }
+
+            var hargaImport = item.HrgUsd;
+            var hargaPokok = hargaImport * kurs;
+            var ppnMasukan = hargaPokok * (Transh.NilaiPPnM / 100m);
+            var pph = hargaPokok * (Transh.NilaiPPh / 100m);
+            var forwarder = hargaPokok * (Transh.NilaiExpd / 100m);
+            var tambahanBiaya = Math.Round(ppnMasukan + pph + forwarder);
+            var totalCost = hargaPokok + tambahanBiaya;
+            var hargaJual = totalCost * (1 + (ExportMarkupPct / 100m));
+            var hargaBefPpn = Transh.NilaiPPnK != 0 ? hargaJual / (1 + (Transh.NilaiPPnK / 100m)) : hargaJual;
+            var keuntungan = hargaBefPpn - totalCost;
+            var grossProfit = hargaBefPpn != 0 ? (keuntungan / hargaBefPpn) * 100m : 0;
+
+            worksheet.Cell(row, 1).Value = nomor++;
+            worksheet.Cell(row, 2).Value = item.ItemCode;
+            worksheet.Cell(row, 3).Value = item.NamaItem;
+            worksheet.Cell(row, 4).Value = item.Satuan;
+            worksheet.Cell(row, 5).Value = item.CurrencyCode;
+            worksheet.Cell(row, 6).Value = hargaImport;
+            worksheet.Cell(row, 7).Value = kurs;
+            worksheet.Cell(row, 8).Value = hargaPokok;
+            worksheet.Cell(row, 9).Value = ppnMasukan;
+            worksheet.Cell(row, 10).Value = pph;
+            worksheet.Cell(row, 11).Value = forwarder;
+            worksheet.Cell(row, 12).Value = totalCost;
+            worksheet.Cell(row, 13).Value = ExportMarkupPct;
+            worksheet.Cell(row, 14).Value = hargaJual;
+            worksheet.Cell(row, 15).Value = grossProfit;
+
+            row++;
+        }
+
+        worksheet.Range(1, 1, row - 1, 15).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+        worksheet.Range(1, 1, 1, 15).Style.Font.Bold = true;
+        worksheet.Columns().AdjustToContents();
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        ms.Position = 0;
+
+        using var streamRef = new DotNetStreamReference(stream: ms);
+        var fileName = $"HargaJualImport_{DateTime.Now:yyyy-MM-dd}.xlsx";
+        await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
     }
 
 
