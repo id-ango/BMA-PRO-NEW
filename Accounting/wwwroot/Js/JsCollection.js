@@ -55,8 +55,6 @@ window.BlazorDownloadFile = (filename, contentBase64) => {
     document.body.removeChild(link);
 };
 
-window.CheckingPriceDraft = {
-    get: (key) => sessionStorage.getItem(key),
-    set: (key, value) => sessionStorage.setItem(key, value),
-    remove: (key) => sessionStorage.removeItem(key)
-};
+window.checkingPriceDraftGet = (key) => sessionStorage.getItem(key);
+window.checkingPriceDraftSet = (key, value) => sessionStorage.setItem(key, value);
+window.checkingPriceDraftRemove = (key) => sessionStorage.removeItem(key);

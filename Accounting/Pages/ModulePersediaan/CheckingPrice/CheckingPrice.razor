@@ -276,7 +276,7 @@
 
     private async Task<bool> RestoreDraftFromSessionAsync()
     {
-        var json = await JSRuntime.InvokeAsync<string>("CheckingPriceDraft.get", DraftStorageKey);
+        var json = await JSRuntime.InvokeAsync<string>("checkingPriceDraftGet", DraftStorageKey);
         if (string.IsNullOrWhiteSpace(json))
         {
             return false;
@@ -296,7 +296,7 @@
     private async Task SaveDraftAsync()
     {
         var json = JsonSerializer.Serialize(Transh);
-        await JSRuntime.InvokeVoidAsync("CheckingPriceDraft.set", DraftStorageKey, json);
+        await JSRuntime.InvokeVoidAsync("checkingPriceDraftSet", DraftStorageKey, json);
     }
 
     private void OnVisibleClose()
