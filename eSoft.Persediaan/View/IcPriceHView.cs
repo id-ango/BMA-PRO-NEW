@@ -28,8 +28,8 @@ namespace eSoft.Persediaan.View
         public string NoLpb { get; set; }
         public string NoPrj { get; set; }
 
-        public decimal CNY { get; set; } = 2250;
-        public decimal USD { get; set; } = 16000;
+        public decimal CNY { get; set; } = 2700;
+        public decimal USD { get; set; } = 18000;
         public decimal Harga
         {
             get
