@@ -524,9 +524,11 @@
         worksheet.Cell(1, 11).Value = "Forwarder";
         worksheet.Cell(1, 12).Value = "TotalCost";
         worksheet.Cell(1, 13).Value = "Markup (%)";
-        worksheet.Cell(1, 14).Value = "Harga Jual";
-        worksheet.Cell(1, 15).Value = "Keuntungan";
-        worksheet.Cell(1, 16).Value = "Gross Profit (%)";
+        worksheet.Cell(1, 14).Value = "Harga Sebelum PPN";
+        worksheet.Cell(1, 15).Value = "PPN Keluaran";
+        worksheet.Cell(1, 16).Value = "Harga Jual";
+        worksheet.Cell(1, 17).Value = "Keuntungan";
+        worksheet.Cell(1, 18).Value = "Gross Profit (%)";
 
         var row = 2;
         var nomor = 1;
@@ -545,10 +547,11 @@
             var forwarder = hargaPokok * (Transh.NilaiExpd / 100m);
             var tambahanBiaya = Math.Round(ppnMasukan + pph + forwarder);
             var totalCost = hargaPokok + tambahanBiaya;
-            var hargaJual = totalCost * (1 + (ExportMarkupPct / 100m));
-            var hargaBefPpn = Transh.NilaiPPnK != 0 ? hargaJual / (1 + (Transh.NilaiPPnK / 100m)) : hargaJual;
-            var keuntungan = hargaBefPpn - totalCost;
-            var grossProfit = hargaBefPpn != 0 ? (keuntungan / hargaBefPpn) * 100m : 0;
+            var hargaSebelumPpn = totalCost * (1 + (ExportMarkupPct / 100m));
+            var ppnKeluaran = hargaSebelumPpn * (Transh.NilaiPPnK / 100m);
+            var hargaJual = hargaSebelumPpn + ppnKeluaran;
+            var keuntungan = hargaSebelumPpn - totalCost;
+            var grossProfit = hargaSebelumPpn != 0 ? (keuntungan / hargaSebelumPpn) * 100m : 0;
 
             worksheet.Cell(row, 1).Value = nomor++;
             worksheet.Cell(row, 2).Value = item.ItemCode;
@@ -563,25 +566,27 @@
             worksheet.Cell(row, 11).Value = forwarder;
             worksheet.Cell(row, 12).Value = totalCost;
             worksheet.Cell(row, 13).Value = ExportMarkupPct;
-            worksheet.Cell(row, 14).Value = hargaJual;
-            worksheet.Cell(row, 15).Value = keuntungan;
-            worksheet.Cell(row, 16).Value = grossProfit;
+            worksheet.Cell(row, 14).Value = hargaSebelumPpn;
+            worksheet.Cell(row, 15).Value = ppnKeluaran;
+            worksheet.Cell(row, 16).Value = hargaJual;
+            worksheet.Cell(row, 17).Value = keuntungan;
+            worksheet.Cell(row, 18).Value = grossProfit;
 
             row++;
         }
 
-        var usedRange = worksheet.Range(1, 1, row - 1, 16);
+        var usedRange = worksheet.Range(1, 1, row - 1, 18);
         usedRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
         usedRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-        worksheet.Range(1, 1, 1, 16).Style.Fill.BackgroundColor = XLColor.FromArgb(31, 78, 121);
-        worksheet.Range(1, 1, 1, 16).Style.Font.FontColor = XLColor.White;
-        worksheet.Range(1, 1, 1, 16).Style.Font.Bold = true;
-        worksheet.Range(2, 6, Math.Max(row - 1, 2), 16).Style.NumberFormat.Format = "#,##0.00";
-        worksheet.Range(2, 13, Math.Max(row - 1, 2), 16).Style.NumberFormat.Format = "0.00";
-        worksheet.Range(1, 1, row - 1, 16).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-        worksheet.Range(1, 1, row - 1, 16).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+        worksheet.Range(1, 1, 1, 18).Style.Fill.BackgroundColor = XLColor.FromArgb(31, 78, 121);
+        worksheet.Range(1, 1, 1, 18).Style.Font.FontColor = XLColor.White;
+        worksheet.Range(1, 1, 1, 18).Style.Font.Bold = true;
+        worksheet.Range(2, 6, Math.Max(row - 1, 2), 18).Style.NumberFormat.Format = "#,##0.00";
+        worksheet.Range(2, 13, Math.Max(row - 1, 2), 18).Style.NumberFormat.Format = "0.00";
+        worksheet.Range(1, 1, row - 1, 18).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        worksheet.Range(1, 1, row - 1, 18).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
         worksheet.SheetView.FreezeRows(1);
-        worksheet.Range(1, 1, row - 1, 16).SetAutoFilter();
+        worksheet.Range(1, 1, row - 1, 18).SetAutoFilter();
         worksheet.Columns().AdjustToContents();
 
         using var ms = new MemoryStream();
