@@ -4,11 +4,16 @@
 @using eSoft.Penjualan.View
 @using eSoft.Persediaan.View
 @using System.Text.Json
+@using System.Web
 @inject NavigationManager navigationmanager
 
-<div class="print-actions dontprint">
+<div class="dontprint" style="display:none inline">
     <br />
-    <button class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</button>
+    &emsp;
+    <button type="button" class="btn btn-primary btn-lg" @onclick="BackToDraft">&nbsp;Back&nbsp;</button>
+    &emsp;
+    <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+    &emsp;
 </div>
 
 <style>
@@ -143,17 +148,36 @@
     private IcPriceHView Transh = new IcPriceHView { IcPriceDs = new List<IcPriceDView>() };
     public string PreviousUri { get; set; } = string.Empty;
     public string encodedPreviousUri { get; set; }
+    public string encodedTransh { get; set; }
 
     protected override void OnInitialized()
     {
         var uri = new Uri(navigationmanager.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
 
-        if (query.Count != 0)
+        encodedTransh = query["transh"];
+        encodedPreviousUri = query["prevUri"];
+
+        if (!string.IsNullOrWhiteSpace(encodedTransh))
         {
-            encodedPreviousUri = query.Get(0);
-            var json = Uri.UnescapeDataString(encodedPreviousUri);
-            Transh = JsonSerializer.Deserialize<IcPriceHView>(json);
+            var json = Uri.UnescapeDataString(encodedTransh);
+            Transh = JsonSerializer.Deserialize<IcPriceHView>(json) ?? new IcPriceHView { IcPriceDs = new List<IcPriceDView>() };
+            Transh.IcPriceDs ??= new List<IcPriceDView>();
         }
+
+        if (!string.IsNullOrWhiteSpace(encodedPreviousUri))
+        {
+            PreviousUri = Uri.UnescapeDataString(encodedPreviousUri);
+        }
+    }
+
+    private string GetBackUri()
+    {
+        return string.IsNullOrWhiteSpace(PreviousUri) ? "/ModulePersediaan/CheckingPrice" : PreviousUri;
+    }
+
+    private void BackToDraft()
+    {
+        navigationmanager.NavigateTo(GetBackUri(), replace: true);
     }
 }

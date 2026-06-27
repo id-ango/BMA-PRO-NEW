@@ -8,6 +8,7 @@
 @inject IIcAdjustServices service
 @inject IInventoryServices serviceIC
 @inject NavigationManager navigationmanager
+@using System.Web
 
 
 <div class="top-row px-4 " style="z-index:5">
@@ -261,7 +262,8 @@
     {
         string transhJson = JsonSerializer.Serialize(Transh);
         string encodedTranshJson = Uri.EscapeDataString(transhJson);
-        navigationmanager.NavigateTo($"/ModulePrinting/NotaCheckingPrice/?transh={encodedTranshJson}");
+        var returnUri = $"{new Uri(navigationmanager.Uri).GetLeftPart(UriPartial.Path)}?state={encodedTranshJson}";
+        navigationmanager.NavigateTo($"/ModulePrinting/NotaCheckingPrice/?transh={encodedTranshJson}&prevUri={Uri.EscapeDataString(returnUri)}");
 
         // var newEdit = service.AddTransH(Transh);
         // if (newEdit != null)
