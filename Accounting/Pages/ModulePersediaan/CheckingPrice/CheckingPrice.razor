@@ -3,12 +3,12 @@
 @using eSoft.Persediaan.View
 @using eSoft.Persediaan.Services
 @using System.Text.Json;
-
+@using System.Web
 
 @inject IIcAdjustServices service
 @inject IInventoryServices serviceIC
 @inject NavigationManager navigationmanager
-@using System.Web
+@inject IJSRuntime JSRuntime
 
 
 <div class="top-row px-4 " style="z-index:5">
@@ -213,6 +213,7 @@
 
 
 @code {
+    private const string DraftStorageKey = "CheckingPrice.Draft";
     IcPriceHView Transh = new IcPriceHView() { IcPriceDs = new List<IcPriceDView>() };
 
     private List<IcItem> srccode;
@@ -228,14 +229,74 @@
     public bool IsKurs { get; set; }
     public bool IsEdit { get; set; }
     public bool SearchOpen { get; set; }
+    private bool _draftRestored;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        base.OnInitialized();
-
-
         LoadBank();
         LoadSrcCode();
+        RestoreDraftFromQuery();
+        await Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_draftRestored)
+        {
+            var restored = await RestoreDraftFromSessionAsync();
+            if (restored)
+            {
+                _draftRestored = true;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void RestoreDraftFromQuery()
+    {
+        var uri = new Uri(navigationmanager.Uri);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+        var encodedState = query["state"];
+
+        if (string.IsNullOrWhiteSpace(encodedState))
+        {
+            return;
+        }
+
+        var json = Uri.UnescapeDataString(encodedState);
+        var loaded = JsonSerializer.Deserialize<IcPriceHView>(json);
+
+        if (loaded != null)
+        {
+            loaded.IcPriceDs ??= new List<IcPriceDView>();
+            Transh = loaded;
+            _draftRestored = true;
+        }
+    }
+
+    private async Task<bool> RestoreDraftFromSessionAsync()
+    {
+        var json = await JSRuntime.InvokeAsync<string>("CheckingPriceDraft.get", DraftStorageKey);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
+
+        var loaded = JsonSerializer.Deserialize<IcPriceHView>(json);
+        if (loaded == null)
+        {
+            return false;
+        }
+
+        loaded.IcPriceDs ??= new List<IcPriceDView>();
+        Transh = loaded;
+        return true;
+    }
+
+    private async Task SaveDraftAsync()
+    {
+        var json = JsonSerializer.Serialize(Transh);
+        await JSRuntime.InvokeVoidAsync("CheckingPriceDraft.set", DraftStorageKey, json);
     }
 
     private void OnVisibleClose()
@@ -258,12 +319,12 @@
 
 
 
-    private void HandleValidSubmit()
+    private async Task HandleValidSubmit()
     {
+        await SaveDraftAsync();
         string transhJson = JsonSerializer.Serialize(Transh);
         string encodedTranshJson = Uri.EscapeDataString(transhJson);
-        var returnUri = $"{new Uri(navigationmanager.Uri).GetLeftPart(UriPartial.Path)}?state={encodedTranshJson}";
-        navigationmanager.NavigateTo($"/ModulePrinting/NotaCheckingPrice/?transh={encodedTranshJson}&prevUri={Uri.EscapeDataString(returnUri)}");
+        navigationmanager.NavigateTo($"/ModulePrinting/NotaCheckingPrice/?transh={encodedTranshJson}&prevUri=/ModulePersediaan/CheckingPrice");
 
         // var newEdit = service.AddTransH(Transh);
         // if (newEdit != null)
@@ -277,7 +338,7 @@
 
     }
 
-    private void OnDetailTrans(IcPriceDView transD)
+    private async Task OnDetailTrans(IcPriceDView transD)
     {
         transD.NamaItem = serviceIC.GetIcItemProduk(transD.ItemCode).NamaItem;
         transD.Satuan = serviceIC.GetIcItemProduk(transD.ItemCode).Satuan;
@@ -291,6 +352,7 @@
         IsVisible = false;
         IsKurs = false;
         IsEdit = false;
+        await SaveDraftAsync();
         StateHasChanged();
     }
 
@@ -319,10 +381,11 @@
 
     }
 
-    private void Hapus(IcPriceDView transd)
+    private async Task Hapus(IcPriceDView transd)
     {
 
         Transh.IcPriceDs.Remove(transd);
+        await SaveDraftAsync();
         // ShowOnClick();
     }
 
@@ -356,7 +419,7 @@
         StateHasChanged();
 
     }
-    private void ProsesUlangDetail()
+    private async Task ProsesUlangDetail()
     {
         foreach (var item in Transh.IcPriceDs)
         {
@@ -367,11 +430,12 @@
             else if (item.CurrencyCode == "USD")
                 item.Kurs = Transh.USD;
 
-          
+           
         }
 
         
       //  HitungTotalCost();
+        await SaveDraftAsync();
         StateHasChanged();
     }
 
