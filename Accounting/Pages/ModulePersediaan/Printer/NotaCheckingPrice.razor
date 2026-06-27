@@ -7,7 +7,7 @@
 @using System.Web
 @inject NavigationManager navigationmanager
 
-<div class="dontprint" style="display:none inline">
+<div class="print-actions dontprint">
     <br />
     &emsp;
     <button type="button" class="btn btn-primary btn-lg" @onclick="BackToDraft">&nbsp;Back&nbsp;</button>
@@ -82,7 +82,13 @@
     }
 
     .dontprint {
-        display: none !important;
+        display: block;
+    }
+
+    @@media print {
+        .dontprint {
+            display: none !important;
+        }
     }
 
     
