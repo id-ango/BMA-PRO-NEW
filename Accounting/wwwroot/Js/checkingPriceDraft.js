@@ -5,3 +5,7 @@ window.checkingPriceDraftGet = function (key) {
 window.checkingPriceDraftSet = function (key, value) {
     sessionStorage.setItem(key, value);
 };
+
+window.checkingPriceDraftClear = function (key) {
+    sessionStorage.removeItem(key);
+};
