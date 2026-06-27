@@ -525,7 +525,8 @@
         worksheet.Cell(1, 12).Value = "TotalCost";
         worksheet.Cell(1, 13).Value = "Markup (%)";
         worksheet.Cell(1, 14).Value = "Harga Jual";
-        worksheet.Cell(1, 15).Value = "Gross Profit (%)";
+        worksheet.Cell(1, 15).Value = "Keuntungan";
+        worksheet.Cell(1, 16).Value = "Gross Profit (%)";
 
         var row = 2;
         var nomor = 1;
@@ -563,13 +564,24 @@
             worksheet.Cell(row, 12).Value = totalCost;
             worksheet.Cell(row, 13).Value = ExportMarkupPct;
             worksheet.Cell(row, 14).Value = hargaJual;
-            worksheet.Cell(row, 15).Value = grossProfit;
+            worksheet.Cell(row, 15).Value = keuntungan;
+            worksheet.Cell(row, 16).Value = grossProfit;
 
             row++;
         }
 
-        worksheet.Range(1, 1, row - 1, 15).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-        worksheet.Range(1, 1, 1, 15).Style.Font.Bold = true;
+        var usedRange = worksheet.Range(1, 1, row - 1, 16);
+        usedRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        usedRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+        worksheet.Range(1, 1, 1, 16).Style.Fill.BackgroundColor = XLColor.FromArgb(31, 78, 121);
+        worksheet.Range(1, 1, 1, 16).Style.Font.FontColor = XLColor.White;
+        worksheet.Range(1, 1, 1, 16).Style.Font.Bold = true;
+        worksheet.Range(2, 6, Math.Max(row - 1, 2), 16).Style.NumberFormat.Format = "#,##0.00";
+        worksheet.Range(2, 13, Math.Max(row - 1, 2), 16).Style.NumberFormat.Format = "0.00";
+        worksheet.Range(1, 1, row - 1, 16).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        worksheet.Range(1, 1, row - 1, 16).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+        worksheet.SheetView.FreezeRows(1);
+        worksheet.Range(1, 1, row - 1, 16).SetAutoFilter();
         worksheet.Columns().AdjustToContents();
 
         using var ms = new MemoryStream();
