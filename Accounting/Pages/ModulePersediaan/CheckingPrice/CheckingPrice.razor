@@ -465,12 +465,18 @@
       //  Transh.Keuntungan = Transh.IcPriceDs.Sum(x => x.Qty * x.harga);
     }
 
-    private static bool IsImportItem(IcItem item)
+    private static bool IsPriceExportItem(IcItem item)
     {
         return item != null
-            && item.HrgUsd > 0
-            && !string.IsNullOrWhiteSpace(item.CurrencyCode)
-            && !string.Equals(item.CurrencyCode, "IDR", StringComparison.OrdinalIgnoreCase);
+            && (
+                (item.HrgUsd > 0
+                    && !string.IsNullOrWhiteSpace(item.CurrencyCode)
+                    && !string.Equals(item.CurrencyCode, "IDR", StringComparison.OrdinalIgnoreCase))
+                ||
+                (item.HrgUsd <= 0
+                    && string.IsNullOrWhiteSpace(item.CurrencyCode)
+                    && item.HrgNetto > 0)
+            );
     }
 
     private bool TryGetKurs(string currencyCode, out decimal kurs)
@@ -500,7 +506,7 @@
     private async Task DownloadExcelAllAsync()
     {
         var items = (srccode ?? new List<IcItem>())
-            .Where(IsImportItem)
+            .Where(IsPriceExportItem)
             .ToList();
 
         if (items.Count == 0)
@@ -516,7 +522,7 @@
         worksheet.Cell(1, 3).Value = "NamaItem";
         worksheet.Cell(1, 4).Value = "Satuan";
         worksheet.Cell(1, 5).Value = "Currency";
-        worksheet.Cell(1, 6).Value = "Harga Import";
+        worksheet.Cell(1, 6).Value = "Harga Dasar";
         worksheet.Cell(1, 7).Value = "Kurs";
         worksheet.Cell(1, 8).Value = "Harga Pokok";
         worksheet.Cell(1, 9).Value = "PPN Masukan (%)";
@@ -537,17 +543,32 @@
 
         foreach (var item in items)
         {
-            if (!TryGetKurs(item.CurrencyCode, out var kurs) || kurs <= 0)
+            decimal kurs = 0;
+            var isLocalItem = item.HrgUsd <= 0 && string.IsNullOrWhiteSpace(item.CurrencyCode);
+            var displayCurrency = isLocalItem ? "IDR" : item.CurrencyCode;
+            var hargaDasar = isLocalItem ? item.HrgNetto : item.HrgUsd;
+
+            if (hargaDasar <= 0)
             {
                 continue;
+            }
+
+            if (!isLocalItem && (!TryGetKurs(item.CurrencyCode, out kurs) || kurs <= 0))
+            {
+                continue;
+            }
+
+            if (isLocalItem)
+            {
+                kurs = 1;
             }
 
             worksheet.Cell(row, 1).Value = nomor++;
             worksheet.Cell(row, 2).Value = item.ItemCode;
             worksheet.Cell(row, 3).Value = item.NamaItem;
             worksheet.Cell(row, 4).Value = item.Satuan;
-            worksheet.Cell(row, 5).Value = item.CurrencyCode;
-            worksheet.Cell(row, 6).Value = item.HrgUsd;
+            worksheet.Cell(row, 5).Value = displayCurrency;
+            worksheet.Cell(row, 6).Value = hargaDasar;
             worksheet.Cell(row, 7).Value = kurs;
             worksheet.Cell(row, 8).FormulaA1 = $"F{row}*G{row}";
             worksheet.Cell(row, 9).Value = Transh.NilaiPPnM;
