@@ -523,12 +523,14 @@
         worksheet.Cell(1, 10).Value = "PPH (%)";
         worksheet.Cell(1, 11).Value = "Forwarder (%)";
         worksheet.Cell(1, 12).Value = "TotalCost";
-        worksheet.Cell(1, 13).Value = "Markup (%)";
-        worksheet.Cell(1, 14).Value = "Harga Sebelum PPN";
-        worksheet.Cell(1, 15).Value = "PPN Keluaran (%)";
-        worksheet.Cell(1, 16).Value = "Harga Jual";
-        worksheet.Cell(1, 17).Value = "Keuntungan";
-        worksheet.Cell(1, 18).Value = "Gross Profit (%)";
+        worksheet.Cell(1, 13).Value = "Harga Jual Lama";
+        worksheet.Cell(1, 14).Value = "Harga Jual (Edit)";
+        worksheet.Cell(1, 15).Value = "Harga Sebelum PPN";
+        worksheet.Cell(1, 16).Value = "PPN Keluaran (%)";
+        worksheet.Cell(1, 17).Value = "PPN Keluaran";
+        worksheet.Cell(1, 18).Value = "Keuntungan";
+        worksheet.Cell(1, 19).Value = "Markup (%)";
+        worksheet.Cell(1, 20).Value = "Gross Profit (%)";
 
         var row = 2;
         var nomor = 1;
@@ -552,12 +554,14 @@
             worksheet.Cell(row, 10).Value = Transh.NilaiPPh;
             worksheet.Cell(row, 11).Value = Transh.NilaiExpd;
             worksheet.Cell(row, 12).FormulaA1 = $"H{row}+(ROUND(H{row}*(I{row}/100),0)+ROUND(H{row}*(J{row}/100),0)+ROUND(H{row}*(K{row}/100),0))";
-            worksheet.Cell(row, 13).Value = ExportMarkupPct;
-            worksheet.Cell(row, 14).FormulaA1 = $"L{row}*(1+(M{row}/100))";
-            worksheet.Cell(row, 15).Value = Transh.NilaiPPnK;
-            worksheet.Cell(row, 16).FormulaA1 = $"N{row}*(1+(O{row}/100))";
-            worksheet.Cell(row, 17).FormulaA1 = $"N{row}-L{row}";
-            worksheet.Cell(row, 18).FormulaA1 = $"IF(N{row}=0,0,(Q{row}/N{row})*100)";
+            worksheet.Cell(row, 13).Value = item.HrgJual;
+            worksheet.Cell(row, 14).Value = item.HrgJual;
+            worksheet.Cell(row, 15).FormulaA1 = $"IF((1+(P{row}/100))=0,0,N{row}/(1+(P{row}/100)))";
+            worksheet.Cell(row, 16).Value = Transh.NilaiPPnK;
+            worksheet.Cell(row, 17).FormulaA1 = $"O{row}*(P{row}/100)";
+            worksheet.Cell(row, 18).FormulaA1 = $"O{row}-L{row}";
+            worksheet.Cell(row, 19).FormulaA1 = $"IF(L{row}=0,0,(R{row}/L{row})*100)";
+            worksheet.Cell(row, 20).FormulaA1 = $"IF(O{row}=0,0,(R{row}/O{row})*100)";
 
             row++;
         }
@@ -568,14 +572,20 @@
         worksheet.Range(1, 1, 1, 18).Style.Fill.BackgroundColor = XLColor.FromArgb(31, 78, 121);
         worksheet.Range(1, 1, 1, 18).Style.Font.FontColor = XLColor.White;
         worksheet.Range(1, 1, 1, 18).Style.Font.Bold = true;
-        worksheet.Range(2, 6, Math.Max(row - 1, 2), 18).Style.NumberFormat.Format = "#,##0.00";
+        worksheet.Range(2, 14, Math.Max(row - 1, 2), 14).Style.Fill.BackgroundColor = XLColor.FromArgb(255, 242, 204);
+        worksheet.Range(2, 14, Math.Max(row - 1, 2), 14).Style.Font.FontColor = XLColor.FromArgb(156, 101, 0);
+        worksheet.Range(2, 8, Math.Max(row - 1, 2), 8).Style.Fill.BackgroundColor = XLColor.FromArgb(226, 239, 218);
+        worksheet.Range(2, 12, Math.Max(row - 1, 2), 12).Style.Fill.BackgroundColor = XLColor.FromArgb(226, 239, 218);
+        worksheet.Range(2, 15, Math.Max(row - 1, 2), 20).Style.Fill.BackgroundColor = XLColor.FromArgb(221, 235, 247);
+        worksheet.Range(2, 15, Math.Max(row - 1, 2), 20).Style.Font.FontColor = XLColor.FromArgb(31, 78, 121);
+        worksheet.Range(2, 6, Math.Max(row - 1, 2), 20).Style.NumberFormat.Format = "#,##0.00";
         worksheet.Range(2, 9, Math.Max(row - 1, 2), 11).Style.NumberFormat.Format = "0.00";
-        worksheet.Range(2, 13, Math.Max(row - 1, 2), 15).Style.NumberFormat.Format = "0.00";
-        worksheet.Range(2, 18, Math.Max(row - 1, 2), 18).Style.NumberFormat.Format = "0.00";
-        worksheet.Range(1, 1, row - 1, 18).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-        worksheet.Range(1, 1, row - 1, 18).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+        worksheet.Range(2, 16, Math.Max(row - 1, 2), 16).Style.NumberFormat.Format = "0.00";
+        worksheet.Range(2, 19, Math.Max(row - 1, 2), 20).Style.NumberFormat.Format = "0.00";
+        worksheet.Range(1, 1, row - 1, 20).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        worksheet.Range(1, 1, row - 1, 20).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
         worksheet.SheetView.FreezeRows(1);
-        worksheet.Range(1, 1, row - 1, 18).SetAutoFilter();
+        worksheet.Range(1, 1, row - 1, 20).SetAutoFilter();
         worksheet.Columns().AdjustToContents();
 
         using var ms = new MemoryStream();
