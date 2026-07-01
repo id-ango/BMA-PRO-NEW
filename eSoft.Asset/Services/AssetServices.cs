@@ -14,9 +14,9 @@ namespace eSoft.Asset.Services
 {
     public class AssetServices : IAssetServices
     {
-        private readonly DbContextAssets _context;
+        private readonly IDbContextFactory<DbContextAssets> _context;
 
-        public AssetServices(DbContextAssets context)
+        public AssetServices(IDbContextFactory<DbContextAssets> context)
         {
             _context = context;
         }
@@ -26,7 +26,8 @@ namespace eSoft.Asset.Services
             if (item != null)
             {
                 string test = item.ToUpper();
-                var cekFirst = _context.AsItems.Where(x => x.ItemCode == test).ToList();
+                using var context = CreateContext();
+                var cekFirst = context.AsItems.Where(x => x.ItemCode == test).ToList();
                 if (cekFirst.Count == 0)
                 {
                     return false;
@@ -37,29 +38,33 @@ namespace eSoft.Asset.Services
 
         public List<AsItem> GetAsItem()
         {
-            return _context.AsItems.OrderBy(x => x.NamaItem).ToList();
+            using var context = CreateContext();
+            return context.AsItems.OrderBy(x => x.NamaItem).ToList();
         }
 
        
         public AsItem GetAsItemId(int itemKode)
         {
-            return _context.AsItems.Where(x => x.AsItemId == itemKode).FirstOrDefault();
+            using var context = CreateContext();
+            return context.AsItems.Where(x => x.AsItemId == itemKode).FirstOrDefault();
         }
 
         public AsItem GetAsItemProduk(string itemKode)
         {
-            return _context.AsItems.Where(x => x.ItemCode == itemKode).FirstOrDefault();
+            using var context = CreateContext();
+            return context.AsItems.Where(x => x.ItemCode == itemKode).FirstOrDefault();
         }
 
         public async Task<bool> DelAsItem(int codeview)
         {
             try
             {
-                var ExistingDist = _context.AsItems.Where(x => x.AsItemId == codeview).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingDist = context.AsItems.Where(x => x.AsItemId == codeview).FirstOrDefault();
                 if (ExistingDist != null)
                 {
-                    _context.AsItems.Remove(ExistingDist);
-                    await _context.SaveChangesAsync();
+                    context.AsItems.Remove(ExistingDist);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -75,7 +80,8 @@ namespace eSoft.Asset.Services
         public bool AddAsItem(AsItemView produk)
         {
             string test = produk.ItemCode.ToUpper();
-            var cekFirst = _context.AsItems.Where(x => x.ItemCode == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.AsItems.Where(x => x.ItemCode == test).ToList();
             if (cekFirst.Count == 0)
             {
                 AsItem Produk = new AsItem()
@@ -87,8 +93,8 @@ namespace eSoft.Asset.Services
                     
 
                 };
-                _context.AsItems.Add(Produk);
-                _context.SaveChanges();
+                context.AsItems.Add(Produk);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -103,7 +109,8 @@ namespace eSoft.Asset.Services
         {
             try
             {
-                var ExistingItem = _context.AsItems.Where(x => x.AsItemId == produk.AsItemId).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingItem = context.AsItems.Where(x => x.AsItemId == produk.AsItemId).FirstOrDefault();
                 if (ExistingItem != null)
                 {
                     ExistingItem.NamaItem = produk.NamaItem;
@@ -111,8 +118,8 @@ namespace eSoft.Asset.Services
                     ExistingItem.Divisi = produk.Divisi;
 
                     
-                    _context.AsItems.Update(ExistingItem);
-                    await _context.SaveChangesAsync();
+                    context.AsItems.Update(ExistingItem);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -131,7 +138,8 @@ namespace eSoft.Asset.Services
         public bool CekKdDivisi(string item)
         {
             string test = item.ToUpper();
-            var cekFirst = _context.AsDivisis.Where(x => x.Divisi == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.AsDivisis.Where(x => x.Divisi == test).ToList();
             if (cekFirst.Count == 0)
             {
                 return false;
@@ -141,18 +149,21 @@ namespace eSoft.Asset.Services
 
         public List<AsDivisi> GetAsDiv()
         {
-            return _context.AsDivisis.OrderBy(x => x.Divisi).ToList();
+            using var context = CreateContext();
+            return context.AsDivisis.OrderBy(x => x.Divisi).ToList();
         }
 
         public AsDivisi GetAsDivId(int id)
         {
-            return _context.AsDivisis.Where(x => x.AsDivId == id).FirstOrDefault();
+            using var context = CreateContext();
+            return context.AsDivisis.Where(x => x.AsDivId == id).FirstOrDefault();
         }
 
         public bool AddAsDiv(AsDivisiView codeview)
         {
             string test = codeview.Divisi.ToUpper();
-            var cekFirst = _context.AsDivisis.Where(x => x.Divisi == test).ToList();
+                using var context = CreateContext();
+                var cekFirst = context.AsDivisis.Where(x => x.Divisi == test).ToList();
             if (cekFirst.Count == 0)
             {
                 AsDivisi Division = new AsDivisi()
@@ -161,8 +172,8 @@ namespace eSoft.Asset.Services
                     NamaDiv = codeview.NamaDiv
 
                 };
-                _context.AsDivisis.Add(Division);
-                _context.SaveChanges();
+                context.AsDivisis.Add(Division);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -177,14 +188,15 @@ namespace eSoft.Asset.Services
         {
             try
             {
-                var ExistingDiv = _context.AsDivisis.Where(x => x.AsDivId == codeview.AsDivId).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingDiv = context.AsDivisis.Where(x => x.AsDivId == codeview.AsDivId).FirstOrDefault();
                 if (ExistingDiv != null)
                 {
                     ExistingDiv.NamaDiv = codeview.NamaDiv;
 
 
-                    _context.AsDivisis.Update(ExistingDiv);
-                    await _context.SaveChangesAsync();
+                    context.AsDivisis.Update(ExistingDiv);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -201,11 +213,12 @@ namespace eSoft.Asset.Services
         {
             try
             {
-                var ExistingDiv = _context.AsDivisis.Where(x => x.AsDivId == codeview).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingDiv = context.AsDivisis.Where(x => x.AsDivId == codeview).FirstOrDefault();
                 if (ExistingDiv != null)
                 {
-                    _context.AsDivisis.Remove(ExistingDiv);
-                    await _context.SaveChangesAsync();
+                    context.AsDivisis.Remove(ExistingDiv);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -224,7 +237,8 @@ namespace eSoft.Asset.Services
         public bool CekAcctSet(string supplier)
         {
             string test = supplier.ToUpper();
-            var cekFirst = _context.AsAcctsets.Where(x => x.AcctSet == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.AsAcctsets.Where(x => x.AcctSet == test).ToList();
             if (cekFirst.Count == 0)
             {
                 return false;
@@ -234,18 +248,21 @@ namespace eSoft.Asset.Services
 
         public List<AsAcctset> GetAsAkunSet()
         {
-            return _context.AsAcctsets.ToList();
+            using var context = CreateContext();
+            return context.AsAcctsets.ToList();
         }
 
         public AsAcctset GetAsAkunSetId(int id)
         {
-            return _context.AsAcctsets.Where(x => x.AsAcctId == id).FirstOrDefault();
+            using var context = CreateContext();
+            return context.AsAcctsets.Where(x => x.AsAcctId == id).FirstOrDefault();
         }
 
         public bool AddAkunSet(AsAcctsetView codeview)
         {
             string test = codeview.AcctSet.ToUpper();
-            var cekFirst = _context.AsAcctsets.Where(x => x.AcctSet == test).ToList();
+                using var context = CreateContext();
+                var cekFirst = context.AsAcctsets.Where(x => x.AcctSet == test).ToList();
             if (cekFirst.Count == 0)
             {
                 AsAcctset AcctCode = new AsAcctset()
@@ -260,8 +277,8 @@ namespace eSoft.Asset.Services
                     Acct6 = codeview.Acct6
 
                 };
-                _context.AsAcctsets.Add(AcctCode);
-                _context.SaveChanges();
+                context.AsAcctsets.Add(AcctCode);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -277,7 +294,8 @@ namespace eSoft.Asset.Services
         {
             try
             {
-                var ExistingAkunSet = _context.AsAcctsets.Where(x => x.AsAcctId == codeview.AsAcctId).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingAkunSet = context.AsAcctsets.Where(x => x.AsAcctId == codeview.AsAcctId).FirstOrDefault();
                 if (ExistingAkunSet != null)
                 {
                     ExistingAkunSet.Description = codeview.Description;
@@ -288,8 +306,8 @@ namespace eSoft.Asset.Services
                     ExistingAkunSet.Acct5 = codeview.Acct5;
                     ExistingAkunSet.Acct6 = codeview.Acct6;
 
-                    _context.AsAcctsets.Update(ExistingAkunSet);
-                    await _context.SaveChangesAsync();
+                    context.AsAcctsets.Update(ExistingAkunSet);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -306,11 +324,12 @@ namespace eSoft.Asset.Services
         {
             try
             {
-                var ExistingAkunSet = _context.AsAcctsets.Where(x => x.AsAcctId == codeview).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingAkunSet = context.AsAcctsets.Where(x => x.AsAcctId == codeview).FirstOrDefault();
                 if (ExistingAkunSet != null)
                 {
-                    _context.AsAcctsets.Remove(ExistingAkunSet);
-                    await _context.SaveChangesAsync();
+                    context.AsAcctsets.Remove(ExistingAkunSet);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -329,7 +348,8 @@ namespace eSoft.Asset.Services
         public bool CekDistCode(string distcode)
         {
             string test = distcode.ToUpper();
-            var cekFirst = _context.AsDistSets.Where(x => x.DistCode == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.AsDistSets.Where(x => x.DistCode == test).ToList();
             if (cekFirst.Count == 0)
             {
                 return false;
@@ -339,18 +359,21 @@ namespace eSoft.Asset.Services
 
         public List<AsDistSet> GetDist()
         {
-            return _context.AsDistSets.ToList();
+            using var context = CreateContext();
+            return context.AsDistSets.ToList();
         }
 
         public AsDistSet GetDistId(int id)
         {
-            return _context.AsDistSets.Where(x => x.AsDistId == id).FirstOrDefault();
+            using var context = CreateContext();
+            return context.AsDistSets.Where(x => x.AsDistId == id).FirstOrDefault();
         }
 
         public bool AddDist(AsDistSetView codeview)
         {
             string test = codeview.DistCode.ToUpper();
-            var cekFirst = _context.AsDistSets.Where(x => x.DistCode == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.AsDistSets.Where(x => x.DistCode == test).ToList();
             if (cekFirst.Count == 0)
             {
                 AsDistSet AcctCode = new AsDistSet()
@@ -360,8 +383,8 @@ namespace eSoft.Asset.Services
                     Dist1 = codeview.Dist1
 
                 };
-                _context.AsDistSets.Add(AcctCode);
-                _context.SaveChanges();
+                context.AsDistSets.Add(AcctCode);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -377,14 +400,15 @@ namespace eSoft.Asset.Services
         {
             try
             {
-                var ExistingDist = _context.AsDistSets.Where(x => x.AsDistId == codeview.AsDistId).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingDist = context.AsDistSets.Where(x => x.AsDistId == codeview.AsDistId).FirstOrDefault();
                 if (ExistingDist != null)
                 {
                     ExistingDist.Description = codeview.Description;
                     ExistingDist.Dist1 = codeview.Dist1;
 
-                    _context.AsDistSets.Update(ExistingDist);
-                    await _context.SaveChangesAsync();
+                    context.AsDistSets.Update(ExistingDist);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -401,11 +425,12 @@ namespace eSoft.Asset.Services
         {
             try
             {
-                var ExistingDist = _context.AsDistSets.Where(x => x.AsDistId == codeview).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingDist = context.AsDistSets.Where(x => x.AsDistId == codeview).FirstOrDefault();
                 if (ExistingDist != null)
                 {
-                    _context.AsDistSets.Remove(ExistingDist);
-                    await _context.SaveChangesAsync();
+                    context.AsDistSets.Remove(ExistingDist);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -422,21 +447,23 @@ namespace eSoft.Asset.Services
         #region AsAsset Class
         public List<AsAssets> GetAsAsset()
         {
-            return _context.AsAssetss.Where(x =>x.Qty!=0).OrderBy(x => x.TglBeli).ToList();
+            using var context = CreateContext();
+            return context.AsAssetss.Where(x =>x.Qty!=0).OrderBy(x => x.TglBeli).ToList();
         }
 
         public async Task<bool> DelAsAssets(int codeview)
         {
             try
             {
-                var ExistingDist = _context.AsAssetss.Where(x => x.AsAssetsId == codeview).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingDist = context.AsAssetss.Where(x => x.AsAssetsId == codeview).FirstOrDefault();
                 if (ExistingDist != null && ExistingDist.Nilai == ExistingDist.SisaNilai)
                 {
-                    var existingAsset = _context.AsTransaksis.Where(x => x.BarcodeAssets == ExistingDist.BarcodeAssets).ToList();
+                    var existingAsset = context.AsTransaksis.Where(x => x.BarcodeAssets == ExistingDist.BarcodeAssets).ToList();
 
-                    _context.AsAssetss.Remove(ExistingDist);
-                    _context.AsTransaksis.RemoveRange(existingAsset);
-                    await _context.SaveChangesAsync();
+                    context.AsAssetss.Remove(ExistingDist);
+                    context.AsTransaksis.RemoveRange(existingAsset);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -502,9 +529,10 @@ namespace eSoft.Asset.Services
                     }
                 }
                
-                _context.AsAssetss.AddRange(daftarAsset);
-                _context.AsTransaksis.AddRange(daftarTransaksi);
-                _context.SaveChanges();
+                using var context = CreateContext();
+                context.AsAssetss.AddRange(daftarAsset);
+                context.AsTransaksis.AddRange(daftarTransaksi);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -522,7 +550,8 @@ namespace eSoft.Asset.Services
             string thnbln = DateTime.Now.ToString("yyMM");
             string xbukti = kodeurut ;
             var maxvalue = "";
-            var maxlist = _context.AsAssetss.Where(x => x.BarcodeAssets.Substring(0, 6).Equals(xbukti)).ToList();
+            using var context = CreateContext();
+            var maxlist = context.AsAssetss.Where(x => x.BarcodeAssets.Substring(0, 6).Equals(xbukti)).ToList();
             if (maxlist != null)
             {
                 maxvalue = maxlist.Max(x => x.BarcodeAssets);
@@ -547,6 +576,11 @@ namespace eSoft.Asset.Services
             // var maxvalue = (from e in db.AptTranss where e.NoRef.Substring(0, 7) == "ANG" + cAngNo select e.NoRef.Max()).FirstOrDefault();
             return nourut;
 
+        }
+
+        private DbContextAssets CreateContext()
+        {
+            return _context.CreateDbContext();
         }
 
         #endregion

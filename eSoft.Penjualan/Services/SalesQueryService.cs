@@ -12,12 +12,12 @@ namespace eSoft.Penjualan.Services
 {
     public class SalesQueryService : ISalesQueryService
     {
-        private readonly DbContextJual _context;
-        private readonly DbContextPiutang _contextAr;
+        private readonly IDbContextFactory<DbContextJual> _context;
+        private readonly IDbContextFactory<DbContextPiutang> _contextAr;
 
         public SalesQueryService(
-            DbContextJual context,
-            DbContextPiutang contextPiutang)
+            IDbContextFactory<DbContextJual> context,
+            IDbContextFactory<DbContextPiutang> contextPiutang)
         {
             _context = context;
             _contextAr = contextPiutang;
@@ -25,14 +25,18 @@ namespace eSoft.Penjualan.Services
 
         public ArPiutng GetPiutang(string bukti)
         {
-            return _contextAr.ArPiutngs
+            using var contextAr = CreatePiutangContext();
+
+            return contextAr.ArPiutngs
                 .AsNoTracking()
                 .FirstOrDefault(x => x.Dokumen == bukti);
         }
 
         public OeTransH GetOeTrans(int id)
         {
-            return _context.OeTransHs
+            using var context = CreateJualContext();
+
+            return context.OeTransHs
                 .AsNoTracking()
                 .Include(p => p.OeTransDs)
                 .FirstOrDefault(x => x.OeTransHId == id);
@@ -40,7 +44,9 @@ namespace eSoft.Penjualan.Services
 
         public OeTransH GetOeTransDokumen(string id)
         {
-            return _context.OeTransHs
+            using var context = CreateJualContext();
+
+            return context.OeTransHs
                 .AsNoTracking()
                 .Include(p => p.OeTransDs)
                 .FirstOrDefault(x => x.NoLpb == id);
@@ -48,47 +54,49 @@ namespace eSoft.Penjualan.Services
 
         public List<OeTransH> GetFirstTransH()
         {
-            int hari = 30;
-            DateTime startDate = DateTime.Now.AddDays(-hari);
-            DateTime endDate = DateTime.Now.AddDays(hari);
+            var (startDate, endDate) = GetDefaultDateRange();
 
-            var transaksi = BuildTransHeaderQuery(startDate, endDate, true).ToList();
-            ApplyDisplayNames(transaksi);
+            using var context = CreateJualContext();
+            var transaksi = BuildTransHeaderQuery(context, startDate, endDate, true).ToList();
+            ApplyDisplayNames(context, transaksi);
 
             return transaksi;
         }
 
         public List<OeTransH> GetFirstTransHNon()
         {
-            int hari = 30;
-            DateTime startDate = DateTime.Now.AddDays(-hari);
-            DateTime endDate = DateTime.Now.AddDays(hari);
+            var (startDate, endDate) = GetDefaultDateRange();
 
-            var transaksi = BuildTransHeaderQuery(startDate, endDate, false).ToList();
-            ApplyDisplayNames(transaksi);
+            using var context = CreateJualContext();
+            var transaksi = BuildTransHeaderQuery(context, startDate, endDate, false).ToList();
+            ApplyDisplayNames(context, transaksi);
 
             return transaksi;
         }
 
         public async Task<List<OeTransH>> GetTransH(DateTime tanggalAwal, DateTime tanggalAkhir)
         {
-            var transaksi = await BuildTransHeaderQuery(tanggalAwal, tanggalAkhir, true).ToListAsync();
-            ApplyDisplayNames(transaksi);
+            using var context = CreateJualContext();
+            var transaksi = await BuildTransHeaderQuery(context, tanggalAwal, tanggalAkhir, true).ToListAsync();
+            ApplyDisplayNames(context, transaksi);
 
             return transaksi;
         }
 
         public async Task<List<OeTransH>> GetTransHNon(DateTime tanggalAwal, DateTime tanggalAkhir)
         {
-            var transaksi = await BuildTransHeaderQuery(tanggalAwal, tanggalAkhir, false).ToListAsync();
-            ApplyDisplayNames(transaksi);
+            using var context = CreateJualContext();
+            var transaksi = await BuildTransHeaderQuery(context, tanggalAwal, tanggalAkhir, false).ToListAsync();
+            ApplyDisplayNames(context, transaksi);
 
             return transaksi;
         }
 
         public List<OeTransH> Get3TransH()
         {
-            return _context.OeTransHs
+            using var context = CreateJualContext();
+
+            return context.OeTransHs
                 .AsNoTracking()
                 .Where(x => x.Tanggal > DateTime.Today.Date.AddMonths(-3) && (x.Kode == "94" || x.Kode == "95"))
                 .OrderByDescending(x => x.Tanggal)
@@ -97,18 +105,21 @@ namespace eSoft.Penjualan.Services
 
         public List<OeTransD> GetTransD()
         {
-            return _context.OeTransDs
+            using var context = CreateJualContext();
+
+            return context.OeTransDs
                 .AsNoTracking()
                 .ToList();
         }
 
         public async Task<List<OeTransH>> GetTransKurirAsync()
         {
+            using var context = CreateJualContext();
             DateTime date1 = new DateTime(2022, 4, 17, 0, 0, 0);
 
-            var query = _context.OeTransHs
+            var query = context.OeTransHs
                 .AsNoTracking()
-                .Where(e => e.Kode == "94" && (e.Kurir == null || e.Kurir == "") && e.Tanggal > date1)
+                .Where(e => e.Kode == "94" && string.IsNullOrEmpty(e.Kurir) && e.Tanggal > date1)
                 .OrderByDescending(e => e.Tanggal)
                 .Select(e => new OeTransH
                 {
@@ -139,41 +150,45 @@ namespace eSoft.Penjualan.Services
 
         public void SimpanKurir(OeTransH transaksi)
         {
-            var oeTransH = _context.OeTransHs.Find(transaksi.OeTransHId);
+            using var context = CreateJualContext();
+            var oeTransH = context.OeTransHs.Find(transaksi.OeTransHId);
 
             if (oeTransH != null)
             {
                 oeTransH.Kurir = transaksi.Kurir;
                 oeTransH.Salesman = transaksi.Salesman;
 
-                _context.SaveChanges();
+                context.SaveChanges();
             }
         }
 
         public void SimpanSalesman(OeTransH transaksi)
         {
-            var oeTransH = _context.OeTransHs.Find(transaksi.OeTransHId);
+            using var context = CreateJualContext();
+            var oeTransH = context.OeTransHs.Find(transaksi.OeTransHId);
 
             if (oeTransH != null)
             {
                 oeTransH.Salesman = transaksi.Salesman;
 
-                _context.SaveChanges();
+                context.SaveChanges();
             }
         }
 
         public List<OeTransD> GetOeTransDByDokumen(string dokumen)
         {
-            return _context.OeTransDs
+            using var context = CreateJualContext();
+
+            return context.OeTransDs
                 .AsNoTracking()
                 .Where(x => x.NoLpb == dokumen)
                 .OrderBy(x => x.OeTransDId)
                 .ToList();
         }
 
-        private IQueryable<OeTransH> BuildTransHeaderQuery(DateTime tanggalAwal, DateTime tanggalAkhir, bool pajak)
+        private IQueryable<OeTransH> BuildTransHeaderQuery(DbContextJual context, DateTime tanggalAwal, DateTime tanggalAkhir, bool pajak)
         {
-            return from e in _context.OeTransHs.AsNoTracking()
+            return from e in context.OeTransHs.AsNoTracking()
                    orderby e.Tanggal descending
                    where (e.Kode == "94" || e.Kode == "95")
                        && e.Pajak == pajak
@@ -206,7 +221,7 @@ namespace eSoft.Penjualan.Services
                    };
         }
 
-        private void ApplyDisplayNames(List<OeTransH> transaksi)
+        private void ApplyDisplayNames(DbContextJual context, List<OeTransH> transaksi)
         {
             if (transaksi.Count == 0)
             {
@@ -225,12 +240,12 @@ namespace eSoft.Penjualan.Services
                 .Distinct()
                 .ToList();
 
-            var kurirMap = _context.OeKurirs
+            var kurirMap = context.OeKurirs
                 .AsNoTracking()
                 .Where(x => kurirCodes.Contains(x.Kurir))
                 .ToDictionary(x => x.Kurir, x => x.NamaKurir);
 
-            var salesmanMap = _context.OeSalesmans
+            var salesmanMap = context.OeSalesmans
                 .AsNoTracking()
                 .Where(x => salesmanCodes.Contains(x.Salesman))
                 .ToDictionary(x => x.Salesman, x => x.NamaSales);
@@ -245,6 +260,24 @@ namespace eSoft.Penjualan.Services
                     ? string.Empty
                     : salesmanMap.GetValueOrDefault(x.Salesman, x.Salesman);
             });
+        }
+
+        private (DateTime Start, DateTime End) GetDefaultDateRange()
+        {
+            const int hari = 30;
+            var now = DateTime.Now;
+
+            return (now.AddDays(-hari), now.AddDays(hari));
+        }
+
+        private DbContextJual CreateJualContext()
+        {
+            return _context.CreateDbContext();
+        }
+
+        private DbContextPiutang CreatePiutangContext()
+        {
+            return _contextAr.CreateDbContext();
         }
     }
 }

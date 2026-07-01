@@ -11,9 +11,9 @@ namespace eSoft.Company.Services
 {
     public class CompanyServices : ICompanyServices
     {
-        private readonly DbContextCompany _context;
+        private readonly IDbContextFactory<DbContextCompany> _context;
 
-        public CompanyServices(DbContextCompany context)
+        public CompanyServices(IDbContextFactory<DbContextCompany> context)
         {
             _context = context;
         }
@@ -22,22 +22,26 @@ namespace eSoft.Company.Services
 
         public List<CoSetup> GetCompany()
         {
-            return _context.CoSetups.ToList();
+            using var context = CreateContext();
+            return context.CoSetups.ToList();
         }
 
         public CoSetup GetCompanyId(int id)
         {
-            return _context.CoSetups.Where(x => x.CoSetupId == id).FirstOrDefault();
+            using var context = CreateContext();
+            return context.CoSetups.Where(x => x.CoSetupId == id).FirstOrDefault();
         }
         public CoSetup GetCompanyKd(string id)
         {
-            return _context.CoSetups.Where(x => x.CoKode == id).FirstOrDefault();
+            using var context = CreateContext();
+            return context.CoSetups.Where(x => x.CoKode == id).FirstOrDefault();
         }
 
         public bool CekKdCompany(string kodeBank)
         {
             string test = kodeBank.ToUpper();
-            var cekFirst = _context.CoSetups.Where(x => x.CoKode == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.CoSetups.Where(x => x.CoKode == test).ToList();
             if (cekFirst.Count == 0)
             {
                 return false;
@@ -48,7 +52,8 @@ namespace eSoft.Company.Services
         public bool AddCompany(CoSetupView banks)
         {
             string test = banks.CoKode.ToUpper();
-            var cekFirst = _context.CoSetups.Where(x => x.CoKode == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.CoSetups.Where(x => x.CoKode == test).ToList();
             if (cekFirst.Count == 0)
             {
                 CoSetup Bank = new()
@@ -63,8 +68,8 @@ namespace eSoft.Company.Services
                     Account6 = banks.Account6
 
                 };
-                _context.CoSetups.Add(Bank);
-                _context.SaveChanges();
+                context.CoSetups.Add(Bank);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -79,7 +84,8 @@ namespace eSoft.Company.Services
         {
             try
             {
-                var ExistingBank = _context.CoSetups.Where(x => x.CoSetupId == banks.CoSetupId).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingBank = context.CoSetups.Where(x => x.CoSetupId == banks.CoSetupId).FirstOrDefault();
                 if (ExistingBank != null)
                 {
                     ExistingBank.CoName = banks.CoName;
@@ -90,8 +96,8 @@ namespace eSoft.Company.Services
                      ExistingBank.Account5 = banks.Account5;
                     ExistingBank.Account6 = banks.Account6;
 
-                    _context.CoSetups.Update(ExistingBank);
-                    await _context.SaveChangesAsync();
+                    context.CoSetups.Update(ExistingBank);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -108,12 +114,13 @@ namespace eSoft.Company.Services
         {
             try
             {
-                var ExistingBank = _context.CoSetups.Single(item => item.CoSetupId == banks);
+                using var context = CreateContext();
+                var ExistingBank = context.CoSetups.Single(item => item.CoSetupId == banks);
                 //  var ExistingBank = _context.Banks.Where(x => x.CbBankId == banks).FirstOrDefault();
                 if (ExistingBank != null)
                 {
-                    _context.CoSetups.Remove(ExistingBank);
-                    await _context.SaveChangesAsync();
+                    context.CoSetups.Remove(ExistingBank);
+                    await context.SaveChangesAsync();
                     return true;
                 }
                 else
@@ -130,5 +137,10 @@ namespace eSoft.Company.Services
 
         }
         #endregion
+
+        private DbContextCompany CreateContext()
+        {
+            return _context.CreateDbContext();
+        }
     }
 }

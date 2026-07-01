@@ -2,21 +2,24 @@ using System.Linq;
 using eSoft.Penjualan.Model;
 using eSoft.Piutang.Data;
 using eSoft.Piutang.Model;
+using Microsoft.EntityFrameworkCore;
 
 namespace eSoft.Penjualan.Services
 {
     public class SalesReceivableService : ISalesReceivableService
     {
-        private readonly DbContextPiutang _contextAr;
+        private readonly IDbContextFactory<DbContextPiutang> _contextAr;
 
-        public SalesReceivableService(DbContextPiutang contextAr)
+        public SalesReceivableService(IDbContextFactory<DbContextPiutang> contextAr)
         {
             _contextAr = contextAr;
         }
 
         public bool HasSettlement(string documentNo)
         {
-            return _contextAr.ArPiutngs.Any(x => x.Dokumen == documentNo && x.Bayar > 0);
+            using var contextAr = CreatePiutangContext();
+
+            return contextAr.ArPiutngs.Any(x => x.Dokumen == documentNo && x.Bayar > 0);
         }
 
         public void ApplySaleReceivable(OeTransH transH, bool nonPiutang)
@@ -26,7 +29,9 @@ namespace eSoft.Penjualan.Services
                 return;
             }
 
-            var customer = GetCustomer(transH.Customer);
+            using var contextAr = CreatePiutangContext();
+
+            var customer = GetCustomer(contextAr, transH.Customer);
             if (customer == null)
             {
                 return;
@@ -47,14 +52,16 @@ namespace eSoft.Penjualan.Services
                 KodeTran = transH.Kode
             };
 
-            _contextAr.ArPiutngs.Add(piutang);
+            contextAr.ArPiutngs.Add(piutang);
             customer.Piutang += transH.Jumlah;
-            _contextAr.ArCusts.Update(customer);
+            contextAr.ArCusts.Update(customer);
         }
 
         public void ApplyReturnReceivable(OeTransH transH)
         {
-            var customer = GetCustomer(transH.Customer);
+            using var contextAr = CreatePiutangContext();
+
+            var customer = GetCustomer(contextAr, transH.Customer);
             if (customer == null)
             {
                 return;
@@ -74,9 +81,9 @@ namespace eSoft.Penjualan.Services
                 KodeTran = transH.Kode
             };
 
-            _contextAr.ArPiutngs.Add(piutang);
+            contextAr.ArPiutngs.Add(piutang);
             customer.Piutang -= transH.Jumlah;
-            _contextAr.ArCusts.Update(customer);
+            contextAr.ArCusts.Update(customer);
         }
 
         public void ReverseExistingReceivable(OeTransH existingTrans)
@@ -86,23 +93,27 @@ namespace eSoft.Penjualan.Services
                 return;
             }
 
-            var customer = GetCustomer(existingTrans.Customer);
+            using var contextAr = CreatePiutangContext();
+
+            var customer = GetCustomer(contextAr, existingTrans.Customer);
             if (customer != null)
             {
                 customer.Piutang -= existingTrans.Jumlah;
-                _contextAr.ArCusts.Update(customer);
+                contextAr.ArCusts.Update(customer);
             }
 
-            var piutang = _contextAr.ArPiutngs.FirstOrDefault(x => x.Dokumen == existingTrans.NoLpb);
+            var piutang = contextAr.ArPiutngs.FirstOrDefault(x => x.Dokumen == existingTrans.NoLpb);
             if (piutang != null)
             {
-                _contextAr.ArPiutngs.Remove(piutang);
+                contextAr.ArPiutngs.Remove(piutang);
             }
         }
 
         public void ReverseExistingReceivableForEdit(OeTransH existingTrans)
         {
-            var customer = GetCustomer(existingTrans.Customer);
+            using var contextAr = CreatePiutangContext();
+
+            var customer = GetCustomer(contextAr, existingTrans.Customer);
             if (customer != null)
             {
                 if (existingTrans.Kode == "94")
@@ -114,13 +125,13 @@ namespace eSoft.Penjualan.Services
                     customer.Piutang += existingTrans.Jumlah;
                 }
 
-                _contextAr.ArCusts.Update(customer);
+                contextAr.ArCusts.Update(customer);
             }
 
-            var piutang = _contextAr.ArPiutngs.FirstOrDefault(x => x.Dokumen == existingTrans.NoLpb && x.Bayar == 0);
+            var piutang = contextAr.ArPiutngs.FirstOrDefault(x => x.Dokumen == existingTrans.NoLpb && x.Bayar == 0);
             if (piutang != null)
             {
-                _contextAr.ArPiutngs.Remove(piutang);
+                contextAr.ArPiutngs.Remove(piutang);
             }
         }
 
@@ -131,7 +142,9 @@ namespace eSoft.Penjualan.Services
                 return;
             }
 
-            var customer = GetCustomer(transH.Customer);
+            using var contextAr = CreatePiutangContext();
+
+            var customer = GetCustomer(contextAr, transH.Customer);
             if (customer == null)
             {
                 return;
@@ -154,7 +167,7 @@ namespace eSoft.Penjualan.Services
                 KodeTran = transH.Kode
             };
 
-            _contextAr.ArPiutngs.Add(piutang);
+            contextAr.ArPiutngs.Add(piutang);
 
             if (transH.Kode == "94")
             {
@@ -165,12 +178,17 @@ namespace eSoft.Penjualan.Services
                 customer.Piutang -= transH.Jumlah;
             }
 
-            _contextAr.ArCusts.Update(customer);
+            contextAr.ArCusts.Update(customer);
         }
 
-        private ArCust GetCustomer(string customerCode)
+        private ArCust GetCustomer(DbContextPiutang contextAr, string customerCode)
         {
-            return _contextAr.ArCusts.FirstOrDefault(x => x.Customer == customerCode);
+            return contextAr.ArCusts.FirstOrDefault(x => x.Customer == customerCode);
+        }
+
+        private DbContextPiutang CreatePiutangContext()
+        {
+            return _contextAr.CreateDbContext();
         }
     }
 }

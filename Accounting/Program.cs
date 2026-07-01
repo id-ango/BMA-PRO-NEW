@@ -51,6 +51,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => {
  //   options.SignIn.RequireConfirmedAccount = true;
@@ -68,71 +69,82 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 // builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
 
-builder.Services.AddDbContext<DbContextBank>(options =>
+builder.Services.AddDbContextFactory<DbContextBank>(options =>
     options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextBank>(sp => sp.GetRequiredService<IDbContextFactory<DbContextBank>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextLedger>(options =>
+builder.Services.AddDbContextFactory<DbContextLedger>(options =>
        options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextLedger>(sp => sp.GetRequiredService<IDbContextFactory<DbContextLedger>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextPiutang>(options =>
+builder.Services.AddDbContextFactory<DbContextPiutang>(options =>
       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting").CommandTimeout(180)));
+builder.Services.AddScoped<DbContextPiutang>(sp => sp.GetRequiredService<IDbContextFactory<DbContextPiutang>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextHutang>(options =>
+builder.Services.AddDbContextFactory<DbContextHutang>(options =>
       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextHutang>(sp => sp.GetRequiredService<IDbContextFactory<DbContextHutang>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextPersediaan>(options =>
+builder.Services.AddDbContextFactory<DbContextPersediaan>(options =>
       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextPersediaan>(sp => sp.GetRequiredService<IDbContextFactory<DbContextPersediaan>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextBeli>(options =>
+builder.Services.AddDbContextFactory<DbContextBeli>(options =>
       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextBeli>(sp => sp.GetRequiredService<IDbContextFactory<DbContextBeli>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextJual>(options =>
+builder.Services.AddDbContextFactory<DbContextJual>(options =>
       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextJual>(sp => sp.GetRequiredService<IDbContextFactory<DbContextJual>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextOrder>(options =>
+builder.Services.AddDbContextFactory<DbContextOrder>(options =>
       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextOrder>(sp => sp.GetRequiredService<IDbContextFactory<DbContextOrder>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextCompany>(options =>
+builder.Services.AddDbContextFactory<DbContextCompany>(options =>
       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextCompany>(sp => sp.GetRequiredService<IDbContextFactory<DbContextCompany>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextAssets>(options =>
+builder.Services.AddDbContextFactory<DbContextAssets>(options =>
       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextAssets>(sp => sp.GetRequiredService<IDbContextFactory<DbContextAssets>>().CreateDbContext());
 
-builder.Services.AddDbContext<DbContextFinancial>(options =>
+builder.Services.AddDbContextFactory<DbContextFinancial>(options =>
       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
-builder.Services.AddDbContext<DbContextTestRun>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddScoped<DbContextFinancial>(sp => sp.GetRequiredService<IDbContextFactory<DbContextFinancial>>().CreateDbContext());
+// builder.Services.AddDbContext<DbContextTestRun>(options =>
+//      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
 
-builder.Services.AddTransient<ICashBankServices, CashBankServices>();
-builder.Services.AddTransient<ILedgerServices, LedgerServices>();
-builder.Services.AddTransient<IReceivableServices, ReceivableServices>();
-builder.Services.AddTransient<IPaymentArServices, PaymentArServices>();
-builder.Services.AddTransient<IPaymentArDpServices, PaymentArDpServices>();
-builder.Services.AddTransient<IPayableServices, PayableServices>();
-builder.Services.AddTransient<IPaymentApServices, PaymentApServices>();
-builder.Services.AddTransient<IPaymentApDpServices, PaymentApDpServices>();
-builder.Services.AddTransient<IInventoryServices, InventoryServices>();
-builder.Services.AddTransient<IIcAdjustServices, IcAdjustServices>();
-builder.Services.AddTransient<IPurchaseServices, PurchaseServices>();
-builder.Services.AddTransient<ISalesDocumentNumberService, SalesDocumentNumberService>();
-builder.Services.AddTransient<ISalesDetailFactory, SalesDetailFactory>();
-builder.Services.AddTransient<ISalesInventoryAdjustmentService, SalesInventoryAdjustmentService>();
-builder.Services.AddTransient<ISalesReceivableService, SalesReceivableService>();
-builder.Services.AddTransient<ISalesmanMasterService, SalesmanMasterService>();
-builder.Services.AddTransient<IKurirMasterService, KurirMasterService>();
-builder.Services.AddTransient<ISalesReportService, SalesReportService>();
-builder.Services.AddTransient<ISalesQueryService, SalesQueryService>();
-builder.Services.AddTransient<ISalesCommandService, SalesCommandService>();
-builder.Services.AddTransient<ISalesServices, SalesServices>();
-builder.Services.AddTransient<IOrderPurchaseServices, OrderPurchaseServices>();
-builder.Services.AddTransient<ILaporanStockServices, LaporanStockServices>();
-builder.Services.AddTransient<ICompanyServices, CompanyServices>();
-builder.Services.AddTransient<IAdministrationServices, AdministrationServices>();
-builder.Services.AddTransient<IExcelServices, ExcelServices>();
-builder.Services.AddTransient<IAssetServices, AssetServices>();
-builder.Services.AddTransient<IOrderSalesServices, OrderSalesServices>();
-builder.Services.AddTransient<IFinancialServices, FinancialServices>();
-builder.Services.AddTransient<ITestRunServices, TestRunServices>();
+builder.Services.AddScoped<ICashBankServices, CashBankServices>();
+builder.Services.AddScoped<ILedgerServices, LedgerServices>();
+builder.Services.AddScoped<IReceivableServices, ReceivableServices>();
+builder.Services.AddScoped<IPaymentArServices, PaymentArServices>();
+builder.Services.AddScoped<IPaymentArDpServices, PaymentArDpServices>();
+builder.Services.AddScoped<IPayableServices, PayableServices>();
+builder.Services.AddScoped<IPaymentApServices, PaymentApServices>();
+builder.Services.AddScoped<IPaymentApDpServices, PaymentApDpServices>();
+builder.Services.AddScoped<IInventoryServices, InventoryServices>();
+builder.Services.AddScoped<IIcAdjustServices, IcAdjustServices>();
+builder.Services.AddScoped<IPurchaseServices, PurchaseServices>();
+builder.Services.AddScoped<ISalesDocumentNumberService, SalesDocumentNumberService>();
+builder.Services.AddScoped<ISalesDetailFactory, SalesDetailFactory>();
+builder.Services.AddScoped<ISalesInventoryAdjustmentService, SalesInventoryAdjustmentService>();
+builder.Services.AddScoped<ISalesReceivableService, SalesReceivableService>();
+builder.Services.AddScoped<ISalesmanMasterService, SalesmanMasterService>();
+builder.Services.AddScoped<IKurirMasterService, KurirMasterService>();
+builder.Services.AddScoped<ISalesReportService, SalesReportService>();
+builder.Services.AddScoped<ISalesQueryService, SalesQueryService>();
+builder.Services.AddScoped<ISalesCommandService, SalesCommandService>();
+builder.Services.AddScoped<ISalesServices, SalesServices>();
+builder.Services.AddScoped<IOrderPurchaseServices, OrderPurchaseServices>();
+builder.Services.AddScoped<ILaporanStockServices, LaporanStockServices>();
+builder.Services.AddScoped<ICompanyServices, CompanyServices>();
+builder.Services.AddScoped<IAdministrationServices, AdministrationServices>();
+builder.Services.AddScoped<IExcelServices, ExcelServices>();
+builder.Services.AddScoped<IAssetServices, AssetServices>();
+builder.Services.AddScoped<IOrderSalesServices, OrderSalesServices>();
+builder.Services.AddScoped<IFinancialServices, FinancialServices>();
+// builder.Services.AddTransient<ITestRunServices, TestRunServices>();
 
 
 var app = builder.Build();

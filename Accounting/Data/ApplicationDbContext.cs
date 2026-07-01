@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Accounting.Data
 {
-    public class ApplicationDbContext : IdentityDbContext
+    public partial class ApplicationDbContext : IdentityDbContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)

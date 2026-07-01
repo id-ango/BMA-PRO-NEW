@@ -15,22 +15,24 @@ namespace eSoft.Ledger.Services
     public class LedgerServices : ILedgerServices
     {
 
-        private readonly DbContextLedger _context;
+        private readonly IDbContextFactory<DbContextLedger> _context;
 
-        public LedgerServices(DbContextLedger context)
+        public LedgerServices(IDbContextFactory<DbContextLedger> context)
         {
             _context = context;
         }
 
         public List<GlAccount> GetGlAccount()
         {
-            return _context.GlAccounts.OrderBy(x => x.GlAcct).ToList();
+            using var context = CreateContext();
+            return context.GlAccounts.OrderBy(x => x.GlAcct).ToList();
         }
 
         public bool CekKdAkun(string kodeAkun)
         {
             string test = kodeAkun.ToUpper();
-            var cekFirst = _context.GlAccounts.Where(x => x.GlAcct == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.GlAccounts.Where(x => x.GlAcct == test).ToList();
             if (cekFirst.Count == 0)
             {
                 return false;
@@ -40,13 +42,15 @@ namespace eSoft.Ledger.Services
 
         public GlAccount GetGlAccountId(int id)
         {
-            return _context.GlAccounts.Where(x => x.GlAccountId == id).FirstOrDefault();
+            using var context = CreateContext();
+            return context.GlAccounts.Where(x => x.GlAccountId == id).FirstOrDefault();
         }
 
         public bool AddGlAccount(GlAccountView glakun)
         {
             string test = glakun.GlAcct.ToUpper();
-            var cekFirst = _context.GlAccounts.Where(x => x.GlAcct == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.GlAccounts.Where(x => x.GlAcct == test).ToList();
             if (cekFirst.Count == 0)
             {
                 GlAccount Akun = new GlAccount()
@@ -60,8 +64,8 @@ namespace eSoft.Ledger.Services
 
 
                 };
-                _context.GlAccounts.Add(Akun);
-                 _context.SaveChanges();
+                context.GlAccounts.Add(Akun);
+                 context.SaveChanges();
                 return true;
             }
             else
@@ -76,15 +80,16 @@ namespace eSoft.Ledger.Services
         {
             try
             {
-                var ExistingBank = _context.GlAccounts.Where(x => x.GlAccountId == glakun.GlAccountId).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingBank = context.GlAccounts.Where(x => x.GlAccountId == glakun.GlAccountId).FirstOrDefault();
                 if (ExistingBank != null)
                 {
                     ExistingBank.GlNama = glakun.GlNama;
                     ExistingBank.GlTipe = (int)glakun.GlStatus;
                     ExistingBank.NamaLengkap = glakun.NamaLengkap;
                    
-                    _context.GlAccounts.Update(ExistingBank);
-                    await _context.SaveChangesAsync();
+                    context.GlAccounts.Update(ExistingBank);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -101,11 +106,12 @@ namespace eSoft.Ledger.Services
         {
             try
             {
-                var ExistingBank = _context.GlAccounts.Where(x => x.GlAccountId == banks).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingBank = context.GlAccounts.Where(x => x.GlAccountId == banks).FirstOrDefault();
                 if (ExistingBank != null)
                 {
-                    _context.GlAccounts.Remove(ExistingBank);
-                     await _context.SaveChangesAsync();
+                    context.GlAccounts.Remove(ExistingBank);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -123,7 +129,8 @@ namespace eSoft.Ledger.Services
         public bool CekKodeGL(string kodeAkun)
         {
             string test = kodeAkun.ToUpper();
-            var cekFirst = _context.GlCodes.Any(x => x.KodeGl == test);
+            using var context = CreateContext();
+            var cekFirst = context.GlCodes.Any(x => x.KodeGl == test);
             if (!cekFirst)
             {
                 return false;
@@ -133,18 +140,21 @@ namespace eSoft.Ledger.Services
 
         public List<GlCode> GetGlCode()
         {
-            return _context.GlCodes.OrderBy(x => x.KodeGl).ToList();
+            using var context = CreateContext();
+            return context.GlCodes.OrderBy(x => x.KodeGl).ToList();
         }
 
         public GlCode GetGlCodeId(int id)
         {
-            return _context.GlCodes.Where(x => x.GlCodeId == id).FirstOrDefault();
+            using var context = CreateContext();
+            return context.GlCodes.Where(x => x.GlCodeId == id).FirstOrDefault();
         }
 
         public async Task<bool> AddGlCode(GlCodeView codeview)
         {
             string test = codeview.KodeGl.ToUpper();
-            var cekFirst = _context.GlCodes.Where(x => x.KodeGl == test).ToList();
+            using var context = CreateContext();
+            var cekFirst = context.GlCodes.Where(x => x.KodeGl == test).ToList();
             if (cekFirst.Count == 0)
             {
                 GlCode Division = new GlCode()
@@ -153,8 +163,8 @@ namespace eSoft.Ledger.Services
                     NamaGl = codeview.NamaGl
 
                 };
-                _context.GlCodes.Add(Division);
-                await _context.SaveChangesAsync();
+                context.GlCodes.Add(Division);
+                await context.SaveChangesAsync();
                 return true;
             }
             else
@@ -169,14 +179,15 @@ namespace eSoft.Ledger.Services
         {
             try
             {
-                var ExistingDiv = _context.GlCodes.Where(x => x.GlCodeId == codeview.GlCodeId).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingDiv = context.GlCodes.Where(x => x.GlCodeId == codeview.GlCodeId).FirstOrDefault();
                 if (ExistingDiv != null)
                 {
                     ExistingDiv.NamaGl = codeview.NamaGl;
 
 
-                    _context.GlCodes.Update(ExistingDiv);
-                    await _context.SaveChangesAsync();
+                    context.GlCodes.Update(ExistingDiv);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -193,11 +204,12 @@ namespace eSoft.Ledger.Services
         {
             try
             {
-                var ExistingDiv = _context.GlCodes.Where(x => x.GlCodeId == codeview).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingDiv = context.GlCodes.Where(x => x.GlCodeId == codeview).FirstOrDefault();
                 if (ExistingDiv != null)
                 {
-                    _context.GlCodes.Remove(ExistingDiv);
-                    await _context.SaveChangesAsync();
+                    context.GlCodes.Remove(ExistingDiv);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -215,11 +227,13 @@ namespace eSoft.Ledger.Services
         #region TransLedger
         public GlTransH GetTrans(int id)
         {
-            return _context.GlTransHs.Include(p => p.GlTransDs).Where(x => x.GlTransHId == id).FirstOrDefault();
+            using var context = CreateContext();
+            return context.GlTransHs.Include(p => p.GlTransDs).Where(x => x.GlTransHId == id).FirstOrDefault();
         }
         public GlTransH GetTransDoc(string docno)
         {
-            return _context.GlTransHs.Include(p => p.GlTransDs).Where(x => x.DocNo == docno).FirstOrDefault();
+            using var context = CreateContext();
+            return context.GlTransHs.Include(p => p.GlTransDs).Where(x => x.DocNo == docno).FirstOrDefault();
         }
 
         public List<GlTransH> GetTransH()
@@ -227,7 +241,8 @@ namespace eSoft.Ledger.Services
             List<GlTransH> arTrans = new List<GlTransH>();
             try
             {
-                arTrans = _context.GlTransHs.OrderByDescending(x => x.Tanggal).ToList();
+                using var context = CreateContext();
+                arTrans = context.GlTransHs.OrderByDescending(x => x.Tanggal).ToList();
                
             }
             catch (Exception)
@@ -243,7 +258,8 @@ namespace eSoft.Ledger.Services
 
         public List<GlTransD> GetTransD()
         {
-            return _context.GlTransDs.ToList();
+            using var context = CreateContext();
+            return context.GlTransDs.ToList();
         }
 
         public GlTransH AddTransH(GlTransHView trans)
@@ -278,8 +294,9 @@ namespace eSoft.Ledger.Services
                 });
             }
             
-            _context.GlTransHs.Add(transH);
-            _context.SaveChanges();
+                using var context = CreateContext();
+                context.GlTransHs.Add(transH);
+                context.SaveChanges();
 
             var TempTrans = GetTransDoc(transH.DocNo);
 
@@ -298,11 +315,12 @@ namespace eSoft.Ledger.Services
 
             try
             {
-                var ExistingTrans = _context.GlTransHs.Where(x => x.GlTransHId == trans.GlTransHId).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingTrans = context.GlTransHs.Where(x => x.GlTransHId == trans.GlTransHId).FirstOrDefault();
                 if (ExistingTrans != null)
                 {
 
-                    _context.GlTransHs.Remove(ExistingTrans);
+                    context.GlTransHs.Remove(ExistingTrans);
 
                   
                     /* update */
@@ -335,8 +353,8 @@ namespace eSoft.Ledger.Services
                         });
                     }
                    
-                    _context.GlTransHs.Add(transH);
-                    _context.SaveChanges();
+                    context.GlTransHs.Add(transH);
+                    context.SaveChanges();
 
                     return transH;
                     //   return true;
@@ -359,7 +377,8 @@ namespace eSoft.Ledger.Services
         {
             try
             {
-                var ExistingTrans = _context.GlTransHs.Where(x => x.GlTransHId == id).FirstOrDefault();
+                using var context = CreateContext();
+                var ExistingTrans = context.GlTransHs.Where(x => x.GlTransHId == id).FirstOrDefault();
                 if (ExistingTrans != null)
                 {
                   //  var cekFirst = _context.ArPiutngs.Where(x => x.Dokumen == ExistingTrans.Bukti).FirstOrDefault();
@@ -369,9 +388,9 @@ namespace eSoft.Ledger.Services
 
 
                  //   _context.ArCusts.Update(customer);
-                    _context.GlTransHs.Remove(ExistingTrans);
+                    context.GlTransHs.Remove(ExistingTrans);
                 //    _context.ArPiutngs.Remove(cekFirst);
-                    await _context.SaveChangesAsync();
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -388,12 +407,13 @@ namespace eSoft.Ledger.Services
 
         public string GetNumber()
         {
+            using var context = CreateContext();
             string kodeno = "GLJ";
             string kodeurut = kodeno + "-";
             string thnbln = DateTime.Now.ToString("yyMM");
             string xbukti = kodeurut + thnbln.Substring(0, 2) + '2' + thnbln.Substring(2, 2) + '-';
             var maxvalue = "";
-            var maxlist = _context.GlTransHs.Where(x => x.DocNo.Substring(0, 10).Equals(xbukti)).ToList();
+            var maxlist = context.GlTransHs.Where(x => x.DocNo.Substring(0, 10).Equals(xbukti)).ToList();
             if (maxlist != null)
             {
                 maxvalue = maxlist.Max(x => x.DocNo);
@@ -418,6 +438,11 @@ namespace eSoft.Ledger.Services
             // var maxvalue = (from e in db.AptTranss where e.NoRef.Substring(0, 7) == "ANG" + cAngNo select e.NoRef.Max()).FirstOrDefault();
             return cAngNo;
 
+        }
+
+        private DbContextLedger CreateContext()
+        {
+            return _context.CreateDbContext();
         }
 
     }

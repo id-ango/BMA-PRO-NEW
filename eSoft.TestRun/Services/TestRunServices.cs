@@ -19,7 +19,6 @@ namespace eSoft.TestRun.Services
 
         public List<TsSchedule> GetTsSchedules()
         {
-            
             return _context.TsSchedules.OrderBy(x => x.Dokumen).ToList();
         }
     }

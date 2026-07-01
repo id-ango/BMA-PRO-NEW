@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Accounting.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -22,23 +23,27 @@ namespace Accounting.Services
 
         public List<IdentityRole> GetRoles()
         {
-            return _context.Roles.ToList();
+            using var context = _context.CreateDbContext();
+            return context.Roles.ToList();
         }
 
         public IdentityRole GetRoleId(string id)
         {
-            return _context.Roles.Where(x => x.Id == id).First();
+            using var context = _context.CreateDbContext();
+            return context.Roles.Where(x => x.Id == id).First();
         }
 
         public IdentityRole GetRoleName(string id)
         {
-            return _context.Roles.Where(x => x.NormalizedName == id).First();
+            using var context = _context.CreateDbContext();
+            return context.Roles.Where(x => x.NormalizedName == id).First();
         }
 
         public bool CekNameRole(string kodeBank)
         {
             string test = kodeBank.ToUpper();
-            var cekFirst = _context.Roles.Where(x => x.NormalizedName == test).ToList();
+            using var context = _context.CreateDbContext();
+            var cekFirst = context.Roles.Where(x => x.NormalizedName == test).ToList();
             if (cekFirst.Count == 0)
             {
                 return false;
@@ -59,8 +64,8 @@ namespace Accounting.Services
                     
 
                 };
-                _context.Roles.Add(Bank);
-                _context.SaveChanges();
+                context.Roles.Add(Bank);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -75,15 +80,16 @@ namespace Accounting.Services
         {
             try
             {
-                var ExistingBank = _context.Roles.Where(x =>x.Id == banks.Id).FirstOrDefault();
+                using var context = _context.CreateDbContext();
+                var ExistingBank = context.Roles.Where(x =>x.Id == banks.Id).FirstOrDefault();
                 if (ExistingBank != null)
                 {
                     ExistingBank.Name = banks.Name;
                     ExistingBank.NormalizedName = banks.NormalizedName;
                     
 
-                    _context.Roles.Update(ExistingBank);
-                    await _context.SaveChangesAsync();
+                    context.Roles.Update(ExistingBank);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -100,12 +106,13 @@ namespace Accounting.Services
         {
             try
             {
-                var ExistingBank = _context.Roles.Single(item => item.Id == banks);
+                using var context = _context.CreateDbContext();
+                var ExistingBank = context.Roles.Single(item => item.Id == banks);
                 //  var ExistingBank = _context.Banks.Where(x => x.CbBankId == banks).FirstOrDefault();
                 if (ExistingBank != null)
                 {
-                    _context.Roles.Remove(ExistingBank);
-                    await _context.SaveChangesAsync();
+                    context.Roles.Remove(ExistingBank);
+                    await context.SaveChangesAsync();
                     return true;
                 }
                 else

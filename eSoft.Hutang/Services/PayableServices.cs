@@ -13,17 +13,18 @@ namespace eSoft.Hutang.Services
 {
     public class PayableServices : IPayableServices
     {
-        private readonly DbContextHutang _context;
+        private readonly IDbContextFactory<DbContextHutang> _context;
 
-        public PayableServices(DbContextHutang context)
+        public PayableServices(IDbContextFactory<DbContextHutang> context)
         {
             _context = context;
         }
 
         public bool CekKdSupplier(string supplier)
         {
+            using var context = _context.CreateDbContext();
             string test = supplier.ToUpper();
-            var cekFirst = _context.ApSuppls.Where(x => x.Supplier == test).ToList();
+            var cekFirst = context.ApSuppls.Where(x => x.Supplier == test).ToList();
             if (cekFirst.Count == 0)
             {
                 return false;
@@ -33,23 +34,27 @@ namespace eSoft.Hutang.Services
 
         public List<ApSuppl> GetSupplier()
         {
-            return _context.ApSuppls.OrderBy(x => x.NamaSup).ToList();
+            using var context = _context.CreateDbContext();
+            return context.ApSuppls.OrderBy(x => x.NamaSup).ToList();
         }
 
         public ApSuppl GetSupplierId(int id)
         {
-            return _context.ApSuppls.Where(x => x.ApSupplId == id).FirstOrDefault();
+            using var context = _context.CreateDbContext();
+            return context.ApSuppls.FirstOrDefault(x => x.ApSupplId == id);
         }
 
         public ApSuppl GetSupplierKode(string kode)
         {
-            return _context.ApSuppls.Where(x => x.Supplier == kode).FirstOrDefault();
+            using var context = _context.CreateDbContext();
+            return context.ApSuppls.FirstOrDefault(x => x.Supplier == kode);
         }
 
         public bool AddSupplier(SupplierView suppliers)
         {
+            using var context = _context.CreateDbContext();
             string test = suppliers.Supplier.ToUpper();
-            var cekFirst = _context.ApSuppls.Where(x => x.Supplier == test).ToList();
+            var cekFirst = context.ApSuppls.Where(x => x.Supplier == test).ToList();
             if (cekFirst.Count == 0)
             {
                 ApSuppl Supplier = new ApSuppl()
@@ -67,8 +72,8 @@ namespace eSoft.Hutang.Services
                     AcctSet = suppliers.AcctSet
 
                 };
-                _context.ApSuppls.Add(Supplier);
-                _context.SaveChanges();
+                context.ApSuppls.Add(Supplier);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -83,7 +88,8 @@ namespace eSoft.Hutang.Services
         {
             try
             {
-                var ExistingSupplier = _context.ApSuppls.Where(x => x.ApSupplId == suppliers.ApSupplId).FirstOrDefault();
+                using var context = _context.CreateDbContext();
+                var ExistingSupplier = context.ApSuppls.FirstOrDefault(x => x.ApSupplId == suppliers.ApSupplId);
                 if (ExistingSupplier != null)
                 {
                     ExistingSupplier.NamaSup = suppliers.NamaSup;
@@ -97,8 +103,8 @@ namespace eSoft.Hutang.Services
                     ExistingSupplier.AcctSet = suppliers.AcctSet;
                     ExistingSupplier.Pajak = suppliers.Pajak;
 
-                    _context.ApSuppls.Update(ExistingSupplier);
-                    await _context.SaveChangesAsync();
+                    context.ApSuppls.Update(ExistingSupplier);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -115,11 +121,12 @@ namespace eSoft.Hutang.Services
         {
             try
             {
-                var ExistingSupplier = _context.ApSuppls.Where(x => x.ApSupplId == suppliers).FirstOrDefault();
+                using var context = _context.CreateDbContext();
+                var ExistingSupplier = context.ApSuppls.FirstOrDefault(x => x.ApSupplId == suppliers);
                 if (ExistingSupplier != null)
                 {
-                    _context.ApSuppls.Remove(ExistingSupplier);
-                    await _context.SaveChangesAsync();
+                    context.ApSuppls.Remove(ExistingSupplier);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -136,8 +143,9 @@ namespace eSoft.Hutang.Services
 
         public bool CekAcctSet(string supplier)
         {
+            using var context = _context.CreateDbContext();
             string test = supplier.ToUpper();
-            var cekFirst = _context.ApAccts.Where(x => x.AcctSet == test).ToList();
+            var cekFirst = context.ApAccts.Where(x => x.AcctSet == test).ToList();
             if (cekFirst.Count == 0)
             {
                 return false;
@@ -147,18 +155,21 @@ namespace eSoft.Hutang.Services
 
         public List<ApAcct> GetApAkunSet()
         {
-            return _context.ApAccts.ToList();
+            using var context = _context.CreateDbContext();
+            return context.ApAccts.ToList();
         }
 
         public ApAcct GetApAkunSetId(int id)
         {
-            return _context.ApAccts.Where(x => x.ApAcctId == id).FirstOrDefault();
+            using var context = _context.CreateDbContext();
+            return context.ApAccts.FirstOrDefault(x => x.ApAcctId == id);
         }
 
         public bool AddAkunSet(ApAcctView codeview)
         {
+            using var context = _context.CreateDbContext();
             string test = codeview.AcctSet.ToUpper();
-            var cekFirst = _context.ApAccts.Where(x => x.AcctSet == test).ToList();
+            var cekFirst = context.ApAccts.Where(x => x.AcctSet == test).ToList();
             if (cekFirst.Count == 0)
             {
                 ApAcct AcctCode = new ApAcct()
@@ -173,8 +184,8 @@ namespace eSoft.Hutang.Services
                     Acct6 = codeview.Acct6
 
                 };
-                _context.ApAccts.Add(AcctCode);
-                _context.SaveChanges();
+                context.ApAccts.Add(AcctCode);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -190,7 +201,8 @@ namespace eSoft.Hutang.Services
         {
             try
             {
-                var ExistingAkunSet = _context.ApAccts.Where(x => x.ApAcctId == codeview.ApAcctId).FirstOrDefault();
+                using var context = _context.CreateDbContext();
+                var ExistingAkunSet = context.ApAccts.FirstOrDefault(x => x.ApAcctId == codeview.ApAcctId);
                 if (ExistingAkunSet != null)
                 {
                     ExistingAkunSet.Description = codeview.Description;
@@ -201,8 +213,8 @@ namespace eSoft.Hutang.Services
                     ExistingAkunSet.Acct5 = codeview.Acct5;
                     ExistingAkunSet.Acct6 = codeview.Acct6;
 
-                    _context.ApAccts.Update(ExistingAkunSet);
-                    await _context.SaveChangesAsync();
+                    context.ApAccts.Update(ExistingAkunSet);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -219,11 +231,12 @@ namespace eSoft.Hutang.Services
         {
             try
             {
-                var ExistingAkunSet = _context.ApAccts.Where(x => x.ApAcctId == codeview).FirstOrDefault();
+                using var context = _context.CreateDbContext();
+                var ExistingAkunSet = context.ApAccts.FirstOrDefault(x => x.ApAcctId == codeview);
                 if (ExistingAkunSet != null)
                 {
-                    _context.ApAccts.Remove(ExistingAkunSet);
-                    await _context.SaveChangesAsync();
+                    context.ApAccts.Remove(ExistingAkunSet);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -241,8 +254,9 @@ namespace eSoft.Hutang.Services
 
         public bool CekDistCode(string distcode)
         {
+            using var context = _context.CreateDbContext();
             string test = distcode.ToUpper();
-            var cekFirst = _context.ApDists.Where(x => x.DistCode == test).ToList();
+            var cekFirst = context.ApDists.Where(x => x.DistCode == test).ToList();
             if (cekFirst.Count == 0)
             {
                 return false;
@@ -252,18 +266,21 @@ namespace eSoft.Hutang.Services
 
         public List<ApDist> GetDist()
         {
-            return _context.ApDists.ToList();
+            using var context = _context.CreateDbContext();
+            return context.ApDists.ToList();
         }
 
         public ApDist GetDistId(int id)
         {
-            return _context.ApDists.Where(x => x.ApDistId == id).FirstOrDefault();
+            using var context = _context.CreateDbContext();
+            return context.ApDists.FirstOrDefault(x => x.ApDistId == id);
         }
 
         public bool AddDist(ApDistView codeview)
         {
+            using var context = _context.CreateDbContext();
             string test = codeview.DistCode.ToUpper();
-            var cekFirst = _context.ApDists.Where(x => x.DistCode == test).ToList();
+            var cekFirst = context.ApDists.Where(x => x.DistCode == test).ToList();
             if (cekFirst.Count == 0)
             {
                 ApDist AcctCode = new ApDist()
@@ -273,8 +290,8 @@ namespace eSoft.Hutang.Services
                     Dist1 = codeview.Dist1
 
                 };
-                _context.ApDists.Add(AcctCode);
-                _context.SaveChanges();
+                context.ApDists.Add(AcctCode);
+                context.SaveChanges();
                 return true;
             }
             else
@@ -290,14 +307,15 @@ namespace eSoft.Hutang.Services
         {
             try
             {
-                var ExistingDist = _context.ApDists.Where(x => x.ApDistId == codeview.ApDistId).FirstOrDefault();
+                using var context = _context.CreateDbContext();
+                var ExistingDist = context.ApDists.FirstOrDefault(x => x.ApDistId == codeview.ApDistId);
                 if (ExistingDist != null)
                 {
                     ExistingDist.Description = codeview.Description;
                     ExistingDist.Dist1 = codeview.Dist1;
 
-                    _context.ApDists.Update(ExistingDist);
-                    await _context.SaveChangesAsync();
+                    context.ApDists.Update(ExistingDist);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -314,11 +332,12 @@ namespace eSoft.Hutang.Services
         {
             try
             {
-                var ExistingDist = _context.ApDists.Where(x => x.ApDistId == codeview).FirstOrDefault();
+                using var context = _context.CreateDbContext();
+                var ExistingDist = context.ApDists.FirstOrDefault(x => x.ApDistId == codeview);
                 if (ExistingDist != null)
                 {
-                    _context.ApDists.Remove(ExistingDist);
-                    await _context.SaveChangesAsync();
+                    context.ApDists.Remove(ExistingDist);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -336,23 +355,26 @@ namespace eSoft.Hutang.Services
 
         public ApTransH GetTrans(int id)
         {
-            return _context.ApTransHs.Include(p => p.ApTransDs).Where(x => x.ApTransHId == id).FirstOrDefault();
+            using var context = _context.CreateDbContext();
+            return context.ApTransHs.Include(p => p.ApTransDs).FirstOrDefault(x => x.ApTransHId == id);
         }
 
         public ApHutang GetHutang(string bukti)
         {
-            return _context.ApHutangs.Where(x => x.Dokumen == bukti).FirstOrDefault();
+            using var context = _context.CreateDbContext();
+            return context.ApHutangs.FirstOrDefault(x => x.Dokumen == bukti);
 
         }
         public List<ApTransH> GetTransH()
         {
+            using var context = _context.CreateDbContext();
             List<ApTransH> ApTrans = new List<ApTransH>();
             try
             {
-                ApTrans = _context.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Kode == "21").ToList();
+                ApTrans = context.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Kode == "21").ToList();
                 foreach (var item in ApTrans)
                 {
-                    item.NamaSup = (from e in _context.ApSuppls where e.Supplier == item.Supplier select e.NamaSup).FirstOrDefault();
+                    item.NamaSup = context.ApSuppls.FirstOrDefault(e => e.Supplier == item.Supplier)?.NamaSup;
                 }
             }
             catch (Exception)
@@ -368,12 +390,13 @@ namespace eSoft.Hutang.Services
 
         public List<ApTransH> Get3TransH()
         {
+            using var context = _context.CreateDbContext();
             List<ApTransH> ApTrans = new List<ApTransH>();
 
-            ApTrans = _context.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Tanggal > DateTime.Today.AddMonths(-3) && x.Kode == "21").ToList();
+            ApTrans = context.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Tanggal > DateTime.Today.AddMonths(-3) && x.Kode == "21").ToList();
             foreach (var item in ApTrans)
             {
-                item.NamaSup = (from e in _context.ApSuppls where e.Supplier == item.Supplier select e.NamaSup).FirstOrDefault();
+                item.NamaSup = context.ApSuppls.FirstOrDefault(e => e.Supplier == item.Supplier)?.NamaSup;
             }
 
             return ApTrans;
@@ -385,7 +408,8 @@ namespace eSoft.Hutang.Services
 
         public bool CekBeli(string noLpb)
         {
-            var cekFirst = _context.ApHutangs.Where(x => x.Dokumen == noLpb && x.Bayar == 0).FirstOrDefault();
+            using var context = _context.CreateDbContext();
+            var cekFirst = context.ApHutangs.FirstOrDefault(x => x.Dokumen == noLpb && x.Bayar == 0);
 
             if (cekFirst != null)
                 return true;
@@ -395,11 +419,13 @@ namespace eSoft.Hutang.Services
 
         public List<ApTransD> GetTransD()
         {
-            return _context.ApTransDs.ToList();
+            using var context = _context.CreateDbContext();
+            return context.ApTransDs.ToList();
         }
 
         public ApTransH AddTransH(ApTransHView trans)
         {
+            using var context = _context.CreateDbContext();
             //string test = codeview.SrcCode.ToUpper();
             //var cekFirst = _context.CbSrcCodes.Where(x => x.SrcCode == test).ToList();
 
@@ -469,13 +495,13 @@ namespace eSoft.Hutang.Services
                 SldUnpl = 0
             };
 
-            var Supplier = (from e in _context.ApSuppls where e.Supplier == trans.Supplier select e).FirstOrDefault();
+            var Supplier = context.ApSuppls.FirstOrDefault(e => e.Supplier == trans.Supplier);
             Supplier.Hutang += trans.Jumlah;
 
-            _context.ApSuppls.Update(Supplier);
-            _context.ApTransHs.Add(transH);
-            _context.ApHutangs.Add(transaksi);
-            _context.SaveChanges();
+            context.ApSuppls.Update(Supplier);
+            context.ApTransHs.Add(transH);
+            context.ApHutangs.Add(transaksi);
+            context.SaveChanges();
             var TempTrans = GetTransDoc(transH.Bukti);
 
             return TempTrans;
@@ -485,9 +511,10 @@ namespace eSoft.Hutang.Services
 
         public ApTransH EditTransH(ApTransHView trans)
         {
+            using var context = _context.CreateDbContext();
             //string test = codeview.SrcCode.ToUpper();
             //var cekFirst = _context.CbSrcCodes.Where(x => x.SrcCode == test).ToList();
-            var cekFirst = _context.ApHutangs.Where(x => x.Dokumen == trans.Bukti).FirstOrDefault();
+            var cekFirst = context.ApHutangs.FirstOrDefault(x => x.Dokumen == trans.Bukti);
 
 
             ApTransH transH = new ApTransH
@@ -557,25 +584,25 @@ namespace eSoft.Hutang.Services
             };
 
 
-            var ExistingTrans = _context.ApTransHs.Where(x => x.ApTransHId == trans.ApTransHId).FirstOrDefault();
+            var ExistingTrans = context.ApTransHs.FirstOrDefault(x => x.ApTransHId == trans.ApTransHId);
             if (ExistingTrans != null)
             {
                 transH.Bukti = ExistingTrans.Bukti;
                 transaksi.Dokumen = ExistingTrans.Bukti;
 
-                _context.ApTransHs.Remove(ExistingTrans);
+                context.ApTransHs.Remove(ExistingTrans);
 
-                var Supplier = (from e in _context.ApSuppls where e.Supplier == trans.Supplier select e).FirstOrDefault();
+                var Supplier = context.ApSuppls.FirstOrDefault(e => e.Supplier == trans.Supplier);
 
                 Supplier.Hutang -= ExistingTrans.Jumlah;
                 Supplier.Hutang += trans.Jumlah;
 
-                _context.ApSuppls.Update(Supplier);
-                _context.ApHutangs.Remove(cekFirst);
+                context.ApSuppls.Update(Supplier);
+                context.ApHutangs.Remove(cekFirst);
 
-                _context.ApTransHs.Add(transH);
-                _context.ApHutangs.Add(transaksi);
-                _context.SaveChanges();
+                context.ApTransHs.Add(transH);
+                context.ApHutangs.Add(transaksi);
+                context.SaveChanges();
 
                 var TempTrans = GetTransDoc(transH.Bukti);
 
@@ -594,19 +621,20 @@ namespace eSoft.Hutang.Services
         {
             try
             {
-                var ExistingTrans = _context.ApTransHs.Where(x => x.ApTransHId == id).FirstOrDefault();
+                using var context = _context.CreateDbContext();
+                var ExistingTrans = context.ApTransHs.FirstOrDefault(x => x.ApTransHId == id);
                 if (ExistingTrans != null)
                 {
-                    var cekFirst = _context.ApHutangs.Where(x => x.Dokumen == ExistingTrans.Bukti).FirstOrDefault();
-                    var Supplier = (from e in _context.ApSuppls where e.Supplier == ExistingTrans.Supplier select e).FirstOrDefault();
+                    var cekFirst = context.ApHutangs.FirstOrDefault(x => x.Dokumen == ExistingTrans.Bukti);
+                    var Supplier = context.ApSuppls.FirstOrDefault(e => e.Supplier == ExistingTrans.Supplier);
 
                     Supplier.Hutang -= ExistingTrans.Jumlah;
 
 
-                    _context.ApSuppls.Update(Supplier);
-                    _context.ApTransHs.Remove(ExistingTrans);
-                    _context.ApHutangs.Remove(cekFirst);
-                    await _context.SaveChangesAsync();
+                    context.ApSuppls.Update(Supplier);
+                    context.ApTransHs.Remove(ExistingTrans);
+                    context.ApHutangs.Remove(cekFirst);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -620,7 +648,8 @@ namespace eSoft.Hutang.Services
         }
         public bool CekAlreadyPayment(string dokumen)
         {
-            var cekFirst = _context.ApHutangs.Where(x => x.Dokumen == dokumen).FirstOrDefault();
+            using var context = _context.CreateDbContext();
+            var cekFirst = context.ApHutangs.FirstOrDefault(x => x.Dokumen == dokumen);
 
             if (cekFirst.SldSisa != cekFirst.Sisa)
             {
@@ -635,18 +664,19 @@ namespace eSoft.Hutang.Services
 
         public List<ApHutang> Detail1(string xKdHeader)
         {
-
+            using var context = _context.CreateDbContext();
             List<ApHutang> trans = new List<ApHutang>();
 
             //    trans = _context.ApHutangs.Where(x => x.Supplier == xKdHeader && (x.Sisa != 0)).ToList();
-            trans = _context.ApHutangs.Where(x => x.Supplier == xKdHeader).ToList();
+            trans = context.ApHutangs.Where(x => x.Supplier == xKdHeader).ToList();
             return trans;
         }
 
         public List<ApHutangView> GetBayarDimuka()
         {
+            using var context = _context.CreateDbContext();
             List<ApHutangView> transView = new List<ApHutangView>();
-            var trans = _context.ApHutangs.Where(x => x.Kode == "CA" && x.KodeTran == "23" && x.Sisa != 0).ToList();
+            var trans = context.ApHutangs.Where(x => x.Kode == "CA" && x.KodeTran == "23" && x.Sisa != 0).ToList();
             var supplier = GetSupplier();
 
 
@@ -671,17 +701,19 @@ namespace eSoft.Hutang.Services
 
         public ApTransH GetTransDoc(string docno)
         {
-            return _context.ApTransHs.Include(p => p.ApTransDs).Where(x => x.Bukti == docno).FirstOrDefault();
+            using var context = _context.CreateDbContext();
+            return context.ApTransHs.Include(p => p.ApTransDs).FirstOrDefault(x => x.Bukti == docno);
         }
 
         public string GetNumber()
         {
+            using var context = _context.CreateDbContext();
             string kodeno = "API";
             string kodeurut = kodeno + '-';
             string thnbln = DateTime.Now.ToString("yyMM");
             string xbukti = kodeurut + thnbln.Substring(0, 2) + '2' + thnbln.Substring(2, 2) + '-';
             var maxvalue = "";
-            var maxlist = _context.ApTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
+            var maxlist = context.ApTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
             if (maxlist != null)
             {
                 maxvalue = maxlist.Max(x => x.Bukti);
@@ -710,10 +742,11 @@ namespace eSoft.Hutang.Services
 
         public List<ApAgingView> GetAgingSchedule()
         {
+            using var context = _context.CreateDbContext();
             List<ApHutang> trans = new List<ApHutang>();
             List<ApAgingView> transaksi = new List<ApAgingView>();
 
-            List<ApSuppl> supplier = _context.ApSuppls.ToList();
+            List<ApSuppl> supplier = context.ApSuppls.ToList();
 
             DateTime duedate = DateTime.Today.Date;
 
@@ -723,7 +756,7 @@ namespace eSoft.Hutang.Services
             DateTime date3 = currentDate.AddMonths(3);
 
             // trans = _context.ApHutangs.Where(x => x.Kode != "CA" && (x.Sisa != 0)).OrderBy(x => x.Supplier).ToList();
-            trans = _context.ApHutangs.Where(x => (x.Sisa != 0)).OrderBy(x => x.Supplier).ThenByDescending(x => x.Dokumen).ToList();
+            trans = context.ApHutangs.Where(x => (x.Sisa != 0)).OrderBy(x => x.Supplier).ThenByDescending(x => x.Dokumen).ToList();
             foreach (var ap in trans)
             {
                 duedate = ap.DueDate ?? ap.Tanggal;
@@ -761,9 +794,10 @@ namespace eSoft.Hutang.Services
 
         public async Task  ProsesHutang()
         {
+            using var context = _context.CreateDbContext();
 
-            List<ApSuppl> Suppliers = _context.ApSuppls.ToList();
-            List<ApHutang> Hutangs = _context.ApHutangs.ToList();
+            List<ApSuppl> Suppliers = context.ApSuppls.ToList();
+            List<ApHutang> Hutangs = context.ApHutangs.ToList();
 
             List<ApTransH> TransHutang = new List<ApTransH>();
 
@@ -791,7 +825,7 @@ namespace eSoft.Hutang.Services
 
            
 
-            TransHutang = _context.ApTransHs.OrderBy(x => x.Tanggal).Include(x => x.ApTransDs).Where(x => x.Kode != "21").ToList();
+            TransHutang = context.ApTransHs.OrderBy(x => x.Tanggal).Include(x => x.ApTransDs).Where(x => x.Kode != "21").ToList();
 
 
             foreach (var trans in TransHutang)
@@ -842,12 +876,12 @@ namespace eSoft.Hutang.Services
 
 
 
-            _context.UpdateRange(Suppliers);
-            _context.UpdateRange(Hutangs);
+            context.UpdateRange(Suppliers);
+            context.UpdateRange(Hutangs);
 
 
 
-           await  _context.SaveChangesAsync();
+           await context.SaveChangesAsync();
 
 
             // return Transaksi;
@@ -858,7 +892,8 @@ namespace eSoft.Hutang.Services
 
         public List<ApHutang> GetAllApHutangBySupplier(string supplier, DateTime sampaiTanggal)
         {
-            return _context.ApHutangs
+            using var context = _context.CreateDbContext();
+            return context.ApHutangs
                 .Where(x => x.Supplier == supplier && x.Tanggal.Date <= sampaiTanggal.Date)
                 .OrderBy(x => x.Tanggal)
                 .ThenBy(x => x.Kode)
