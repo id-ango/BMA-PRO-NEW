@@ -15,10 +15,10 @@ namespace eSoft.Piutang.Services
 {
     public class PaymentArServices: IPaymentArServices
     {
-        private readonly DbContextPiutang _context;
-        private readonly DbContextBank _contextBank;
+        private readonly IDbContextFactory<DbContextPiutang> _context;
+        private readonly IDbContextFactory<DbContextBank> _contextBank;
 
-        public PaymentArServices(DbContextPiutang context, DbContextBank contextBank)
+        public PaymentArServices(IDbContextFactory<DbContextPiutang> context, IDbContextFactory<DbContextBank> contextBank)
         {
             _context = context;
             _contextBank = contextBank;
@@ -28,23 +28,25 @@ namespace eSoft.Piutang.Services
 
         public ArTransH GetTrans(int id)
         {
-            return _context.ArTransHs.Include(p => p.ArTransDs).Where(x => x.ArTransHId == id).FirstOrDefault();
+            using var db = _context.CreateDbContext();
+            return db.ArTransHs.Include(p => p.ArTransDs).Where(x => x.ArTransHId == id).FirstOrDefault();
         }
 
         public List<ArPiutng> GetPiutangSisa(string customer)
         {
-            return _context.ArPiutngs.Where(x => x.Customer == customer && x.Sisa != 0).ToList();
-
+            using var db = _context.CreateDbContext();
+            return db.ArPiutngs.Where(x => x.Customer == customer && x.Sisa != 0).ToList();
         }
         public List<ArTransH> GetTransH()
         {
+            using var db = _context.CreateDbContext();
             List<ArTransH> arTrans = new List<ArTransH>();
             try
             {
-                arTrans = _context.ArTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Kode == "14").ToList();
+                arTrans = db.ArTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Kode == "14").ToList();
                 foreach (var item in arTrans)
                 {
-                    item.NamaCust = (from e in _context.ArCusts where e.Customer == item.Customer select e.NamaCust).FirstOrDefault();
+                    item.NamaCust = (from e in db.ArCusts where e.Customer == item.Customer select e.NamaCust).FirstOrDefault();
                 }
             }
             catch (Exception)
@@ -52,36 +54,33 @@ namespace eSoft.Piutang.Services
                 throw;
             }
             return arTrans;
-            // return  _context.CbTransHs.Include(p =>p.CbTransDs).OrderByDescending(x =>x.Tanggal).ToListAsync();
-            //  return await _context.ArTransHs.OrderByDescending(x => x.Tanggal).ToListAsync();
-            //  return await _context.ArTransHs.ToListAsync();
-
         }
 
         public List<ArTransH> Get3TransH(DateTime tgl1, DateTime tgl2)
         {
+            using var db = _context.CreateDbContext();
             List<ArTransH> arTrans = new List<ArTransH>();
 
-            arTrans = _context.ArTransHs.OrderByDescending(x => x.Tanggal).Where(x => (x.Tanggal.Date >= tgl1.Date && x.Tanggal.Date <= tgl2.Date) && x.Kode == "14").ToList();
+            arTrans = db.ArTransHs.OrderByDescending(x => x.Tanggal).Where(x => (x.Tanggal.Date >= tgl1.Date && x.Tanggal.Date <= tgl2.Date) && x.Kode == "14").ToList();
             foreach (var item in arTrans)
             {
-                item.NamaCust = (from e in _context.ArCusts where e.Customer == item.Customer select e.NamaCust).FirstOrDefault();
+                item.NamaCust = (from e in db.ArCusts where e.Customer == item.Customer select e.NamaCust).FirstOrDefault();
             }
 
             return arTrans;
-
-            // return  _context.CbTransHs.Include(p =>p.CbTransDs).OrderByDescending(x =>x.Tanggal).ToListAsync();
-            //   return _context.ArTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Tanggal > DateTime.Today.AddMonths(-3)).ToListAsync();
-
         }
 
         public List<ArTransD> GetTransD()
         {
-            return _context.ArTransDs.Where(x => x.Kode == "14").ToList();
+            using var db = _context.CreateDbContext();
+            return db.ArTransDs.Where(x => x.Kode == "14").ToList();
         }
 
         public ArTransH AddTransH(ArTransHView trans)
         {
+            using var db = _context.CreateDbContext();
+            using var dbBank = _contextBank.CreateDbContext();
+
             //string test = codeview.SrcCode.ToUpper();
             //var cekFirst = _context.CbSrcCodes.Where(x => x.SrcCode == test).ToList();
             string KdSrc = "AR";
@@ -111,7 +110,7 @@ namespace eSoft.Piutang.Services
             };
 
             List<ArPiutng> transaksi = new List<ArPiutng>();
-            transaksi = _context.ArPiutngs.Where(x => x.Customer == trans.Customer).ToList();
+            transaksi = db.ArPiutngs.Where(x => x.Customer == trans.Customer).ToList();
 
             foreach (var item in trans.ArTransDs)
             {
@@ -142,7 +141,7 @@ namespace eSoft.Piutang.Services
             transH.ArTransDs.RemoveAll(x => x.Bayar == 0 && x.Discount == 0);
             transaksi.RemoveAll(x => x.Bayar == 0 && x.Discount == 0);
 
-            var customer = (from e in _context.ArCusts where e.Customer == trans.Customer select e).FirstOrDefault();
+            var customer = (from e in db.ArCusts where e.Customer == trans.Customer select e).FirstOrDefault();
             customer.Piutang -= trans.JumPiutang;
 
             ArPiutng Newtransaksi = new ArPiutng
@@ -168,15 +167,14 @@ namespace eSoft.Piutang.Services
                 SldUnpl = 0
             };
 
-            _context.ArCusts.Update(customer);
-            _context.ArTransHs.Add(transH);
-            _context.ArPiutngs.UpdateRange(transaksi);
-            _context.ArPiutngs.Add(Newtransaksi);
+            db.ArCusts.Update(customer);
+            db.ArTransHs.Add(transH);
+            db.ArPiutngs.UpdateRange(transaksi);
+            db.ArPiutngs.Add(Newtransaksi);
 
 
 
-
-            var cekBukti = (from e in _contextBank.CbTransHs where e.DocNo == transH.Bukti select e).FirstOrDefault();
+            var cekBukti = (from e in dbBank.CbTransHs where e.DocNo == transH.Bukti select e).FirstOrDefault();
 
             if (cekBukti == null)
             {
@@ -206,20 +204,20 @@ namespace eSoft.Piutang.Services
 
                             });
                         }
-                        
+
                     }
-                    var bank = (from e in _contextBank.CbBanks where e.KodeBank == trans.KdBank select e).FirstOrDefault();
+                    var bank = (from e in dbBank.CbBanks where e.KodeBank == trans.KdBank select e).FirstOrDefault();
                     bank.Saldo += trans.JumBayar;
 
-                    _contextBank.CbBanks.Update(bank);
-                    _contextBank.CbTransHs.Add(transBank);
+                    dbBank.CbBanks.Update(bank);
+                    dbBank.CbTransHs.Add(transBank);
 
 
 
                 }
             }
-            _context.SaveChanges();
-            _contextBank.SaveChanges();
+            db.SaveChanges();
+            dbBank.SaveChanges();
 
             var TempTrans = GetTransDoc(transH.Bukti);
 
@@ -234,11 +232,12 @@ namespace eSoft.Piutang.Services
         {
             try
             {
-                var ExistingTrans = _context.ArTransHs.Where(x => x.ArTransHId == id).FirstOrDefault();
-                var cekFirst = _context.ArPiutngs.Where(x => x.Dokumen == ExistingTrans.Bukti).FirstOrDefault();
+                using var db = _context.CreateDbContext();
+                var ExistingTrans = db.ArTransHs.Where(x => x.ArTransHId == id).FirstOrDefault();
+                var cekFirst = db.ArPiutngs.Where(x => x.Dokumen == ExistingTrans.Bukti).FirstOrDefault();
 
                 List<ArPiutng> transaksi = new List<ArPiutng>();
-                transaksi = _context.ArPiutngs.Where(x => x.Customer == ExistingTrans.Customer).ToList();
+                transaksi = db.ArPiutngs.Where(x => x.Customer == ExistingTrans.Customer).ToList();
 
                 if (ExistingTrans != null)
                 {
@@ -254,15 +253,15 @@ namespace eSoft.Piutang.Services
                     });
                     }
                 }
-                var customer = (from e in _context.ArCusts where e.Customer == ExistingTrans.Customer select e).FirstOrDefault();
+                var customer = (from e in db.ArCusts where e.Customer == ExistingTrans.Customer select e).FirstOrDefault();
 
                 customer.Piutang += ExistingTrans.Piutang;
 
 
-                _context.ArCusts.Update(customer);
-                _context.ArTransHs.Remove(ExistingTrans);
-                _context.ArPiutngs.Remove(cekFirst);
-                await _context.SaveChangesAsync();
+                db.ArCusts.Update(customer);
+                db.ArTransHs.Remove(ExistingTrans);
+                db.ArPiutngs.Remove(cekFirst);
+                await db.SaveChangesAsync();
                 return true;
 
             }
@@ -275,7 +274,8 @@ namespace eSoft.Piutang.Services
 
         public bool CekAlreadyPosting(string dokumen)
         {
-            var cekFirst = _context.ArTransHs.Where(x => x.Bukti == dokumen).FirstOrDefault();
+            using var db = _context.CreateDbContext();
+            var cekFirst = db.ArTransHs.Where(x => x.Bukti == dokumen).FirstOrDefault();
 
             if (!string.IsNullOrEmpty(cekFirst.AcctSet))
             {
@@ -287,19 +287,21 @@ namespace eSoft.Piutang.Services
 
         public ArTransH GetTransDoc(string docno)
         {
-            return _context.ArTransHs.Include(p => p.ArTransDs).Where(x => x.Bukti == docno).FirstOrDefault();
+            using var db = _context.CreateDbContext();
+            return db.ArTransHs.Include(p => p.ArTransDs).Where(x => x.Bukti == docno).FirstOrDefault();
         }
 
         #endregion Transaksi Piutang Class
 
         public string GetNumber()
         {
+            using var db = _context.CreateDbContext();
             string kodeno = "BMY";
             string kodeurut = kodeno + '-';
             string thnbln = DateTime.Now.ToString("yyMM");
             string xbukti = kodeurut + thnbln.Substring(0, 2) + '3' + thnbln.Substring(2, 2) + '-';
             var maxvalue = "";
-            var maxlist = _context.ArTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
+            var maxlist = db.ArTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
             if (maxlist != null)
             {
                 maxvalue = maxlist.Max(x => x.Bukti);

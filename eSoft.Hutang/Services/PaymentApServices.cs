@@ -15,10 +15,10 @@ namespace eSoft.Hutang.Services
 {
     public class PaymentApServices : IPaymentApServices
     {
-        private readonly DbContextHutang _context;
-        private readonly DbContextBank _contextBank;
+        private readonly IDbContextFactory<DbContextHutang> _context;
+        private readonly IDbContextFactory<DbContextBank> _contextBank;
 
-        public PaymentApServices(DbContextHutang context, DbContextBank contextBank)
+        public PaymentApServices(IDbContextFactory<DbContextHutang> context, IDbContextFactory<DbContextBank> contextBank)
         {
             _context = context;
             _contextBank = contextBank;
@@ -28,23 +28,26 @@ namespace eSoft.Hutang.Services
 
         public ApTransH GetTrans(int id)
         {
-            return _context.ApTransHs.Include(p => p.ApTransDs).Where(x => x.ApTransHId == id).FirstOrDefault();
+            using var db = _context.CreateDbContext();
+            return db.ApTransHs.Include(p => p.ApTransDs).Where(x => x.ApTransHId == id).FirstOrDefault();
         }
 
         public List<ApHutang> GetHutangSisa(string Supplier)
         {
-            return _context.ApHutangs.Where(x => x.Supplier == Supplier && x.Sisa != 0).ToList();
+            using var db = _context.CreateDbContext();
+            return db.ApHutangs.Where(x => x.Supplier == Supplier && x.Sisa != 0).ToList();
 
         }
         public List<ApTransH> GetTransH()
         {
+            using var db = _context.CreateDbContext();
             List<ApTransH> ApTrans = new List<ApTransH>();
             try
             {
-                ApTrans = _context.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Kode == "24").ToList();
+                ApTrans = db.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Kode == "24").ToList();
                 foreach (var item in ApTrans)
                 {
-                    item.NamaSup = (from e in _context.ApSuppls where e.Supplier == item.Supplier select e.NamaSup).FirstOrDefault();
+                    item.NamaSup = (from e in db.ApSuppls where e.Supplier == item.Supplier select e.NamaSup).FirstOrDefault();
                 }
             }
             catch (Exception)
@@ -52,36 +55,33 @@ namespace eSoft.Hutang.Services
                 throw;
             }
             return ApTrans;
-            // return  _context.CbTransHs.Include(p =>p.CbTransDs).OrderByDescending(x =>x.Tanggal).ToListAsync();
-            //  return await _context.ApTransHs.OrderByDescending(x => x.Tanggal).ToListAsync();
-            //  return await _context.ApTransHs.ToListAsync();
-
         }
 
         public List<ApTransH> Get3TransH()
         {
+            using var db = _context.CreateDbContext();
             List<ApTransH> ApTrans = new List<ApTransH>();
 
-            ApTrans = _context.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Tanggal > DateTime.Today.AddMonths(-3) && x.Kode == "24").ToList();
+            ApTrans = db.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Tanggal > DateTime.Today.AddMonths(-3) && x.Kode == "24").ToList();
             foreach (var item in ApTrans)
             {
-                item.NamaSup = (from e in _context.ApSuppls where e.Supplier == item.Supplier select e.NamaSup).FirstOrDefault();
+                item.NamaSup = (from e in db.ApSuppls where e.Supplier == item.Supplier select e.NamaSup).FirstOrDefault();
             }
 
             return ApTrans;
-
-            // return  _context.CbTransHs.Include(p =>p.CbTransDs).OrderByDescending(x =>x.Tanggal).ToListAsync();
-            //   return _context.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Tanggal > DateTime.Today.AddMonths(-3)).ToListAsync();
-
         }
 
         public List<ApTransD> GetTransD()
         {
-            return _context.ApTransDs.Where(x => x.Kode == "24").ToList();
+            using var db = _context.CreateDbContext();
+            return db.ApTransDs.Where(x => x.Kode == "24").ToList();
         }
 
         public ApTransH AddTransH(ApTransHView trans)
         {
+            using var db = _context.CreateDbContext();
+            using var dbBank = _contextBank.CreateDbContext();
+
             //string test = codeview.SrcCode.ToUpper();
             //var cekFirst = _context.CbSrcCodes.Where(x => x.SrcCode == test).ToList();
             string KdSrc = "AP";
@@ -114,7 +114,7 @@ namespace eSoft.Hutang.Services
             };
 
             List<ApHutang> transaksi = new List<ApHutang>();
-            transaksi = _context.ApHutangs.Where(x => x.Supplier == trans.Supplier).ToList();
+            transaksi = db.ApHutangs.Where(x => x.Supplier == trans.Supplier).ToList();
 
             foreach (var item in trans.ApTransDs)
             {
@@ -155,7 +155,7 @@ namespace eSoft.Hutang.Services
             transH.ApTransDs.RemoveAll(x => x.Bayar == 0 && x.Discount == 0);
             transaksi.RemoveAll(x => x.Bayar == 0 && x.Discount == 0);
 
-            var Supplier = (from e in _context.ApSuppls where e.Supplier == trans.Supplier select e).FirstOrDefault();
+            var Supplier = (from e in db.ApSuppls where e.Supplier == trans.Supplier select e).FirstOrDefault();
             Supplier.Hutang -= trans.JumHutang;
 
             ApHutang Newtransaksi = new ApHutang
@@ -183,15 +183,15 @@ namespace eSoft.Hutang.Services
                 SldUnpl = 0
             };
 
-            _context.ApSuppls.Update(Supplier);
-            _context.ApTransHs.Add(transH);
-            _context.ApHutangs.UpdateRange(transaksi);
-            _context.ApHutangs.Add(Newtransaksi);
-            _context.SaveChanges();
+            db.ApSuppls.Update(Supplier);
+            db.ApTransHs.Add(transH);
+            db.ApHutangs.UpdateRange(transaksi);
+            db.ApHutangs.Add(Newtransaksi);
+            db.SaveChanges();
 
 
-            var bank = (from e in _contextBank.CbBanks where e.KodeBank == trans.KdBank select e).FirstOrDefault();
-            var cekBukti = (from e in _contextBank.CbTransHs where e.DocNo == transH.Bukti select e).FirstOrDefault();
+            var bank = (from e in dbBank.CbBanks where e.KodeBank == trans.KdBank select e).FirstOrDefault();
+            var cekBukti = (from e in dbBank.CbTransHs where e.DocNo == transH.Bukti select e).FirstOrDefault();
 
             if (cekBukti == null)
             {
@@ -209,7 +209,7 @@ namespace eSoft.Hutang.Services
                         KSaldo = -1 * (trans.Kurs != 0 ? trans.JumBayar : 0),
                         CbTransDs = new List<CbTransD>()
                     };
-              
+
 
                     foreach (var item in trans.ApTransDs)
                     {
@@ -237,15 +237,15 @@ namespace eSoft.Hutang.Services
 
                         }
                     }
-                
+
                   //  bank.Saldo -= trans.JumBayar;
                     bank.KSaldo -= (trans.Kurs != 0 ? trans.JumBayar : 0);
                     bank.Saldo -= (trans.Kurs != 0 ? trans.Nilai : trans.JumBayar);
 
-                    _contextBank.CbBanks.Update(bank);
-                    _contextBank.CbTransHs.Add(transBank);
+                    dbBank.CbBanks.Update(bank);
+                    dbBank.CbTransHs.Add(transBank);
 
-                    _contextBank.SaveChanges();
+                    dbBank.SaveChanges();
 
                 }
             }
@@ -263,11 +263,12 @@ namespace eSoft.Hutang.Services
         {
             try
             {
-                var ExistingTrans = _context.ApTransHs.Where(x => x.ApTransHId == id).FirstOrDefault();
-                var cekFirst = _context.ApHutangs.Where(x => x.Dokumen == ExistingTrans.Bukti).FirstOrDefault();
+                using var db = _context.CreateDbContext();
+                var ExistingTrans = db.ApTransHs.Where(x => x.ApTransHId == id).FirstOrDefault();
+                var cekFirst = db.ApHutangs.Where(x => x.Dokumen == ExistingTrans.Bukti).FirstOrDefault();
 
                 List<ApHutang> transaksi = new List<ApHutang>();
-                transaksi = _context.ApHutangs.Where(x => x.Supplier == ExistingTrans.Supplier).ToList();
+                transaksi = db.ApHutangs.Where(x => x.Supplier == ExistingTrans.Supplier).ToList();
                 if (ExistingTrans != null)
                 {
 
@@ -293,15 +294,15 @@ namespace eSoft.Hutang.Services
                 }
 
 
-                var Supplier = (from e in _context.ApSuppls where e.Supplier == ExistingTrans.Supplier select e).FirstOrDefault();
+                var Supplier = (from e in db.ApSuppls where e.Supplier == ExistingTrans.Supplier select e).FirstOrDefault();
 
                 Supplier.Hutang += ExistingTrans.Jumlah;
 
 
-                _context.ApSuppls.Update(Supplier);
-                _context.ApTransHs.Remove(ExistingTrans);
-                _context.ApHutangs.Remove(cekFirst);
-                await _context.SaveChangesAsync();
+                db.ApSuppls.Update(Supplier);
+                db.ApTransHs.Remove(ExistingTrans);
+                db.ApHutangs.Remove(cekFirst);
+                await db.SaveChangesAsync();
                 return true;
 
             }
@@ -316,7 +317,8 @@ namespace eSoft.Hutang.Services
 
         public bool CekAlreadyPosting(string dokumen)
         {
-            var cekFirst = _context.ApTransHs.Where(x => x.Bukti == dokumen).FirstOrDefault();
+            using var db = _context.CreateDbContext();
+            var cekFirst = db.ApTransHs.Where(x => x.Bukti == dokumen).FirstOrDefault();
 
             if (!string.IsNullOrEmpty(cekFirst.AcctSet))
             {
@@ -330,17 +332,19 @@ namespace eSoft.Hutang.Services
 
         public ApTransH GetTransDoc(string docno)
         {
-            return _context.ApTransHs.Include(p => p.ApTransDs).Where(x => x.Bukti == docno).FirstOrDefault();
+            using var db = _context.CreateDbContext();
+            return db.ApTransHs.Include(p => p.ApTransDs).Where(x => x.Bukti == docno).FirstOrDefault();
         }
 
         public string GetNumber()
         {
+            using var db = _context.CreateDbContext();
             string kodeno = "BKY";
             string kodeurut = kodeno + '-';
             string thnbln = DateTime.Now.ToString("yyMM");
             string xbukti = kodeurut + thnbln.Substring(0, 2) + '3' + thnbln.Substring(2, 2) + '-';
             var maxvalue = "";
-            var maxlist = _context.ApTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
+            var maxlist = db.ApTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
             if (maxlist != null)
             {
                 maxvalue = maxlist.Max(x => x.Bukti);

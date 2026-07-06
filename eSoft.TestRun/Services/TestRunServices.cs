@@ -6,20 +6,22 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace eSoft.TestRun.Services
 {
     public class TestRunServices : ITestRunServices
     {
-        private readonly DbContextTestRun _context;
-        public TestRunServices(DbContextTestRun context)
+        private readonly IDbContextFactory<DbContextTestRun> _context;
+        public TestRunServices(IDbContextFactory<DbContextTestRun> context)
         {
             _context = context;
         }
 
         public List<TsSchedule> GetTsSchedules()
         {
-            return _context.TsSchedules.OrderBy(x => x.Dokumen).ToList();
+            using var db = _context.CreateDbContext();
+            return db.TsSchedules.OrderBy(x => x.Dokumen).ToList();
         }
     }
 }
