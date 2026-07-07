@@ -40,6 +40,7 @@ namespace eSoft.Piutang.Services
         bool BatalPiutang(ArPiutng piutang);
 
         bool CekAlreadyPayment(string dokumen);
+        bool HasSettlement(string documentNo);
         List<ArPiutng> Detail1(string xKdHeader);
         List<ArPiutngView> GetUangMuka();
 

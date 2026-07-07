@@ -689,6 +689,12 @@ namespace eSoft.Piutang.Services
             return false;
         }
 
+        public bool HasSettlement(string documentNo)
+        {
+            using var db = _context.CreateDbContext();
+            return db.ArPiutngs.Any(x => x.Dokumen == documentNo && x.Bayar > 0);
+        }
+
         public async Task<bool> DelTransH(int id)
         {
             try
