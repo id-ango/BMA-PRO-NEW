@@ -280,8 +280,12 @@
                                 <span style="@amtStyle">@ctx.Amount.ToString("N2")</span>
                             </td>
                             <td style="padding-top:10px; text-align:right; white-space:nowrap; font-size:0.9rem;">@ctx.Balance.ToString("N2")</td>
-                            <td>
+                            <td style="position: relative;">
                                 <input type="date" @bind="ctx.Tanggal" class="form-control form-control-sm" />
+                                @if (ctx.Date.Equals("PEND", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <span class="badge badge-warning" style="position: absolute; top: 2px; right: 2px; font-size: 0.7rem;">PEND</span>
+                                }
                             </td>
                             <td>
                                 <InputSelect class="form-control form-control-sm" @bind-Value="ctx.SrcCode">
@@ -581,8 +585,9 @@
             }
 
             // Auto-detect statement period date from PT CSV header, e.g. "Periode : 25/06/2026 - 25/06/2026"
+            // Only use detected date if formModel.Date is still at default (DateTime.MinValue or not set)
             var detectedDate = DetectStatementDate(allText);
-            if (detectedDate.HasValue)
+            if (detectedDate.HasValue && formModel.Date == DateTime.MinValue)
             {
                 formModel.Date = detectedDate.Value;
             }
@@ -749,12 +754,35 @@
             var amount = ParseDecimalFromString(rawAmount);
             var balance = ParseDecimalFromString(rawBalance);
 
-            DateTime tanggal = formModel.Date;
-            if (!string.IsNullOrEmpty(rawDate) && !rawDate.Equals("PEND", StringComparison.OrdinalIgnoreCase))
+            // Parse date from CSV with these priorities:
+            // 1. If rawDate == "PEND", use formModel.Date but mark as pending
+            // 2. If rawDate is a valid date, parse it
+            // 3. If rawDate is empty/missing, use formModel.Date as fallback
+            DateTime tanggal = DateTime.MinValue;
+
+            if (string.IsNullOrEmpty(rawDate))
             {
+                // No date in CSV, use formModel.Date
+                tanggal = formModel.Date;
+            }
+            else if (rawDate.Equals("PEND", StringComparison.OrdinalIgnoreCase))
+            {
+                // PEND transaction - use formModel.Date as the transaction date
+                // but keep rawDate as "PEND" to indicate it was originally pending
+                tanggal = formModel.Date;
+            }
+            else
+            {
+                // Try to parse the date
                 if (!DateTime.TryParseExact(rawDate, new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out tanggal))
                 {
                     DateTime.TryParse(rawDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out tanggal);
+                }
+
+                // If parsing still failed, use formModel.Date
+                if (tanggal == DateTime.MinValue)
+                {
+                    tanggal = formModel.Date;
                 }
             }
 
