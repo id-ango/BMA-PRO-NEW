@@ -11,23 +11,25 @@ namespace eSoft.Penjualan.Services
 {
     public class KurirMasterService : IKurirMasterService
     {
-        private readonly DbContextJual _context;
+        private readonly IDbContextFactory<DbContextJual> _context;
 
-        public KurirMasterService(DbContextJual context)
+        public KurirMasterService(IDbContextFactory<DbContextJual> context)
         {
             _context = context;
         }
 
         public List<OeKurir> GetKurir()
         {
-            return _context.OeKurirs
+            using var context = _context.CreateDbContext();
+            return context.OeKurirs
                 .AsNoTracking()
                 .ToList();
         }
 
         public OeKurir GetKurirId(int id)
         {
-            return _context.OeKurirs
+            using var context = _context.CreateDbContext();
+            return context.OeKurirs
                 .AsNoTracking()
                 .FirstOrDefault(x => x.OeKurirId == id);
         }
@@ -37,7 +39,8 @@ namespace eSoft.Penjualan.Services
             if (string.IsNullOrEmpty(id))
                 return string.Empty;
 
-            return _context.OeKurirs
+            using var context = _context.CreateDbContext();
+            return context.OeKurirs
                 .AsNoTracking()
                 .Where(x => x.Kurir == id)
                 .Select(x => x.NamaKurir)
@@ -47,14 +50,15 @@ namespace eSoft.Penjualan.Services
         public bool CekKdKurir(string kurir)
         {
             string test = kurir.ToUpper();
-
-            return _context.OeKurirs.Any(x => x.Kurir == test);
+            using var context = _context.CreateDbContext();
+            return context.OeKurirs.Any(x => x.Kurir == test);
         }
 
         public bool AddKurir(OeKurirView kurir)
         {
+            using var context = _context.CreateDbContext();
             string test = kurir.Kurir.ToUpper();
-            var exists = _context.OeKurirs.Any(x => x.Kurir == test);
+            var exists = context.OeKurirs.Any(x => x.Kurir == test);
             if (!exists)
             {
                 OeKurir entity = new()
@@ -72,8 +76,8 @@ namespace eSoft.Penjualan.Services
                     NPWP_Kurir = kurir.NPWP_Kurir,
                     Kontak = kurir.Kontak
                 };
-                _context.OeKurirs.Add(entity);
-                _context.SaveChanges();
+                context.OeKurirs.Add(entity);
+                context.SaveChanges();
                 return true;
             }
 
@@ -84,7 +88,8 @@ namespace eSoft.Penjualan.Services
         {
             try
             {
-                var existingKurir = _context.OeKurirs.FirstOrDefault(x => x.OeKurirId == kurir.OeKurirId);
+                using var context = _context.CreateDbContext();
+                var existingKurir = context.OeKurirs.FirstOrDefault(x => x.OeKurirId == kurir.OeKurirId);
                 if (existingKurir != null)
                 {
                     existingKurir.NamaKurir = kurir.NamaKurir;
@@ -101,8 +106,8 @@ namespace eSoft.Penjualan.Services
                     existingKurir.Kontak = kurir.Kontak;
                     existingKurir.NPWP_Kurir = kurir.NPWP_Kurir;
 
-                    _context.OeKurirs.Update(existingKurir);
-                    await _context.SaveChangesAsync();
+                    context.OeKurirs.Update(existingKurir);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -118,11 +123,12 @@ namespace eSoft.Penjualan.Services
         {
             try
             {
-                var existingKurir = _context.OeKurirs.FirstOrDefault(x => x.OeKurirId == id);
+                using var context = _context.CreateDbContext();
+                var existingKurir = context.OeKurirs.FirstOrDefault(x => x.OeKurirId == id);
                 if (existingKurir != null)
                 {
-                    _context.OeKurirs.Remove(existingKurir);
-                    await _context.SaveChangesAsync();
+                    context.OeKurirs.Remove(existingKurir);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }

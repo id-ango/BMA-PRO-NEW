@@ -13,8 +13,8 @@ namespace Accounting.Services
 {
     public  class AdministrationServices : IAdministrationServices
     {
-        private readonly IdentityDbContext _context;
-        public AdministrationServices(IdentityDbContext context)
+        private readonly IDbContextFactory<IdentityDbContext> _context;
+        public AdministrationServices(IDbContextFactory<IdentityDbContext> context)
         {
             _context = context;
         }
@@ -54,14 +54,15 @@ namespace Accounting.Services
         public bool AddRoles(IdentityRole banks)
         {
             string test = banks.Name.Normalize();
-            var cekFirst = _context.Roles.Where(x => x.NormalizedName == test).ToList();
+            using var context = _context.CreateDbContext();
+            var cekFirst = context.Roles.Where(x => x.NormalizedName == test).ToList();
             if (cekFirst.Count == 0)
             {
                 IdentityRole Bank = new()
                 {
                     Name = banks.Name,
                     NormalizedName = banks.Name.Normalize(),
-                    
+
 
                 };
                 context.Roles.Add(Bank);

@@ -17,11 +17,11 @@ namespace eSoft.Order.Services
 {
     public class OrderPurchaseServices : IOrderPurchaseServices
     {
-        private readonly DbContextOrder _context;
-        private readonly DbContextHutang _contextAp;
-        private readonly DbContextPersediaan _contextIc;
+        private readonly IDbContextFactory<DbContextOrder> _context;
+        private readonly IDbContextFactory<DbContextHutang> _contextAp;
+        private readonly IDbContextFactory<DbContextPersediaan> _contextIc;
 
-        public OrderPurchaseServices(DbContextOrder context, DbContextHutang contextHutang, DbContextPersediaan contextPersediaan)
+        public OrderPurchaseServices(IDbContextFactory<DbContextOrder> context, IDbContextFactory<DbContextHutang> contextHutang, IDbContextFactory<DbContextPersediaan> contextPersediaan)
         {
             _context = context;
             _contextAp = contextHutang;
@@ -32,12 +32,14 @@ namespace eSoft.Order.Services
 
         private ApSuppl GetVendorId(string id)
         {
-            return _contextAp.ApSuppls.Where(x => x.Supplier == id).FirstOrDefault();
+            using var contextAp = _contextAp.CreateDbContext();
+            return contextAp.ApSuppls.Where(x => x.Supplier == id).FirstOrDefault();
         }
 
         public ApHutang GetHutang(string bukti)
         {
-            return _contextAp.ApHutangs.Where(x => x.Dokumen == bukti).FirstOrDefault();
+            using var contextAp = _contextAp.CreateDbContext();
+            return contextAp.ApHutangs.Where(x => x.Dokumen == bukti).FirstOrDefault();
 
         }
 
@@ -47,17 +49,19 @@ namespace eSoft.Order.Services
 
         public PoTransH GetPoTrans(int id)
         {
-            return _context.PoTransHs.Include(p => p.PoTransDs).Where(x => x.PoTransHId == id).FirstOrDefault();
+            using var db = _context.CreateDbContext();
+            return db.PoTransHs.Include(p => p.PoTransDs).Where(x => x.PoTransHId == id).FirstOrDefault();
         }
 
         public List<PoTransH> GetTransHAktif()
         {
+            using var db = _context.CreateDbContext();
             List<PoTransH> PoTrans = new List<PoTransH>();
 
 
             try
             {
-                PoTrans = _context.PoTransHs.OrderByDescending(x => x.Tanggal.Date).Where(x => x.Kode == "71" && x.Cek == "1").ToList();
+                PoTrans = db.PoTransHs.OrderByDescending(x => x.Tanggal.Date).Where(x => x.Kode == "71" && x.Cek == "1").ToList();
 
             }
             catch (Exception)
@@ -70,41 +74,42 @@ namespace eSoft.Order.Services
         }
         public void SaveOrderAktif(string customer)
         {
-
-            _context.PoTransHs.Include(p => p.PoTransDs).Where(x => x.NoLpb == customer).FirstOrDefault().Cek = "3";
-            _context.SaveChanges();
+            using var db = _context.CreateDbContext();
+            db.PoTransHs.Include(p => p.PoTransDs).Where(x => x.NoLpb == customer).FirstOrDefault().Cek = "3";
+            db.SaveChanges();
 
             //  return true;
         }
 
         public void DelOrderAktif(string customer)
         {
-
-            _context.PoTransHs.Include(p => p.PoTransDs).Where(x => x.NoLpb == customer).FirstOrDefault().Cek = "1";
-            _context.SaveChanges();
+            using var db = _context.CreateDbContext();
+            db.PoTransHs.Include(p => p.PoTransDs).Where(x => x.NoLpb == customer).FirstOrDefault().Cek = "1";
+            db.SaveChanges();
 
             //  return true;
         }
 
         public PoTransH GetOrderAktif(string customer)
         {
-
-            return _context.PoTransHs.Include(p => p.PoTransDs).Where(x => x.NoLpb == customer).FirstOrDefault();
+            using var db = _context.CreateDbContext();
+            return db.PoTransHs.Include(p => p.PoTransDs).Where(x => x.NoLpb == customer).FirstOrDefault();
         }
 
         public List<PoTransH> GetTransH()
         {
+            using var db = _context.CreateDbContext();
             List<PoTransH> PoTrans = new List<PoTransH>();
 
 
             try
             {
-                PoTrans = _context.PoTransHs.OrderByDescending(x => x.Tanggal.Date).Where(x => x.Kode == "71").ToList();
-                //  PoTrans = (from e in _context.PoTransHs orderby e.Tanggal where e.Kode == "71" select e).ToList();
+                PoTrans = db.PoTransHs.OrderByDescending(x => x.Tanggal.Date).Where(x => x.Kode == "71").ToList();
+                //  PoTrans = (from e in db.PoTransHs orderby e.Tanggal where e.Kode == "71" select e).ToList();
 
                 //foreach (var item in PoTrans)
                 //{
-                //    item.NamaVendor = _contextAp.ApSuppls.Where(x => x.Supplier == item.Vendor).FirstOrDefault().NamaLengkap;
+                //    item.NamaVendor = dbAp.ApSuppls.Where(x => x.Supplier == item.Vendor).FirstOrDefault().NamaLengkap;
                 //}
 
             }
@@ -113,34 +118,38 @@ namespace eSoft.Order.Services
                 throw;
             }
             return PoTrans;
-            // return  _context.CbTransHs.Include(p =>p.CbTransDs).OrderByDescending(x =>x.Tanggal).ToListAsync();
-            //  return await _context.ApTransHs.OrderByDescending(x => x.Tanggal).ToListAsync();
-            //  return await _context.ApTransHs.ToListAsync();
+            // return  db.CbTransHs.Include(p =>p.CbTransDs).OrderByDescending(x =>x.Tanggal).ToListAsync();
+            //  return await db.ApTransHs.OrderByDescending(x => x.Tanggal).ToListAsync();
+            //  return await db.ApTransHs.ToListAsync();
 
         }
 
         public List<PoTransH> Get3TransH()
         {
+            using var db = _context.CreateDbContext();
             List<PoTransH> PoTrans = new List<PoTransH>();
 
-            PoTrans = _context.PoTransHs.OrderByDescending(x => x.Tanggal.Date).Where(x => x.Tanggal.Date > DateTime.Today.Date.AddMonths(-3) && x.Kode == "71").ToList();
+            PoTrans = db.PoTransHs.OrderByDescending(x => x.Tanggal.Date).Where(x => x.Tanggal.Date > DateTime.Today.Date.AddMonths(-3) && x.Kode == "71").ToList();
 
             return PoTrans;
 
-            // return  _context.CbTransHs.Include(p =>p.CbTransDs).OrderByDescending(x =>x.Tanggal).ToListAsync();
-            //   return _context.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Tanggal > DateTime.Today.AddMonths(-3)).ToListAsync();
+            // return  db.CbTransHs.Include(p =>p.CbTransDs).OrderByDescending(x =>x.Tanggal).ToListAsync();
+            //   return db.ApTransHs.OrderByDescending(x => x.Tanggal).Where(x => x.Tanggal > DateTime.Today.AddMonths(-3)).ToListAsync();
 
         }
 
         public List<PoTransD> GetTransD()
         {
-            return _context.PoTransDs.ToList();
+            using var db = _context.CreateDbContext();
+            return db.PoTransDs.ToList();
         }
 
         public PoTransH AddTransH(PoTransHView trans)
         {
+            using var db = _context.CreateDbContext();
+            using var dbIc = _contextIc.CreateDbContext();
             //string test = codeview.SrcCode.ToUpper();
-            //var cekFirst = _context.CbSrcCodes.Where(x => x.SrcCode == test).ToList();
+            //var cekFirst = db.CbSrcCodes.Where(x => x.SrcCode == test).ToList();
             decimal mQty5 = 0;
 
             PoTransH transH = new PoTransH
@@ -196,7 +205,7 @@ namespace eSoft.Order.Services
                         JumDpp = mQty5
                     });
 
-                    IcItem cekItem = _contextIc.IcItems.Where(x => x.ItemCode == item.ItemCode).FirstOrDefault();
+                    IcItem cekItem = dbIc.IcItems.Where(x => x.ItemCode == item.ItemCode).FirstOrDefault();
 
                     if (cekItem != null)
                     {
@@ -210,18 +219,18 @@ namespace eSoft.Order.Services
                             cekItem.CurrencyCode = trans.Currency;
                         }
 
-                        _contextIc.IcItems.Update(cekItem);
+                        dbIc.IcItems.Update(cekItem);
 
                     }
                 }
-                _context.PoTransHs.Add(transH);
+                db.PoTransHs.Add(transH);
             }
 
 
 
-            _context.SaveChanges();
+            db.SaveChanges();
 
-            _contextIc.SaveChanges();
+            dbIc.SaveChanges();
 
             var TempTrans = GetTransDoc(transH.NoLpb);
 
@@ -231,20 +240,22 @@ namespace eSoft.Order.Services
 
         public PoTransH GetTransDoc(string docno)
         {
-            return _context.PoTransHs.Include(p => p.PoTransDs).Where(x => x.NoLpb == docno).FirstOrDefault();
+            using var db = _context.CreateDbContext();
+            return db.PoTransHs.Include(p => p.PoTransDs).Where(x => x.NoLpb == docno).FirstOrDefault();
         }
 
         public async Task<bool> DelTransH(int id)
         {
+            using var db = _context.CreateDbContext();
             try
             {
-                var ExistingTrans = _context.PoTransHs.Where(x => x.PoTransHId == id).FirstOrDefault();
+                var ExistingTrans = db.PoTransHs.Where(x => x.PoTransHId == id).FirstOrDefault();
 
                 if (ExistingTrans != null)
                 {
 
-                    _context.PoTransHs.Remove(ExistingTrans);
-                    await _context.SaveChangesAsync();
+                    db.PoTransHs.Remove(ExistingTrans);
+                    await db.SaveChangesAsync();
 
                     return true;
                 }
@@ -259,22 +270,24 @@ namespace eSoft.Order.Services
 
         public async Task<bool> EditTransH(PoTransHView trans)
         {
+            using var db = _context.CreateDbContext();
+            using var dbIc = _contextIc.CreateDbContext();
             decimal mQty5 = 0;
 
-            //   var cekFirst = _contextAp.ApHutangs.Where(x => x.Dokumen == trans.NoLpb && x.Bayar == 0).FirstOrDefault();
+            //   var cekFirst = dbAp.ApHutangs.Where(x => x.Dokumen == trans.NoLpb && x.Bayar == 0).FirstOrDefault();
 
             if (true)
             {
                 try
                 {
 
-                    var ExistingTrans = _context.PoTransHs.Where(x => x.PoTransHId == trans.PoTransHId).FirstOrDefault();
-                    //    var ExistingTrans = _context.PoTransHs.Include(x => x.PoTransDs).Where(x => x.PoTransHId == trans.PoTransHId).FirstOrDefault();
+                    var ExistingTrans = db.PoTransHs.Where(x => x.PoTransHId == trans.PoTransHId).FirstOrDefault();
+                    //    var ExistingTrans = db.PoTransHs.Include(x => x.PoTransDs).Where(x => x.PoTransHId == trans.PoTransHId).FirstOrDefault();
 
                     if (ExistingTrans != null)
                     {
 
-                        _context.PoTransHs.Remove(ExistingTrans);
+                        db.PoTransHs.Remove(ExistingTrans);
 
                         /* update nya */
                         PoTransH transH = new PoTransH
@@ -327,7 +340,7 @@ namespace eSoft.Order.Services
                                 });
 
 
-                                IcItem cekItem = _contextIc.IcItems.Where(x => x.ItemCode == item.ItemCode).FirstOrDefault();
+                                IcItem cekItem = dbIc.IcItems.Where(x => x.ItemCode == item.ItemCode).FirstOrDefault();
                                 if (cekItem != null)
                                 {
                                     //  cekItem.HrgUsd = item.Harga;
@@ -339,7 +352,7 @@ namespace eSoft.Order.Services
                                         cekItem.HrgUsd = item.Harga;  // harga beli barang
                                         cekItem.CurrencyCode = trans.Currency;
                                     }
-                                    _contextIc.IcItems.Update(cekItem);
+                                    dbIc.IcItems.Update(cekItem);
 
                                 }
                             }
@@ -348,11 +361,11 @@ namespace eSoft.Order.Services
 
 
 
-                        _context.PoTransHs.Add(transH);
+                        db.PoTransHs.Add(transH);
 
 
-                        await _contextIc.SaveChangesAsync();
-                        await _context.SaveChangesAsync();
+                        await dbIc.SaveChangesAsync();
+                        await db.SaveChangesAsync();
 
                         //  var TempTrans = GetTransDoc(transH.NoLpb);
 
@@ -381,12 +394,13 @@ namespace eSoft.Order.Services
 
         public string GetNumber()
         {
+            using var db = _context.CreateDbContext();
             string kodeno = "P/I";
             string kodeurut = kodeno + '-';
             string thnbln = DateTime.Now.ToString("yyMM");
             string xbukti = kodeurut + thnbln.Substring(0, 2) + '2' + thnbln.Substring(2, 2) + '-';
             var maxvalue = "";
-            var maxlist = _context.PoTransHs.Where(x => x.NoLpb.Substring(0, 10).Equals(xbukti)).ToList();
+            var maxlist = db.PoTransHs.Where(x => x.NoLpb.Substring(0, 10).Equals(xbukti)).ToList();
             if (maxlist != null)
             {
                 maxvalue = maxlist.Max(x => x.NoLpb);
@@ -417,9 +431,11 @@ namespace eSoft.Order.Services
 
         public List<PoItemQtyByLocationView> GetAllIcItemQtyByLocation(string KodeVendor)
         {
-            var icAltItems = _context.PoTransDs.Where(x => x.Kode == "71").ToList();
-            var icItems = _contextIc.IcItems.ToList();
-            var icLocations = _context.PoTransHs.Where(x => x.Vendor == KodeVendor && x.Kode == "71").ToList();
+            using var db = _context.CreateDbContext();
+            using var dbIc = _contextIc.CreateDbContext();
+            var icAltItems = db.PoTransDs.Where(x => x.Kode == "71").ToList();
+            var icItems = dbIc.IcItems.ToList();
+            var icLocations = db.PoTransHs.Where(x => x.Vendor == KodeVendor && x.Kode == "71").ToList();
 
 
             //var icItemQtyByLocations = icAltItems.GroupJoin(icLocations, alt => alt.PoTransHId, loc => loc.PoTransHId,

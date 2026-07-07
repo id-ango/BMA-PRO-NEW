@@ -19,11 +19,11 @@ namespace eSoft.Pembelian.Services
 {
     public class PurchaseServices : IPurchaseServices
     {
-        private readonly DbContextBeli _context;
-        private readonly DbContextHutang _contextAp;
-        private readonly DbContextPersediaan _contextIc;
+        private readonly IDbContextFactory<DbContextBeli> _context;
+        private readonly IDbContextFactory<DbContextHutang> _contextAp;
+        private readonly IDbContextFactory<DbContextPersediaan> _contextIc;
 
-        public PurchaseServices(DbContextBeli context, DbContextHutang contextHutang, DbContextPersediaan contextPersediaan)
+        public PurchaseServices(IDbContextFactory<DbContextBeli> context, IDbContextFactory<DbContextHutang> contextHutang, IDbContextFactory<DbContextPersediaan> contextPersediaan)
         {
             _context = context;
             _contextAp = contextHutang;
@@ -34,12 +34,14 @@ namespace eSoft.Pembelian.Services
 
         private ApSuppl GetSupplierId(string id)
         {
-            return _contextAp.ApSuppls.FirstOrDefault(x => x.Supplier == id);
+            using var dbAp = _contextAp.CreateDbContext();
+            return dbAp.ApSuppls.FirstOrDefault(x => x.Supplier == id);
         }
 
         public ApHutang GetHutang(string bukti)
         {
-            return _contextAp.ApHutangs.FirstOrDefault(x => x.Dokumen == bukti);
+            using var dbAp = _contextAp.CreateDbContext();
+            return dbAp.ApHutangs.FirstOrDefault(x => x.Dokumen == bukti);
         }
 
         #endregion getclass
@@ -48,7 +50,8 @@ namespace eSoft.Pembelian.Services
 
         public IrTransH GetIrTrans(int id)
         {
-            return _context.IrTransHs
+            using var db = _context.CreateDbContext();
+            return db.IrTransHs
                 .AsNoTracking()
                 .Include(p => p.IrTransDs)
                 .FirstOrDefault(x => x.IrTransHId == id);
@@ -56,7 +59,9 @@ namespace eSoft.Pembelian.Services
 
         public List<IrTransH> GetTransH()
         {
-            List<IrTransH> irTrans = _context.IrTransHs
+            using var db = _context.CreateDbContext();
+            using var dbAp = _contextAp.CreateDbContext();
+            List<IrTransH> irTrans = db.IrTransHs
                 .AsNoTracking()
                 .OrderByDescending(x => x.Tanggal.Date)
                 .Where(x => x.Kode == "82" || x.Kode == "83")
@@ -69,7 +74,7 @@ namespace eSoft.Pembelian.Services
 
             var supplierIds = irTrans.Select(x => x.Supplier).Distinct().ToList();
 
-            var suppliers = _contextAp.ApSuppls
+            var suppliers = dbAp.ApSuppls
                 .AsNoTracking()
                 .Where(x => supplierIds.Contains(x.Supplier))
                 .Select(x => new { x.Supplier, x.NamaLengkap })
@@ -96,7 +101,8 @@ namespace eSoft.Pembelian.Services
 
         public List<IrTransH> Get3TransH()
         {
-            return _context.IrTransHs
+            using var db = _context.CreateDbContext();
+            return db.IrTransHs
                 .AsNoTracking()
                 .OrderByDescending(x => x.Tanggal.Date)
                 .Where(x =>
@@ -107,13 +113,17 @@ namespace eSoft.Pembelian.Services
 
         public List<IrTransD> GetTransD()
         {
-            return _context.IrTransDs
+            using var db = _context.CreateDbContext();
+            return db.IrTransDs
                 .AsNoTracking()
                 .ToList();
         }
 
         public IrTransH AddTransH(IrTransHView trans)
         {
+            using var db = _context.CreateDbContext();
+            using var dbAp = _contextAp.CreateDbContext();
+            using var dbIc = _contextIc.CreateDbContext();
             decimal mQty5 = 0;
 
             IrTransH transH = new IrTransH
@@ -144,7 +154,7 @@ namespace eSoft.Pembelian.Services
 
             foreach (var item in trans.IrTransDs)
             {
-                IcItem cekItem = _contextIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
+                IcItem cekItem = dbIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
 
                 if (item.Qty == 0)
                 {
@@ -199,7 +209,7 @@ namespace eSoft.Pembelian.Services
                 var altKey = $"{item.ItemCode}::{item.Lokasi}";
                 if (!altItemDictAdd.TryGetValue(altKey, out IcAltItem cekLokasi1))
                 {
-                    cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                    cekLokasi1 = dbIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
                     if (cekLokasi1 != null) altItemDictAdd[altKey] = cekLokasi1;
                 }
 
@@ -213,13 +223,13 @@ namespace eSoft.Pembelian.Services
                         Lokasi = item.Lokasi,
                         Qty = item.Qty
                     };
-                    _contextIc.IcAltItems.Add(cekLokasi1);
+                    dbIc.IcAltItems.Add(cekLokasi1);
                     altItemDictAdd[altKey] = cekLokasi1;
                 }
                 else
                 {
                     cekLokasi1.Qty += item.Qty;
-                    _contextIc.IcAltItems.Update(cekLokasi1);
+                    dbIc.IcAltItems.Update(cekLokasi1);
                 }
 
                 if (trans.Kurs != 0)
@@ -254,10 +264,10 @@ namespace eSoft.Pembelian.Services
                     cekItem.HrgNetto = cekItem.Harga;
                 }
 
-                _contextIc.IcItems.Update(cekItem);
+                dbIc.IcItems.Update(cekItem);
             }
 
-            _context.IrTransHs.Add(transH);
+            db.IrTransHs.Add(transH);
 
             ApHutang hutang = new ApHutang
             {
@@ -275,25 +285,26 @@ namespace eSoft.Pembelian.Services
                 Nilai = transH.Nilai,
                 KodeTran = transH.Kode
             };
-            _contextAp.ApHutangs.Add(hutang);
+            dbAp.ApHutangs.Add(hutang);
 
             var supplier = GetSupplierId(transH.Supplier);
             if (supplier != null)
             {
                 supplier.Hutang += transH.Jumlah;
-                _contextAp.ApSuppls.Update(supplier);
+                dbAp.ApSuppls.Update(supplier);
             }
 
-            _context.SaveChanges();
-            _contextAp.SaveChanges();
-            _contextIc.SaveChanges();
+            db.SaveChanges();
+            dbAp.SaveChanges();
+            dbIc.SaveChanges();
 
             return GetTransDoc(transH.NoLpb);
         }
 
         public IrTransH GetTransDoc(string docno)
         {
-            return _context.IrTransHs
+            using var db = _context.CreateDbContext();
+            return db.IrTransHs
                 .AsNoTracking()
                 .Include(p => p.IrTransDs)
                 .FirstOrDefault(x => x.NoLpb == docno);
@@ -301,11 +312,14 @@ namespace eSoft.Pembelian.Services
 
         public async Task<bool> DelTransH(int id)
         {
+            using var db = _context.CreateDbContext();
+            using var dbAp = _contextAp.CreateDbContext();
+            using var dbIc = _contextIc.CreateDbContext();
             string cKode = "82";
 
             try
             {
-                var existingTrans = _context.IrTransHs
+                var existingTrans = db.IrTransHs
                     .Include(x => x.IrTransDs)
                     .FirstOrDefault(x => x.IrTransHId == id);
 
@@ -314,7 +328,7 @@ namespace eSoft.Pembelian.Services
                     return false;
                 }
 
-                if (_contextAp.ApHutangs.Any(x => x.Dokumen == existingTrans.NoLpb && x.Bayar > 0))
+                if (dbAp.ApHutangs.Any(x => x.Dokumen == existingTrans.NoLpb && x.Bayar > 0))
                 {
                     return false;
                 }
@@ -330,7 +344,7 @@ namespace eSoft.Pembelian.Services
                         continue;
                     }
 
-                    IcItem cekItem = _contextIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
+                    IcItem cekItem = dbIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
                     if (cekItem == null)
                     {
                         continue;
@@ -339,7 +353,7 @@ namespace eSoft.Pembelian.Services
                     var altKeyDel = $"{item.ItemCode}::{item.Lokasi}";
                     if (!altItemDictDel.TryGetValue(altKeyDel, out IcAltItem cekLokasi1))
                     {
-                        cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                        cekLokasi1 = dbIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
                         if (cekLokasi1 != null) altItemDictDel[altKeyDel] = cekLokasi1;
                     }
 
@@ -353,7 +367,7 @@ namespace eSoft.Pembelian.Services
                             Lokasi = item.Lokasi,
                             Qty = (cKode == "82" ? -1 * item.Qty : item.Qty)
                         };
-                        _contextIc.IcAltItems.Add(produk);
+                        dbIc.IcAltItems.Add(produk);
                         altItemDictDel[altKeyDel] = produk;
                     }
                     else
@@ -367,7 +381,7 @@ namespace eSoft.Pembelian.Services
                             cekLokasi1.Qty += item.Qty;
                         }
 
-                        _contextIc.IcAltItems.Update(cekLokasi1);
+                        dbIc.IcAltItems.Update(cekLokasi1);
                     }
 
                     if (cekItem.JnsBrng == (int)jnsBrng.Stock)
@@ -414,7 +428,7 @@ namespace eSoft.Pembelian.Services
                         cekItem.HrgNetto = cekItem.Harga;
                     }
 
-                    _contextIc.IcItems.Update(cekItem);
+                    dbIc.IcItems.Update(cekItem);
                 }
 
                 var supplier = GetSupplierId(existingTrans.Supplier);
@@ -431,19 +445,19 @@ namespace eSoft.Pembelian.Services
                         supplier.Hutang += existingTrans.Jumlah;
                     }
 
-                    _contextAp.ApSuppls.Update(supplier);
+                    dbAp.ApSuppls.Update(supplier);
                 }
 
                 if (hutang != null)
                 {
-                    _contextAp.ApHutangs.Remove(hutang);
+                    dbAp.ApHutangs.Remove(hutang);
                 }
 
-                _context.IrTransHs.Remove(existingTrans);
+                db.IrTransHs.Remove(existingTrans);
 
-                await _context.SaveChangesAsync();
-                await _contextAp.SaveChangesAsync();
-                await _contextIc.SaveChangesAsync();
+                await db.SaveChangesAsync();
+                await dbAp.SaveChangesAsync();
+                await dbIc.SaveChangesAsync();
 
                 return true;
             }
@@ -455,17 +469,21 @@ namespace eSoft.Pembelian.Services
 
         public bool CekHutang(IrTransH trans)
         {
-            return _contextAp.ApHutangs
+            using var dbAp = _contextAp.CreateDbContext();
+            return dbAp.ApHutangs
                 .AsNoTracking()
                 .Any(x => x.Dokumen == trans.NoLpb && x.Bayar == 0);
         }
 
         public async Task<bool> EditTransH(IrTransHView trans)
         {
+            using var db = _context.CreateDbContext();
+            using var dbAp = _contextAp.CreateDbContext();
+            using var dbIc = _contextIc.CreateDbContext();
             decimal mQty5 = 0;
             string cKode = trans.Kode;
 
-            var cekFirst = _contextAp.ApHutangs.FirstOrDefault(x => x.Dokumen == trans.NoLpb && x.Bayar == 0);
+            var cekFirst = dbAp.ApHutangs.FirstOrDefault(x => x.Dokumen == trans.NoLpb && x.Bayar == 0);
             if (cekFirst == null)
             {
                 return false;
@@ -473,7 +491,7 @@ namespace eSoft.Pembelian.Services
 
             try
             {
-                var existingTrans = _context.IrTransHs
+                var existingTrans = db.IrTransHs
                     .Include(x => x.IrTransDs)
                     .FirstOrDefault(x => x.IrTransHId == trans.IrTransHId);
 
@@ -493,7 +511,7 @@ namespace eSoft.Pembelian.Services
                         continue;
                     }
 
-                    IcItem cekItem = _contextIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
+                    IcItem cekItem = dbIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
                     if (cekItem == null)
                     {
                         continue;
@@ -502,7 +520,7 @@ namespace eSoft.Pembelian.Services
                     var altKeyE1 = $"{item.ItemCode}::{item.Lokasi}";
                     if (!altItemDictEdit1.TryGetValue(altKeyE1, out IcAltItem cekLokasi1))
                     {
-                        cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                        cekLokasi1 = dbIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
                         if (cekLokasi1 != null) altItemDictEdit1[altKeyE1] = cekLokasi1;
                     }
 
@@ -516,7 +534,7 @@ namespace eSoft.Pembelian.Services
                             Lokasi = item.Lokasi,
                             Qty = (existingTrans.Kode == "82" ? -1 * item.Qty : item.Qty)
                         };
-                        _contextIc.IcAltItems.Add(produk);
+                        dbIc.IcAltItems.Add(produk);
                         altItemDictEdit1[altKeyE1] = produk;
                     }
                     else
@@ -530,7 +548,7 @@ namespace eSoft.Pembelian.Services
                             cekLokasi1.Qty += item.Qty;
                         }
 
-                        _contextIc.IcAltItems.Update(cekLokasi1);
+                        dbIc.IcAltItems.Update(cekLokasi1);
                     }
 
                     if (cekItem.JnsBrng == (int)jnsBrng.Stock)
@@ -577,7 +595,7 @@ namespace eSoft.Pembelian.Services
                         cekItem.HrgNetto = cekItem.Harga;
                     }
 
-                    _contextIc.IcItems.Update(cekItem);
+                    dbIc.IcItems.Update(cekItem);
                 }
 
                 var existingSupplier = GetSupplierId(existingTrans.Supplier);
@@ -592,11 +610,11 @@ namespace eSoft.Pembelian.Services
                         existingSupplier.Hutang += existingTrans.Jumlah;
                     }
 
-                    _contextAp.ApSuppls.Update(existingSupplier);
+                    dbAp.ApSuppls.Update(existingSupplier);
                 }
 
-                _contextAp.ApHutangs.Remove(cekFirst);
-                _context.IrTransHs.Remove(existingTrans);
+                dbAp.ApHutangs.Remove(cekFirst);
+                db.IrTransHs.Remove(existingTrans);
 
                 IrTransH transH = new IrTransH
                 {
@@ -623,7 +641,7 @@ namespace eSoft.Pembelian.Services
 
                 foreach (var item in trans.IrTransDs)
                 {
-                    IcItem cekItem = _contextIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
+                    IcItem cekItem = dbIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
 
                     if (item.Qty == 0)
                     {
@@ -664,7 +682,7 @@ namespace eSoft.Pembelian.Services
                     var altKeyE2 = $"{item.ItemCode}::{item.Lokasi}";
                     if (!altItemDictEdit2.TryGetValue(altKeyE2, out IcAltItem cekLokasi1))
                     {
-                        cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                        cekLokasi1 = dbIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
                         if (cekLokasi1 != null) altItemDictEdit2[altKeyE2] = cekLokasi1;
                     }
 
@@ -678,7 +696,7 @@ namespace eSoft.Pembelian.Services
                             Lokasi = item.Lokasi,
                             Qty = (cKode == "82" ? item.Qty : -1 * item.Qty)
                         };
-                        _contextIc.IcAltItems.Add(cekLokasi1);
+                        dbIc.IcAltItems.Add(cekLokasi1);
                         altItemDictEdit2[altKeyE2] = cekLokasi1;
                     }
                     else
@@ -692,7 +710,7 @@ namespace eSoft.Pembelian.Services
                             cekLokasi1.Qty -= item.Qty;
                         }
 
-                        _contextIc.IcAltItems.Update(cekLokasi1);
+                        dbIc.IcAltItems.Update(cekLokasi1);
                     }
 
                     if (cekItem.JnsBrng == (int)jnsBrng.Stock)
@@ -739,7 +757,7 @@ namespace eSoft.Pembelian.Services
                         cekItem.HrgNetto = cekItem.Harga;
                     }
 
-                    _contextIc.IcItems.Update(cekItem);
+                    dbIc.IcItems.Update(cekItem);
                 }
 
                 var supplier = GetSupplierId(transH.Supplier);
@@ -769,15 +787,15 @@ namespace eSoft.Pembelian.Services
                         supplier.Hutang -= transH.Jumlah;
                     }
 
-                    _contextAp.ApSuppls.Update(supplier);
+                    dbAp.ApSuppls.Update(supplier);
                 }
 
-                _context.IrTransHs.Add(transH);
-                _contextAp.ApHutangs.Add(hutang);
+                db.IrTransHs.Add(transH);
+                dbAp.ApHutangs.Add(hutang);
 
-                await _contextAp.SaveChangesAsync();
-                await _contextIc.SaveChangesAsync();
-                await _context.SaveChangesAsync();
+                await db.SaveChangesAsync();
+                await dbAp.SaveChangesAsync();
+                await dbIc.SaveChangesAsync();
 
                 return true;
             }
@@ -791,11 +809,12 @@ namespace eSoft.Pembelian.Services
 
         public string GetNumber()
         {
+            using var db = _context.CreateDbContext();
             const string kodeno = "BPB";
             string thnbln = DateTime.Now.ToString("yyMM");
             string xbukti = $"{kodeno}-{thnbln.Substring(0, 2)}2{thnbln.Substring(2, 2)}-";
 
-            string maxvalue = _context.IrTransHs
+            string maxvalue = db.IrTransHs
                 .AsNoTracking()
                 .Where(x => x.NoLpb != null && x.NoLpb.StartsWith(xbukti))
                 .Select(x => x.NoLpb)
@@ -815,6 +834,9 @@ namespace eSoft.Pembelian.Services
 
         public IrTransH AddTransHRetur(IrTransHView trans)
         {
+            using var db = _context.CreateDbContext();
+            using var dbAp = _contextAp.CreateDbContext();
+            using var dbIc = _contextIc.CreateDbContext();
             decimal mQty5 = 0;
 
             IrTransH transH = new IrTransH
@@ -870,13 +892,13 @@ namespace eSoft.Pembelian.Services
                     JumDpp = mQty5
                 });
 
-                IcItem cekItem = _contextIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
+                IcItem cekItem = dbIc.IcItems.FirstOrDefault(x => x.ItemCode == item.ItemCode);
                 if (cekItem == null)
                 {
                     continue;
                 }
 
-                IcAltItem cekLokasi1 = _contextIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
+                IcAltItem cekLokasi1 = dbIc.IcAltItems.FirstOrDefault(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi);
                 if (cekLokasi1 == null)
                 {
                     IcAltItem produk = new IcAltItem()
@@ -887,12 +909,12 @@ namespace eSoft.Pembelian.Services
                         Lokasi = item.Lokasi,
                         Qty = -1 * item.Qty
                     };
-                    _contextIc.IcAltItems.Add(produk);
+                    dbIc.IcAltItems.Add(produk);
                 }
                 else
                 {
                     cekLokasi1.Qty -= item.Qty;
-                    _contextIc.IcAltItems.Update(cekLokasi1);
+                    dbIc.IcAltItems.Update(cekLokasi1);
                 }
 
                 cekItem.Harga = item.Harga;
@@ -916,10 +938,10 @@ namespace eSoft.Pembelian.Services
                     cekItem.HrgNetto = cekItem.Harga;
                 }
 
-                _contextIc.IcItems.Update(cekItem);
+                dbIc.IcItems.Update(cekItem);
             }
 
-            _context.IrTransHs.Add(transH);
+            db.IrTransHs.Add(transH);
 
             ApHutang hutang = new ApHutang
             {
@@ -934,29 +956,30 @@ namespace eSoft.Pembelian.Services
                 SldSisa = -1 * transH.Jumlah,
                 KodeTran = transH.Kode
             };
-            _contextAp.ApHutangs.Add(hutang);
+            dbAp.ApHutangs.Add(hutang);
 
             var supplier = GetSupplierId(transH.Supplier);
             if (supplier != null)
             {
                 supplier.Hutang -= transH.Jumlah;
-                _contextAp.ApSuppls.Update(supplier);
+                dbAp.ApSuppls.Update(supplier);
             }
 
-            _context.SaveChanges();
-            _contextAp.SaveChanges();
-            _contextIc.SaveChanges();
+            db.SaveChanges();
+            dbAp.SaveChanges();
+            dbIc.SaveChanges();
 
             return GetTransDoc(transH.NoLpb);
         }
 
         public string GetNumberRetur()
         {
+            using var db = _context.CreateDbContext();
             const string kodeno = "R/B";
             string thnbln = DateTime.Now.ToString("yyMM");
             string xbukti = $"{kodeno}-{thnbln.Substring(0, 2)}2{thnbln.Substring(2, 2)}-";
 
-            string maxvalue = _context.IrTransHs
+            string maxvalue = db.IrTransHs
                 .AsNoTracking()
                 .Where(x => x.NoLpb != null && x.NoLpb.StartsWith(xbukti))
                 .Select(x => x.NoLpb)
@@ -978,7 +1001,8 @@ namespace eSoft.Pembelian.Services
 
         public List<IrTransH> Laporan1(DateTime tgl1, DateTime tgl2)
         {
-            var transH = _context.IrTransHs
+            using var db = _context.CreateDbContext();
+            var transH = db.IrTransHs
                 .AsNoTracking()
                 .Where(x => x.Tanggal.Date >= tgl1.Date && x.Tanggal.Date <= tgl2.Date)
                 .OrderByDescending(t => t.Tanggal.Date)
@@ -1007,7 +1031,8 @@ namespace eSoft.Pembelian.Services
 
         public List<IrTransD> Detail1(int xKdHeader)
         {
-            return _context.IrTransDs
+            using var db = _context.CreateDbContext();
+            return db.IrTransDs
                 .AsNoTracking()
                 .Where(x => x.IrTransHId == xKdHeader)
                 .ToList();
@@ -1015,14 +1040,15 @@ namespace eSoft.Pembelian.Services
 
         public List<IrTrans> Detail2(string xKdHeader, DateTime tgl1, DateTime tgl2)
         {
-            List<IrTransH> transH = _context.IrTransHs
+            using var db = _context.CreateDbContext();
+            List<IrTransH> transH = db.IrTransHs
                 .AsNoTracking()
-                .Where(x => x.Tanggal.Date >= tgl1.Date && x.Tanggal.Date <= tgl2.Date)
+                .Where(x => x.NoPrj == xKdHeader && (x.Tanggal.Date >= tgl1.Date && x.Tanggal.Date <= tgl2.Date))
                 .ToList();
 
-            List<IrTransD> transD = _context.IrTransDs
+            List<IrTransD> transD = db.IrTransDs
                 .AsNoTracking()
-                .Where(x => x.ItemCode == xKdHeader && (x.Tanggal.Date >= tgl1.Date && x.Tanggal.Date <= tgl2.Date))
+                .Where(x => (x.Tanggal.Date >= tgl1.Date && x.Tanggal.Date <= tgl2.Date))
                 .ToList();
 
             if (transH.Count == 0 || transD.Count == 0)
@@ -1060,12 +1086,13 @@ namespace eSoft.Pembelian.Services
 
         public void ReprosesPurchase()
         {
-            var transH = _context.IrTransHs
+            using var db = _context.CreateDbContext();
+            var transH = db.IrTransHs
                 .Include(p => p.IrTransDs)
                 .Where(x => x.NoPrj != null)
                 .ToList();
 
-            var transD = _context.IrTransDs.AsQueryable();
+            var transD = db.IrTransDs.AsQueryable();
 
             foreach (var item in transH)
             {
@@ -1078,8 +1105,8 @@ namespace eSoft.Pembelian.Services
                 }
             }
 
-            _context.IrTransHs.UpdateRange(transH);
-            _context.SaveChanges();
+            db.IrTransHs.UpdateRange(transH);
+            db.SaveChanges();
         }
 
         #endregion

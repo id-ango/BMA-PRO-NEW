@@ -10,19 +10,20 @@ namespace eSoft.Penjualan.Services
 {
     public class SalesReportService : ISalesReportService
     {
-        private readonly DbContextJual _context;
+        private readonly IDbContextFactory<DbContextJual> _context;
 
-        public SalesReportService(DbContextJual context)
+        public SalesReportService(IDbContextFactory<DbContextJual> context)
         {
             _context = context;
         }
 
         public List<OeTransH> Laporan1(DateTime tgl1, DateTime tgl2)
         {
+            using var context = _context.CreateDbContext();
             var startDate = tgl1.Date;
             var endDateExclusive = tgl2.Date.AddDays(1);
 
-            return _context.OeTransHs
+            return context.OeTransHs
                 .AsNoTracking()
                 .Where(x => x.Tanggal >= startDate && x.Tanggal < endDateExclusive)
                 .OrderByDescending(t => t.Tanggal)
@@ -48,10 +49,11 @@ namespace eSoft.Penjualan.Services
 
         public List<OeTransD> LaporanDownload(DateTime tgl1, DateTime tgl2)
         {
+            using var context = _context.CreateDbContext();
             var startDate = tgl1.Date;
             var endDateExclusive = tgl2.Date.AddDays(1);
 
-            return _context.OeTransDs
+            return context.OeTransDs
                 .AsNoTracking()
                 .Where(x => x.Tanggal >= startDate && x.Tanggal < endDateExclusive && x.Kode == "94" && x.Jumlah != 0)
                 .OrderBy(t => t.Tanggal)
@@ -71,7 +73,8 @@ namespace eSoft.Penjualan.Services
 
         public List<OeTransD> Detail1(int xKdHeader)
         {
-            return _context.OeTransDs
+            using var context = _context.CreateDbContext();
+            return context.OeTransDs
                 .AsNoTracking()
                 .Where(x => x.OeTransHId == xKdHeader)
                 .ToList();
@@ -79,11 +82,12 @@ namespace eSoft.Penjualan.Services
 
         public List<OeTrans> Detail2(string xKdHeader, DateTime tgl1, DateTime tgl2)
         {
+            using var context = _context.CreateDbContext();
             var startDate = tgl1.Date;
             var endDateExclusive = tgl2.Date.AddDays(1);
 
-            return (from header in _context.OeTransHs.AsNoTracking()
-                    join detail in _context.OeTransDs.AsNoTracking() on header.OeTransHId equals detail.OeTransHId
+            return (from header in context.OeTransHs.AsNoTracking()
+                    join detail in context.OeTransDs.AsNoTracking() on header.OeTransHId equals detail.OeTransHId
                     where detail.ItemCode == xKdHeader
                         && header.Tanggal >= startDate
                         && header.Tanggal < endDateExclusive
@@ -112,11 +116,12 @@ namespace eSoft.Penjualan.Services
 
         public List<OeTrans> Detail3(string xKdHeader, DateTime tgl1, DateTime tgl2)
         {
+            using var context = _context.CreateDbContext();
             var startDate = tgl1.Date;
             var endDateExclusive = tgl2.Date.AddDays(1);
 
-            return (from header in _context.OeTransHs.AsNoTracking()
-                    join detail in _context.OeTransDs.AsNoTracking() on header.OeTransHId equals detail.OeTransHId
+            return (from header in context.OeTransHs.AsNoTracking()
+                    join detail in context.OeTransDs.AsNoTracking() on header.OeTransHId equals detail.OeTransHId
                     where header.Customer == xKdHeader
                         && header.Tanggal >= startDate
                         && header.Tanggal < endDateExclusive
@@ -145,8 +150,9 @@ namespace eSoft.Penjualan.Services
 
         public List<OeTrans> Detail3Index(string xKdHeader)
         {
-            return (from header in _context.OeTransHs.AsNoTracking()
-                    join detail in _context.OeTransDs.AsNoTracking() on header.OeTransHId equals detail.OeTransHId
+            using var context = _context.CreateDbContext();
+            return (from header in context.OeTransHs.AsNoTracking()
+                    join detail in context.OeTransDs.AsNoTracking() on header.OeTransHId equals detail.OeTransHId
                     where header.NoLpb == xKdHeader
                     select new OeTrans
                     {
@@ -173,10 +179,11 @@ namespace eSoft.Penjualan.Services
 
         public List<OeTrans> Detail4(string xKdHeader, DateTime tgl1, DateTime tgl2)
         {
+            using var context = _context.CreateDbContext();
             var startDate = tgl1.Date;
             var endDateExclusive = tgl2.Date.AddDays(1);
 
-            return _context.OeTransHs
+            return context.OeTransHs
                 .AsNoTracking()
                 .Where(x => x.Kurir == xKdHeader && x.Tanggal >= startDate && x.Tanggal < endDateExclusive)
                 .Select(header => new OeTrans()
@@ -191,10 +198,11 @@ namespace eSoft.Penjualan.Services
 
         public List<OeTrans> Detail5(string xKdHeader, DateTime tgl1, DateTime tgl2)
         {
+            using var context = _context.CreateDbContext();
             var startDate = tgl1.Date;
             var endDateExclusive = tgl2.Date.AddDays(1);
 
-            return _context.OeTransHs
+            return context.OeTransHs
                 .AsNoTracking()
                 .Where(x => x.Salesman == xKdHeader && x.Tanggal >= startDate && x.Tanggal < endDateExclusive)
                 .Select(header => new OeTrans()

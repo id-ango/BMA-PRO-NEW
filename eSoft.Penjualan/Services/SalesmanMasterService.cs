@@ -11,23 +11,25 @@ namespace eSoft.Penjualan.Services
 {
     public class SalesmanMasterService : ISalesmanMasterService
     {
-        private readonly DbContextJual _context;
+        private readonly IDbContextFactory<DbContextJual> _context;
 
-        public SalesmanMasterService(DbContextJual context)
+        public SalesmanMasterService(IDbContextFactory<DbContextJual> context)
         {
             _context = context;
         }
 
         public List<OeSalesman> GetSalesman()
         {
-            return _context.OeSalesmans
+            using var context = _context.CreateDbContext();
+            return context.OeSalesmans
                 .AsNoTracking()
                 .ToList();
         }
 
         public OeSalesman GetSalesmanId(int id)
         {
-            return _context.OeSalesmans
+            using var context = _context.CreateDbContext();
+            return context.OeSalesmans
                 .AsNoTracking()
                 .FirstOrDefault(x => x.OeSalesmanId == id);
         }
@@ -37,7 +39,8 @@ namespace eSoft.Penjualan.Services
             if (string.IsNullOrEmpty(id))
                 return string.Empty;
 
-            return _context.OeSalesmans
+            using var context = _context.CreateDbContext();
+            return context.OeSalesmans
                 .AsNoTracking()
                 .Where(x => x.Salesman == id)
                 .Select(x => x.NamaSales)
@@ -48,11 +51,12 @@ namespace eSoft.Penjualan.Services
         {
             try
             {
-                var existingSalesman = _context.OeSalesmans.FirstOrDefault(x => x.OeSalesmanId == id);
+                using var context = _context.CreateDbContext();
+                var existingSalesman = context.OeSalesmans.FirstOrDefault(x => x.OeSalesmanId == id);
                 if (existingSalesman != null)
                 {
-                    _context.OeSalesmans.Remove(existingSalesman);
-                    await _context.SaveChangesAsync();
+                    context.OeSalesmans.Remove(existingSalesman);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }
@@ -67,14 +71,15 @@ namespace eSoft.Penjualan.Services
         public bool CekKdSalesman(string salesman)
         {
             string test = salesman.ToUpper();
-
-            return _context.OeSalesmans.Any(x => x.Salesman == test);
+            using var context = _context.CreateDbContext();
+            return context.OeSalesmans.Any(x => x.Salesman == test);
         }
 
         public bool AddSalesman(OeSalesmanView salesman)
         {
+            using var context = _context.CreateDbContext();
             string test = salesman.Salesman.ToUpper();
-            var exists = _context.OeSalesmans.Any(x => x.Salesman == test);
+            var exists = context.OeSalesmans.Any(x => x.Salesman == test);
             if (!exists)
             {
                 OeSalesman entity = new()
@@ -92,8 +97,8 @@ namespace eSoft.Penjualan.Services
                     NPWP_Sales = salesman.NPWP_Sales,
                     Kontak = salesman.Kontak
                 };
-                _context.OeSalesmans.Add(entity);
-                _context.SaveChanges();
+                context.OeSalesmans.Add(entity);
+                context.SaveChanges();
                 return true;
             }
 
@@ -104,7 +109,8 @@ namespace eSoft.Penjualan.Services
         {
             try
             {
-                var existingSalesman = _context.OeSalesmans.FirstOrDefault(x => x.OeSalesmanId == salesman.OeSalesmanId);
+                using var context = _context.CreateDbContext();
+                var existingSalesman = context.OeSalesmans.FirstOrDefault(x => x.OeSalesmanId == salesman.OeSalesmanId);
                 if (existingSalesman != null)
                 {
                     existingSalesman.NamaSales = salesman.NamaSales;
@@ -121,8 +127,8 @@ namespace eSoft.Penjualan.Services
                     existingSalesman.Kontak = salesman.Kontak;
                     existingSalesman.NPWP_Sales = salesman.NPWP_Sales;
 
-                    _context.OeSalesmans.Update(existingSalesman);
-                    await _context.SaveChangesAsync();
+                    context.OeSalesmans.Update(existingSalesman);
+                    await context.SaveChangesAsync();
                     return true;
                 }
             }

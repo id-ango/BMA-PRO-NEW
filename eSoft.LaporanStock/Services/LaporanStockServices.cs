@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -237,9 +237,8 @@ namespace eSoft.LaporanStock.Services
 
         private IcItemView prosesStockAwal(DateTime Tanggal1, DateTime Tanggal2, string kodeBank)
         {
-
             IcItem MasterStock = _context.IcItems.Where(x => x.ItemCode == kodeBank).FirstOrDefault();
-            //  List<IcAltItem> AltStock = _context.IcAltItems.ToList();
+            //  List<IcAltItem> AltStock = db.IcAltItems.ToList();
             List<OeTransD> TransJual = new List<OeTransD>();
             List<IrTransD> TransBeli = new List<IrTransD>();
             List<IcTransD> TransIC = new List<IcTransD>();
@@ -410,7 +409,6 @@ namespace eSoft.LaporanStock.Services
         }
         public async Task prosesStock()
         {
-
             List<IcItem> MasterStock = _context.IcItems.ToList();
             List<IcAltItem> AltStock = _context.IcAltItems.ToList();
             List<OeTransD> TransJual = new List<OeTransD>();
@@ -2402,4 +2400,5 @@ namespace eSoft.LaporanStock.Services
         #endregion
     }
 }
+
 

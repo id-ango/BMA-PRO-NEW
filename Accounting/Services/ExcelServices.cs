@@ -29,10 +29,10 @@ namespace Accounting.Services
 {
     public class ExcelServices : IExcelServices
     {
-        private readonly DbContextJual _context;
+        private readonly IDbContextFactory<DbContextJual> _context;
         private readonly IOrderPurchaseServices _purchaseService;
 
-        public ExcelServices(DbContextJual context, IOrderPurchaseServices purchaseService)
+        public ExcelServices(IDbContextFactory<DbContextJual> context, IOrderPurchaseServices purchaseService)
         {
             _context = context;
             _purchaseService = purchaseService;
@@ -343,13 +343,14 @@ namespace Accounting.Services
 
         public byte[] CreateRekapStockPjlSlsWorksheet(List<IcRekapStock> rekapStock, DateTime tanggal1, DateTime tanggal2)
         {
+            using var context = _context.CreateDbContext();
             var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("RekapStock_PJL_SLS");
 
             var awal = tanggal1.Date;
             var akhir = tanggal2.Date.AddDays(1).AddTicks(-1);
 
-            var oePenjualan = _context.OeTransDs
+            var oePenjualan = context.OeTransDs
                 .Where(x => x.Kode == "94" && x.Tanggal >= awal && x.Tanggal <= akhir)
                 .Select(x => new
                 {
@@ -443,13 +444,14 @@ namespace Accounting.Services
 
         public byte[] CreateRekapStockPjlSlsPpnWorksheet(List<IcRekapStock> rekapStock, DateTime tanggal1, DateTime tanggal2)
         {
+            using var context = _context.CreateDbContext();
             var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("RekapStock_PJL_SLS_PPN");
 
             var awal = tanggal1.Date;
             var akhir = tanggal2.Date.AddDays(1).AddTicks(-1);
 
-            var headers = _context.OeTransHs
+            var headers = context.OeTransHs
                 .AsNoTracking()
                 .Where(h => h.Tanggal >= awal && h.Tanggal <= akhir && (h.Kode == "94" || h.Kode == "95"))
                 .Select(h => new
@@ -464,7 +466,7 @@ namespace Accounting.Services
                 .GroupBy(h => h.NoLpb)
                 .ToDictionary(g => g.Key, g => g.First());
 
-            var details = _context.OeTransDs
+            var details = context.OeTransDs
                 .AsNoTracking()
                 .Where(d => d.Kode == "94" && d.Tanggal >= awal && d.Tanggal <= akhir)
                 .Select(d => new
