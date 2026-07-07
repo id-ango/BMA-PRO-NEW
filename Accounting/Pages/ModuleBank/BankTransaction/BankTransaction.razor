@@ -760,7 +760,8 @@
 
             return new BankTransactionView
             {
-                Date = tanggal.ToString("dd/MM/yyyy"),
+                Date = rawDate,
+              //   Date = tanggal.ToString("dd/MM/yyyy"),
                 Description = rawDesc,
                 Branch = rawBranch,
                 Amount = amount,
