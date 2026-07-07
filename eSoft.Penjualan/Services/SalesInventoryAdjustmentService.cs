@@ -24,9 +24,8 @@ namespace eSoft.Penjualan.Services
             ApplySaleDetail(context, item, null, null);
         }
 
-        public void ApplyDetailsForCode(IEnumerable<OeTransDView> items, string kode)
+        public void ApplyDetailsForCode(IEnumerable<OeTransDView> items, string kode, DbContextPersediaan context)
         {
-            using var context = CreateInventoryContext();
             var validItems = items.Where(x => x.Qty != 0).ToList();
             if (validItems.Count == 0)
             {
@@ -61,9 +60,8 @@ namespace eSoft.Penjualan.Services
             ReverseExistingDetail(context, item, kode, null, null);
         }
 
-        public void ReverseDetails(IEnumerable<OeTransD> items, string kode)
+        public void ReverseDetails(IEnumerable<OeTransD> items, string kode, DbContextPersediaan context)
         {
-            using var context = CreateInventoryContext();
             var validItems = items.Where(x => x.Qty != 0).ToList();
             if (validItems.Count == 0)
             {

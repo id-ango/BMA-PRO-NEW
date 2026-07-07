@@ -60,13 +60,13 @@ namespace eSoft.Penjualan.Services
 
             OeTransH transH = CreateTransHeader(trans, noLpb, "94", pajak, trans.NamaCust, trans.NonPiutang ? "" : "1");
 
-            _salesInventoryAdjustmentService.ApplyDetailsForCode(trans.OeTransDs, "94");
+            _salesInventoryAdjustmentService.ApplyDetailsForCode(trans.OeTransDs, "94", contextIc);
 
             context.OeTransHs.Add(transH);
 
             if (!trans.NonPiutang)
             {
-                _salesReceivableService.ApplySaleReceivable(transH, trans.NonPiutang);
+                _salesReceivableService.ApplySaleReceivable(transH, trans.NonPiutang, contextAr);
             }
 
             context.SaveChanges();
@@ -91,10 +91,10 @@ namespace eSoft.Penjualan.Services
 
             OeTransH transH = CreateTransHeader(trans, noLpb, "95", pajak, GetCustomerName(trans.Customer), "1");
 
-            _salesInventoryAdjustmentService.ApplyDetailsForCode(trans.OeTransDs, "95");
+            _salesInventoryAdjustmentService.ApplyDetailsForCode(trans.OeTransDs, "95", contextIc);
 
             context.OeTransHs.Add(transH);
-            _salesReceivableService.ApplyReturnReceivable(transH);
+            _salesReceivableService.ApplyReturnReceivable(transH, contextAr);
 
             context.SaveChanges();
             contextAr.SaveChanges();
@@ -128,11 +128,11 @@ namespace eSoft.Penjualan.Services
                 return false;
             }
 
-            _salesInventoryAdjustmentService.ReverseDetails(existingTrans.OeTransDs, existingTrans.Kode);
+            _salesInventoryAdjustmentService.ReverseDetails(existingTrans.OeTransDs, existingTrans.Kode, contextIc);
 
             if (existingTrans.Cek == "1")
             {
-                _salesReceivableService.ReverseExistingReceivable(existingTrans);
+                _salesReceivableService.ReverseExistingReceivable(existingTrans, contextAr);
             }
 
             context.OeTransHs.Remove(existingTrans);
@@ -147,7 +147,7 @@ namespace eSoft.Penjualan.Services
         public bool EditTransH(OeTransHView trans)
         {
             using var context = _context.CreateDbContext();
-            
+
             var existingTrans = context.OeTransHs
                 .Include(h => h.OeTransDs)
                 .FirstOrDefault(x => x.NoLpb == trans.NoLpb);
@@ -170,9 +170,9 @@ namespace eSoft.Penjualan.Services
                 using var contextAr = _contextAr.CreateDbContext();
                 using var contextIc = _contextIc.CreateDbContext();
 
-                _salesInventoryAdjustmentService.ReverseDetails(existingTrans.OeTransDs, existingTrans.Kode);
+                _salesInventoryAdjustmentService.ReverseDetails(existingTrans.OeTransDs, existingTrans.Kode, contextIc);
 
-                _salesReceivableService.ReverseExistingReceivableForEdit(existingTrans);
+                _salesReceivableService.ReverseExistingReceivableForEdit(existingTrans, contextAr);
                 context.OeTransHs.Remove(existingTrans);
 
                 OeTransH transH = CreateTransHeader(
@@ -184,11 +184,11 @@ namespace eSoft.Penjualan.Services
                     trans.NonPiutang ? "" : "1",
                     trans.Kurir);
 
-                _salesInventoryAdjustmentService.ApplyDetailsForCode(trans.OeTransDs, existingTrans.Kode);
+                _salesInventoryAdjustmentService.ApplyDetailsForCode(trans.OeTransDs, existingTrans.Kode, contextIc);
 
                 if (!trans.NonPiutang)
                 {
-                    _salesReceivableService.ApplyEditedReceivable(transH, trans.NonPiutang);
+                    _salesReceivableService.ApplyEditedReceivable(transH, trans.NonPiutang, contextAr);
                 }
 
                 context.OeTransHs.Add(transH);

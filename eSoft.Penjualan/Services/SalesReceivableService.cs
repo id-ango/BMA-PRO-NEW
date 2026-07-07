@@ -22,14 +22,12 @@ namespace eSoft.Penjualan.Services
             return contextAr.ArPiutngs.Any(x => x.Dokumen == documentNo && x.Bayar > 0);
         }
 
-        public void ApplySaleReceivable(OeTransH transH, bool nonPiutang)
+        public void ApplySaleReceivable(OeTransH transH, bool nonPiutang, DbContextPiutang contextAr)
         {
             if (nonPiutang)
             {
                 return;
             }
-
-            using var contextAr = CreatePiutangContext();
 
             var customer = GetCustomer(contextAr, transH.Customer);
             if (customer == null)
@@ -57,10 +55,8 @@ namespace eSoft.Penjualan.Services
             contextAr.ArCusts.Update(customer);
         }
 
-        public void ApplyReturnReceivable(OeTransH transH)
+        public void ApplyReturnReceivable(OeTransH transH, DbContextPiutang contextAr)
         {
-            using var contextAr = CreatePiutangContext();
-
             var customer = GetCustomer(contextAr, transH.Customer);
             if (customer == null)
             {
@@ -86,14 +82,12 @@ namespace eSoft.Penjualan.Services
             contextAr.ArCusts.Update(customer);
         }
 
-        public void ReverseExistingReceivable(OeTransH existingTrans)
+        public void ReverseExistingReceivable(OeTransH existingTrans, DbContextPiutang contextAr)
         {
             if (existingTrans.Cek != "1")
             {
                 return;
             }
-
-            using var contextAr = CreatePiutangContext();
 
             var customer = GetCustomer(contextAr, existingTrans.Customer);
             if (customer != null)
@@ -109,10 +103,8 @@ namespace eSoft.Penjualan.Services
             }
         }
 
-        public void ReverseExistingReceivableForEdit(OeTransH existingTrans)
+        public void ReverseExistingReceivableForEdit(OeTransH existingTrans, DbContextPiutang contextAr)
         {
-            using var contextAr = CreatePiutangContext();
-
             var customer = GetCustomer(contextAr, existingTrans.Customer);
             if (customer != null)
             {
@@ -135,14 +127,12 @@ namespace eSoft.Penjualan.Services
             }
         }
 
-        public void ApplyEditedReceivable(OeTransH transH, bool nonPiutang)
+        public void ApplyEditedReceivable(OeTransH transH, bool nonPiutang, DbContextPiutang contextAr)
         {
             if (nonPiutang)
             {
                 return;
             }
-
-            using var contextAr = CreatePiutangContext();
 
             var customer = GetCustomer(contextAr, transH.Customer);
             if (customer == null)
