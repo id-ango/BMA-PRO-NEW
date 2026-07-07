@@ -123,6 +123,7 @@ namespace eSoft.Penjualan.Services
                 return false;
             }
 
+            // Only check for payment settlement if it's a piutang transaction (Cek field not empty)
             if (!string.IsNullOrEmpty(existingTrans.Cek) && _salesReceivableService.HasSettlement(existingTrans.NoLpb))
             {
                 return false;
@@ -130,6 +131,7 @@ namespace eSoft.Penjualan.Services
 
             _salesInventoryAdjustmentService.ReverseDetails(existingTrans.OeTransDs, existingTrans.Kode, contextIc);
 
+            // Only reverse receivable if it was a piutang transaction (Cek == "1")
             if (existingTrans.Cek == "1")
             {
                 _salesReceivableService.ReverseExistingReceivable(existingTrans, contextAr);
