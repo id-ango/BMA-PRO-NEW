@@ -1345,7 +1345,7 @@ namespace Accounting.Services
             foreach (var pi in progression.PIsInOrder)
             {
                 var c = ws.Cell(currentRow, currentCol);
-                c.Value = $"Status setelah\n{pi.NoPrj}";
+                c.Value = $"Status setelah\n{pi.NoPrj}\n({pi.Tanggal:dd-MMM-yyyy})";
                 c.Style.Font.Bold = true;
                 c.Style.Font.FontColor = XLColor.White;
                 c.Style.Fill.BackgroundColor = headerFill;
@@ -1355,7 +1355,7 @@ namespace Accounting.Services
             }
 
             // Set header row height
-            ws.Row(currentRow).Height = 35;
+            ws.Row(currentRow).Height = 45;
             currentRow++;
 
             // Data rows
@@ -1383,7 +1383,7 @@ namespace Accounting.Services
                 var statusSekarangCell = ws.Cell(currentRow, currentCol);
                 var missingItemsText = string.Join("\n", row.ItemStatusSekarang
                     .Where(i => !i.IsComplete)
-                    .Select(i => $"✗ {i.ItemCode} (kurang {i.QtyKurang})"));
+                    .Select(i => $"✗ {i.NamaItem} ({i.ItemCode}) kurang {(int)i.QtyKurang}"));
 
                 if (string.IsNullOrWhiteSpace(missingItemsText))
                 {
@@ -1420,14 +1420,17 @@ namespace Accounting.Services
                         }
                         else if (piStatus.NewlyCompletedItems.Any())
                         {
-                            var text = $"~ {string.Join(", ", piStatus.NewlyCompletedItems)}\nMasih kurang: {string.Join(", ", piStatus.StillMissingItems)}";
+                            var newlyCompletedFormatted = FormatItemList(piStatus.NewlyCompletedItems, row.ItemStatusSekarang);
+                            var stillMissingFormatted = FormatItemList(piStatus.StillMissingItems, row.ItemStatusSekarang);
+                            var text = $"~ {newlyCompletedFormatted}\n✗ Kurang: {stillMissingFormatted}";
                             piCell.Value = text;
                             piCell.Style.Font.FontColor = XLColor.FromHtml("#856404");
                             piCell.Style.Fill.BackgroundColor = yellowFill;
                         }
                         else
                         {
-                            piCell.Value = $"✗ Masih kurang\n{string.Join(", ", piStatus.StillMissingItems)}";
+                            var stillMissingFormatted = FormatItemList(piStatus.StillMissingItems, row.ItemStatusSekarang);
+                            piCell.Value = $"✗ Kurang\n{stillMissingFormatted}";
                             piCell.Style.Font.FontColor = XLColor.FromHtml("#dc3545");
                             piCell.Style.Fill.BackgroundColor = redFill;
                         }
@@ -1460,6 +1463,28 @@ namespace Accounting.Services
 
             // Freeze panes
             ws.SheetView.FreezeRows(3);
+        }
+
+        /// <summary>
+        /// Helper untuk format item list dengan nama dan kode dalam kurung
+        /// </summary>
+        private string FormatItemList(List<string> itemCodes, List<ItemStatus> itemStatusMap)
+        {
+            if (itemCodes == null || itemCodes.Count == 0)
+                return "";
+
+            var formatted = new List<string>();
+            var itemMap = itemStatusMap.ToDictionary(i => i.ItemCode, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var code in itemCodes)
+            {
+                if (itemMap.TryGetValue(code, out var item))
+                    formatted.Add($"{item.NamaItem} ({code})");
+                else
+                    formatted.Add(code);
+            }
+
+            return string.Join(", ", formatted);
         }
 
         /// <summary>
@@ -1796,14 +1821,13 @@ namespace Accounting.Services
         }
 
         /// <summary>
-        /// Get list of active PIs sorted by order of appearance in POs
+        /// Get list of active PIs sorted by tanggal (earliest first)
         /// </summary>
         private List<PIInfo> GetActivePIsInOrder(
             List<PoTransH> purchaseOrders,
             List<PoTransD> purchaseDetails)
         {
             var piMap = new Dictionary<string, PIInfo>(StringComparer.OrdinalIgnoreCase);
-            int index = 0;
 
             foreach (var po in purchaseOrders.Where(p => !string.IsNullOrWhiteSpace(p.NoPrj)))
             {
@@ -1817,12 +1841,22 @@ namespace Accounting.Services
                         NoPrj = po.NoPrj,
                         NamaVendor = po.NamaVendor,
                         TotalQty = totalQty,
-                        PiIndex = index++
+                        Tanggal = po.Tanggal,
+                        PiIndex = 0 // Will be set after sorting
                     };
                 }
             }
 
-            return piMap.Values.OrderBy(p => p.PiIndex).ToList();
+            // Sort by Tanggal (earliest first)
+            var sorted = piMap.Values
+                .OrderBy(p => p.Tanggal)
+                .ToList();
+
+            // Set index after sorting
+            for (int i = 0; i < sorted.Count; i++)
+                sorted[i].PiIndex = i;
+
+            return sorted;
         }
 
         #endregion

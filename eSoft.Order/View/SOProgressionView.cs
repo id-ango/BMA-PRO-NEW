@@ -40,6 +40,11 @@ namespace eSoft.Order.View
         public decimal TotalQty { get; set; }
 
         /// <summary>
+        /// Tanggal PO (untuk sorting chronologically)
+        /// </summary>
+        public DateTime Tanggal { get; set; }
+
+        /// <summary>
         /// Index PI dalam urutan (0, 1, 2, ...)
         /// </summary>
         public int PiIndex { get; set; }
