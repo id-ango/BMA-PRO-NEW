@@ -1422,7 +1422,7 @@ namespace Accounting.Services
                         {
                             var newlyCompletedFormatted = FormatItemList(piStatus.NewlyCompletedItems, row.ItemStatusSekarang);
                             var stillMissingFormatted = FormatItemList(piStatus.StillMissingItems, row.ItemStatusSekarang);
-                            var text = $"~ {newlyCompletedFormatted}\n✗ Kurang: {stillMissingFormatted}";
+                            var text = $"✓ Selesai: {newlyCompletedFormatted}\n✗ Masih Kurang: {stillMissingFormatted}";
                             piCell.Value = text;
                             piCell.Style.Font.FontColor = XLColor.FromHtml("#856404");
                             piCell.Style.Fill.BackgroundColor = yellowFill;
