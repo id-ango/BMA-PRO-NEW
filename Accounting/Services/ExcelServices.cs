@@ -792,6 +792,20 @@ namespace Accounting.Services
             summaryRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             summaryRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
+            // Sheet 3: Prediksi PO & Readiness
+            var purchaseDetails = activePurchaseOrders
+                .SelectMany(x => x.PoTransDs ?? new List<PoTransD>())
+                .ToList();
+            var prediction = GeneratePOReadinessPrediction(matrix, activePurchaseOrders, purchaseDetails);
+            BuildPoReadinessPredictionSheet(workbook, prediction);
+
+            // Sheet 4: SO Progression per PI
+            var soProgression = GenerateSOProgressionData(matrix, activePurchaseOrders, purchaseDetails);
+            if (soProgression.PIsInOrder.Any())
+            {
+                BuildSOProgressionSheet(workbook, soProgression);
+            }
+
             return ConvertToByte(workbook);
         }
 
@@ -1016,5 +1030,801 @@ namespace Accounting.Services
 
             return ConvertToByte(workbook);
         }
+
+        #region PO Readiness Prediction Helper Methods
+
+        /// <summary>
+        /// Build sheet Excel untuk Prediksi PO & Readiness
+        /// </summary>
+        private void BuildPoReadinessPredictionSheet(XLWorkbook workbook, PoReadinessPredictionView prediction)
+        {
+            var ws = workbook.Worksheets.Add("Prediksi PO & Readiness");
+
+            // -- COLOR PALETTE
+            var headerFill = XLColor.FromHtml("#212529");
+            var greenFill = XLColor.FromHtml("#d1e7dd");
+            var redFill = XLColor.FromHtml("#f8d7da");
+            var yellowFill = XLColor.FromHtml("#fff3cd");
+            var blueFill = XLColor.FromHtml("#cfe2ff");
+            var lightGrayFill = XLColor.FromHtml("#f8f9fa");
+
+            int currentRow = 1;
+
+            // ========== SECTION 1: QUICK SUMMARY ==========
+            var titleCell = ws.Cell(currentRow, 1);
+            titleCell.Value = "PREDIKSI PO & READINESS SO";
+            titleCell.Style.Font.Bold = true;
+            titleCell.Style.Font.FontColor = XLColor.White;
+            titleCell.Style.Fill.BackgroundColor = headerFill;
+            ws.Range(currentRow, 1, currentRow, 8).Merge();
+            ws.Range(currentRow, 1, currentRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            currentRow += 2;
+
+            // Summary metrics
+            var summaryRow = currentRow;
+            ws.Cell(summaryRow, 1).Value = "RINGKASAN";
+            ws.Cell(summaryRow, 1).Style.Font.Bold = true;
+            ws.Cell(summaryRow, 1).Style.Fill.BackgroundColor = yellowFill;
+            currentRow++;
+
+            ws.Cell(currentRow, 1).Value = "Total SO Aktif";
+            ws.Cell(currentRow, 2).Value = prediction.Summary.TotalSalesOrders;
+            ws.Cell(currentRow, 2).Style.Font.Bold = true;
+            currentRow++;
+
+            ws.Cell(currentRow, 1).Value = "SO Sudah Ready";
+            ws.Cell(currentRow, 2).Value = prediction.Summary.ReadyWithoutPO;
+            ws.Cell(currentRow, 2).Style.Font.Bold = true;
+            ws.Cell(currentRow, 2).Style.Font.FontColor = XLColor.FromHtml("#198754");
+            currentRow++;
+
+            ws.Cell(currentRow, 1).Value = "SO Masih Pending";
+            var pendingCount = prediction.Summary.TotalSalesOrders - prediction.Summary.ReadyWithoutPO;
+            ws.Cell(currentRow, 2).Value = pendingCount;
+            ws.Cell(currentRow, 2).Style.Font.Bold = true;
+            ws.Cell(currentRow, 2).Style.Font.FontColor = XLColor.FromHtml("#dc3545");
+            currentRow++;
+
+            ws.Cell(currentRow, 1).Value = "Total PO Aktif";
+            ws.Cell(currentRow, 2).Value = prediction.Scenarios.Count;
+            ws.Cell(currentRow, 2).Style.Font.Bold = true;
+            currentRow += 2;
+
+            // ========== SECTION 2: PO IMPACT RANKING ==========
+            var impactRow = currentRow;
+            ws.Cell(impactRow, 1).Value = "RANKING PO BERDASARKAN IMPACT";
+            ws.Range(impactRow, 1, impactRow, 6).Merge();
+            ws.Cell(impactRow, 1).Style.Font.Bold = true;
+            ws.Cell(impactRow, 1).Style.Fill.BackgroundColor = blueFill;
+            currentRow++;
+
+            // Header ranking
+            string[] rankingHeaders = { "Ranking", "No PO", "No PI", "SO akan Ready", "% dari Total SO", "Keterangan" };
+            for (int i = 0; i < rankingHeaders.Length; i++)
+            {
+                var c = ws.Cell(currentRow, i + 1);
+                c.Value = rankingHeaders[i];
+                c.Style.Font.Bold = true;
+                c.Style.Font.FontColor = XLColor.White;
+                c.Style.Fill.BackgroundColor = headerFill;
+                c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            currentRow++;
+
+            foreach (var ranking in prediction.Summary.POImpactRanking.OrderBy(r => r.Rank).Take(10))
+            {
+                var scenario = prediction.Scenarios.FirstOrDefault(s => s.NoLpb == ranking.NoLpb);
+                if (scenario == null) continue;
+
+                var rowBg = ranking.Rank == 1 ? yellowFill : (ranking.Rank <= 3 ? greenFill : XLColor.White);
+
+                ws.Cell(currentRow, 1).Value = ranking.Rank;
+                ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = rowBg;
+                ws.Cell(currentRow, 1).Style.Font.Bold = true;
+
+                ws.Cell(currentRow, 2).Value = ranking.NoLpb;
+                ws.Cell(currentRow, 2).Style.Fill.BackgroundColor = rowBg;
+
+                ws.Cell(currentRow, 3).Value = ranking.NoPrj ?? "-";
+                ws.Cell(currentRow, 3).Style.Fill.BackgroundColor = rowBg;
+
+                ws.Cell(currentRow, 4).Value = ranking.ImpactCount;
+                ws.Cell(currentRow, 4).Style.Fill.BackgroundColor = rowBg;
+                ws.Cell(currentRow, 4).Style.Font.Bold = true;
+                ws.Cell(currentRow, 4).Style.Font.FontColor = XLColor.FromHtml("#198754");
+
+                ws.Cell(currentRow, 5).Value = ranking.ImpactPercentage / 100;
+                ws.Cell(currentRow, 5).Style.Fill.BackgroundColor = rowBg;
+                ws.Cell(currentRow, 5).Style.NumberFormat.Format = "0.0%";
+                ws.Cell(currentRow, 5).Style.Font.Bold = true;
+
+                var pesan = "";
+                if (ranking.Rank == 1) pesan = "⭐ PALING PENTING";
+                else if (ranking.Rank <= 3) pesan = "🔥 Prioritas tinggi";
+                else if (ranking.Rank <= 5) pesan = "Medium priority";
+
+                ws.Cell(currentRow, 6).Value = pesan;
+                ws.Cell(currentRow, 6).Style.Fill.BackgroundColor = rowBg;
+
+                currentRow++;
+            }
+            currentRow += 1;
+
+            // ========== SECTION 3: CRITICAL ITEMS ==========
+            var criticalRow = currentRow;
+            ws.Cell(criticalRow, 1).Value = "ITEM YANG PALING CRITICAL (Banyak SO Menunggu)";
+            ws.Range(criticalRow, 1, criticalRow, 6).Merge();
+            ws.Cell(criticalRow, 1).Style.Font.Bold = true;
+            ws.Cell(criticalRow, 1).Style.Fill.BackgroundColor = redFill;
+            currentRow++;
+
+            string[] criticalHeaders = { "Item Code", "Nama Item", "Qty Diminta", "Stock Saat Ini", "PO Direncanakan", "Kekurangan" };
+            for (int i = 0; i < criticalHeaders.Length; i++)
+            {
+                var c = ws.Cell(currentRow, i + 1);
+                c.Value = criticalHeaders[i];
+                c.Style.Font.Bold = true;
+                c.Style.Font.FontColor = XLColor.White;
+                c.Style.Fill.BackgroundColor = headerFill;
+                c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            currentRow++;
+
+            foreach (var critical in prediction.Summary.CriticalItems.Take(10))
+            {
+                ws.Cell(currentRow, 1).Value = critical.ItemCode;
+                ws.Cell(currentRow, 2).Value = critical.NamaItem;
+                ws.Cell(currentRow, 3).Value = critical.TotalQtyWaiting;
+                ws.Cell(currentRow, 3).Style.Font.Bold = true;
+                ws.Cell(currentRow, 4).Value = critical.CurrentStock;
+                ws.Cell(currentRow, 5).Value = critical.TotalPOPlanned;
+                ws.Cell(currentRow, 5).Style.Font.FontColor = XLColor.FromHtml("#0d6efd");
+                var kekurangan = critical.TotalQtyWaiting - critical.CurrentStock;
+                ws.Cell(currentRow, 6).Value = Math.Max(kekurangan - critical.TotalPOPlanned, 0);
+                ws.Cell(currentRow, 6).Style.Font.FontColor = XLColor.FromHtml("#dc3545");
+                ws.Cell(currentRow, 6).Style.Font.Bold = true;
+
+                currentRow++;
+            }
+            currentRow += 2;
+
+            // ========== SECTION 4: DETAIL SCENARIO PER PO ==========
+            var detailHeaderRow = currentRow;
+            ws.Cell(detailHeaderRow, 1).Value = "DETAIL PREDIKSI PER PO";
+            ws.Range(detailHeaderRow, 1, detailHeaderRow, 8).Merge();
+            ws.Cell(detailHeaderRow, 1).Style.Font.Bold = true;
+            ws.Cell(detailHeaderRow, 1).Style.Fill.BackgroundColor = blueFill;
+            currentRow += 2;
+
+            foreach (var scenario in prediction.Scenarios.OrderByDescending(s => s.ReadySalesOrders.Count))
+            {
+                // PO Header
+                ws.Cell(currentRow, 1).Value = $"PO: {scenario.NoLpb} | {scenario.NoPrj} | Tgl: {scenario.Tanggal:dd/MM/yyyy}";
+                ws.Cell(currentRow, 1).Style.Font.Bold = true;
+                ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = greenFill;
+                ws.Range(currentRow, 1, currentRow, 8).Merge();
+                currentRow++;
+
+                // Sub-header: Items dalam PO
+                ws.Cell(currentRow, 1).Value = "Item dalam PO:";
+                ws.Cell(currentRow, 1).Style.Font.Bold = true;
+                ws.Cell(currentRow, 1).Style.Font.Italic = true;
+                currentRow++;
+
+                foreach (var item in scenario.Items)
+                {
+                    ws.Cell(currentRow, 1).Value = "  " + item.ItemCode;
+                    ws.Cell(currentRow, 2).Value = item.NamaItem;
+                    ws.Cell(currentRow, 3).Value = item.Qty;
+                    ws.Cell(currentRow, 4).Value = item.Satuan;
+                    currentRow++;
+                }
+                currentRow++;
+
+                // SO yang akan ready
+                ws.Cell(currentRow, 1).Value = $"SO AKAN READY ({scenario.ReadySalesOrders.Count})";
+                ws.Cell(currentRow, 1).Style.Font.Bold = true;
+                ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.White;
+                ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#198754");
+                ws.Range(currentRow, 1, currentRow, 5).Merge();
+                currentRow++;
+
+                if (scenario.ReadySalesOrders.Any())
+                {
+                    foreach (var so in scenario.ReadySalesOrders)
+                    {
+                        ws.Cell(currentRow, 1).Value = so.NoSO;
+                        ws.Cell(currentRow, 2).Value = so.NamaCustomer;
+                        ws.Cell(currentRow, 3).Value = so.TanggalSO.ToString("dd/MM/yy");
+                        ws.Cell(currentRow, 4).Value = so.NoPrj;
+                        ws.Cell(currentRow, 5).Value = so.Keterangan;
+                        ws.Range(currentRow, 1, currentRow, 5).Style.Fill.BackgroundColor = lightGrayFill;
+                        currentRow++;
+                    }
+                }
+                else
+                {
+                    ws.Cell(currentRow, 1).Value = "(Tidak ada SO yang akan ready)";
+                    ws.Cell(currentRow, 1).Style.Font.Italic = true;
+                    ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.Gray;
+                    currentRow++;
+                }
+                currentRow++;
+
+                // SO yang masih pending
+                if (scenario.PendingSalesOrders.Any())
+                {
+                    ws.Cell(currentRow, 1).Value = $"SO MASIH PENDING ({scenario.PendingSalesOrders.Count})";
+                    ws.Cell(currentRow, 1).Style.Font.Bold = true;
+                    ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.White;
+                    ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#dc3545");
+                    ws.Range(currentRow, 1, currentRow, 6).Merge();
+                    currentRow++;
+
+                    foreach (var so in scenario.PendingSalesOrders.Take(5))
+                    {
+                        ws.Cell(currentRow, 1).Value = so.NoSO;
+                        ws.Cell(currentRow, 2).Value = so.NamaCustomer;
+                        ws.Cell(currentRow, 3).Value = string.Join(", ", so.MissingItems);
+                        ws.Cell(currentRow, 4).Value = so.ReasonIfStillPending ?? "-";
+                        ws.Range(currentRow, 1, currentRow, 4).Style.Fill.BackgroundColor = lightGrayFill;
+                        currentRow++;
+                    }
+                    currentRow++;
+                }
+
+                currentRow += 1;
+            }
+
+            // Formatting
+            ws.Columns().AdjustToContents();
+            ws.Column(1).Width = 20;
+            ws.Column(2).Width = 25;
+            ws.Column(3).Width = 18;
+            ws.Column(4).Width = 15;
+            ws.Column(5).Width = 20;
+            ws.Column(6).Width = 25;
+            ws.Column(7).Width = 15;
+            ws.Column(8).Width = 20;
+
+            // Add border to all cells
+            var allCells = ws.Range(1, 1, currentRow, 8);
+            allCells.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            allCells.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            // Freeze panes at row 4 untuk header menus tetap terlihat
+            ws.SheetView.FreezeRows(4);
+        }
+
+        /// <summary>
+        /// Build sheet SO Progression - menampilkan status SO seiring kedatangan PI
+        /// </summary>
+        private void BuildSOProgressionSheet(XLWorkbook workbook, SOProgressionView progression)
+        {
+            var ws = workbook.Worksheets.Add("SO Progression Per PI");
+
+            // Color palette
+            var headerFill = XLColor.FromHtml("#212529");
+            var greenFill = XLColor.FromHtml("#d1e7dd");
+            var redFill = XLColor.FromHtml("#f8d7da");
+            var yellowFill = XLColor.FromHtml("#fff3cd");
+            var lightGrayFill = XLColor.FromHtml("#f8f9fa");
+
+            int currentRow = 1;
+            int currentCol = 1;
+
+            // Title
+            var titleCell = ws.Cell(currentRow, 1);
+            titleCell.Value = "Status SO Progression seiring Kedatangan PI";
+            titleCell.Style.Font.Bold = true;
+            titleCell.Style.Font.FontColor = XLColor.White;
+            titleCell.Style.Fill.BackgroundColor = headerFill;
+            ws.Range(currentRow, 1, currentRow, 6 + progression.PIsInOrder.Count).Merge();
+            ws.Range(currentRow, 1, currentRow, 6 + progression.PIsInOrder.Count).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            currentRow += 2;
+
+            // Header columns
+            var headerRow = currentRow;
+            currentCol = 1;
+
+            string[] fixedHeaders = { "No SO", "Customer", "Tanggal Order", "Status Qty Sekarang", "Keterangan" };
+            foreach (var header in fixedHeaders)
+            {
+                var c = ws.Cell(currentRow, currentCol);
+                c.Value = header;
+                c.Style.Font.Bold = true;
+                c.Style.Font.FontColor = XLColor.White;
+                c.Style.Fill.BackgroundColor = headerFill;
+                c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                c.Style.Alignment.WrapText = true;
+                currentCol++;
+            }
+
+            // Add PI headers
+            int piStartCol = currentCol;
+            foreach (var pi in progression.PIsInOrder)
+            {
+                var c = ws.Cell(currentRow, currentCol);
+                c.Value = $"Status setelah\n{pi.NoPrj}";
+                c.Style.Font.Bold = true;
+                c.Style.Font.FontColor = XLColor.White;
+                c.Style.Fill.BackgroundColor = headerFill;
+                c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                c.Style.Alignment.WrapText = true;
+                currentCol++;
+            }
+
+            // Set header row height
+            ws.Row(currentRow).Height = 35;
+            currentRow++;
+
+            // Data rows
+            foreach (var row in progression.Rows)
+            {
+                currentCol = 1;
+                var rowColor = row.ProgressionPerPI.Values.Last().IsComplete ? yellowFill : XLColor.White;
+
+                // No SO
+                ws.Cell(currentRow, currentCol).Value = row.NoSO;
+                ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
+                currentCol++;
+
+                // Customer
+                ws.Cell(currentRow, currentCol).Value = row.NamaCustomer;
+                ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
+                currentCol++;
+
+                // Tanggal
+                ws.Cell(currentRow, currentCol).Value = row.TanggalSO.ToString("dd/MM/yyyy");
+                ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
+                currentCol++;
+
+                // Status Qty Sekarang
+                var statusSekarangCell = ws.Cell(currentRow, currentCol);
+                var missingItemsText = string.Join("\n", row.ItemStatusSekarang
+                    .Where(i => !i.IsComplete)
+                    .Select(i => $"✗ {i.ItemCode} (kurang {i.QtyKurang})"));
+
+                if (string.IsNullOrWhiteSpace(missingItemsText))
+                {
+                    statusSekarangCell.Value = "✓ Lengkap";
+                    statusSekarangCell.Style.Font.FontColor = XLColor.FromHtml("#198754");
+                }
+                else
+                {
+                    statusSekarangCell.Value = missingItemsText;
+                    statusSekarangCell.Style.Font.FontColor = XLColor.FromHtml("#dc3545");
+                }
+                statusSekarangCell.Style.Alignment.WrapText = true;
+                statusSekarangCell.Style.Fill.BackgroundColor = rowColor;
+                currentCol++;
+
+                // Keterangan
+                ws.Cell(currentRow, currentCol).Value = row.StatusSekarang;
+                ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
+                currentCol++;
+
+                // PI progression columns
+                var piCol = piStartCol;
+                foreach (var pi in progression.PIsInOrder)
+                {
+                    if (row.ProgressionPerPI.TryGetValue(pi.NoPrj, out var piStatus))
+                    {
+                        var piCell = ws.Cell(currentRow, piCol);
+
+                        if (piStatus.IsComplete)
+                        {
+                            piCell.Value = "✓ Lengkap";
+                            piCell.Style.Font.FontColor = XLColor.FromHtml("#198754");
+                            piCell.Style.Fill.BackgroundColor = YellowGreenFill();
+                        }
+                        else if (piStatus.NewlyCompletedItems.Any())
+                        {
+                            var text = $"~ {string.Join(", ", piStatus.NewlyCompletedItems)}\nMasih kurang: {string.Join(", ", piStatus.StillMissingItems)}";
+                            piCell.Value = text;
+                            piCell.Style.Font.FontColor = XLColor.FromHtml("#856404");
+                            piCell.Style.Fill.BackgroundColor = yellowFill;
+                        }
+                        else
+                        {
+                            piCell.Value = $"✗ Masih kurang\n{string.Join(", ", piStatus.StillMissingItems)}";
+                            piCell.Style.Font.FontColor = XLColor.FromHtml("#dc3545");
+                            piCell.Style.Fill.BackgroundColor = redFill;
+                        }
+
+                        piCell.Style.Alignment.WrapText = true;
+                        piCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+
+                    piCol++;
+                }
+
+                currentRow++;
+            }
+
+            // Formatting
+            ws.Columns().AdjustToContents();
+            ws.Column(1).Width = 20;
+            ws.Column(2).Width = 18;
+            ws.Column(3).Width = 16;
+            ws.Column(4).Width = 28;
+            ws.Column(5).Width = 18;
+
+            for (int i = piStartCol; i < piStartCol + progression.PIsInOrder.Count; i++)
+                ws.Column(i).Width = 22;
+
+            // Add borders
+            var allCells = ws.Range(1, 1, currentRow - 1, piStartCol + progression.PIsInOrder.Count - 1);
+            allCells.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            allCells.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            // Freeze panes
+            ws.SheetView.FreezeRows(3);
+        }
+
+        /// <summary>
+        /// Helper untuk yellow-green color
+        /// </summary>
+        private XLColor YellowGreenFill()
+        {
+            return XLColor.FromHtml("#d4edda");
+        }
+
+        private PoReadinessPredictionView GeneratePOReadinessPrediction(
+            SalesOrderStockMatrixView matrix,
+            List<PoTransH> purchaseOrders,
+            List<PoTransD> purchaseDetails)
+        {
+            var prediction = new PoReadinessPredictionView();
+
+            // Group PO details by document
+            var poByDocNo = purchaseDetails
+                .Where(d => !string.IsNullOrWhiteSpace(d.NoLpb))
+                .GroupBy(d => d.NoLpb, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+            // Current stock state
+            var currentStockByItem = matrix.ItemHeaders
+                .ToDictionary(h => h.ItemCode, h => h.QtyStock, StringComparer.OrdinalIgnoreCase);
+
+            var readySOCount = matrix.Rows.Count(r => r.IsComplete);
+            var totalSOCount = matrix.Rows.Count;
+
+            prediction.Summary.TotalSalesOrders = totalSOCount;
+            prediction.Summary.ReadyWithoutPO = readySOCount;
+
+            // Analisis per PO aktif
+            var impactRankings = new List<POImpactRanking>();
+            int rank = 1;
+
+            foreach (var po in purchaseOrders.Where(p => !string.IsNullOrWhiteSpace(p.NoLpb)))
+            {
+                var scenario = CalculateSinglePOScenario(po, poByDocNo, matrix, currentStockByItem);
+                if (scenario != null)
+                {
+                    prediction.Scenarios.Add(scenario);
+
+                    // Track impact
+                    var impactCount = scenario.ReadySalesOrders.Count;
+                    if (impactCount > 0)
+                    {
+                        impactRankings.Add(new POImpactRanking
+                        {
+                            NoLpb = po.NoLpb,
+                            NoPrj = po.NoPrj,
+                            ImpactCount = impactCount,
+                            ImpactPercentage = totalSOCount > 0 ? (decimal)impactCount / totalSOCount * 100 : 0,
+                            Rank = rank++
+                        });
+                    }
+                }
+            }
+
+            // Sort by impact
+            impactRankings = impactRankings.OrderByDescending(r => r.ImpactCount).ToList();
+            for (int i = 0; i < impactRankings.Count; i++)
+                impactRankings[i].Rank = i + 1;
+
+            prediction.Summary.POImpactRanking = impactRankings;
+            prediction.Summary.AverageSOReadyPerPO = impactRankings.Count > 0
+                ? (decimal)impactRankings.Sum(r => r.ImpactCount) / impactRankings.Count
+                : 0;
+            prediction.Summary.MostImpactfulPO = impactRankings.FirstOrDefault()?.NoLpb;
+
+            // Identifikasi critical items
+            var criticalItems = new List<CriticalItemAnalysis>();
+            foreach (var item in matrix.ItemHeaders)
+            {
+                var soWaiting = matrix.Rows.Where(r => !r.IsComplete)
+                    .SelectMany(r => r.Cells)
+                    .Where(c => c.ItemCode == item.ItemCode && c.IsOrdered && !c.HasStock)
+                    .ToList();
+
+                if (soWaiting.Any())
+                {
+                    criticalItems.Add(new CriticalItemAnalysis
+                    {
+                        ItemCode = item.ItemCode,
+                        NamaItem = item.NamaItem,
+                        CountSOWaiting = matrix.Rows.Count(r => !r.IsComplete && 
+                            r.Cells.Any(c => c.ItemCode == item.ItemCode && c.IsOrdered && !c.HasStock)),
+                        TotalQtyWaiting = soWaiting.Sum(c => c.QtyOrder),
+                        CurrentStock = item.QtyStock,
+                        TotalPOPlanned = purchaseDetails
+                            .Where(d => string.Equals(d.ItemCode, item.ItemCode, StringComparison.OrdinalIgnoreCase))
+                            .Sum(d => d.Qty)
+                    });
+                }
+            }
+
+            prediction.Summary.CriticalItems = criticalItems
+                .OrderByDescending(c => c.CountSOWaiting)
+                .ThenByDescending(c => c.TotalQtyWaiting)
+                .ToList();
+
+            return prediction;
+        }
+
+        /// <summary>
+        /// Hitung skenario untuk satu PO: SO mana yang akan ready jika PO ini datang
+        /// </summary>
+        private PoPredictionScenario CalculateSinglePOScenario(
+            PoTransH po,
+            Dictionary<string, List<PoTransD>> poByDocNo,
+            SalesOrderStockMatrixView matrix,
+            Dictionary<string, decimal> currentStockByItem)
+        {
+            if (string.IsNullOrWhiteSpace(po.NoLpb) || !poByDocNo.TryGetValue(po.NoLpb, out var details))
+                return null;
+
+            var scenario = new PoPredictionScenario
+            {
+                NoLpb = po.NoLpb,
+                Tanggal = po.Tanggal,
+                NoPrj = po.NoPrj,
+                NamaSupplier = !string.IsNullOrWhiteSpace(po.NamaVendor) ? po.NamaVendor : "Not Specified"
+            };
+
+            // Build PO items
+            foreach (var detail in details)
+            {
+                if (!string.IsNullOrWhiteSpace(detail.ItemCode))
+                {
+                    scenario.Items.Add(new PoPredictionItem
+                    {
+                        ItemCode = detail.ItemCode,
+                        NamaItem = detail.NamaItem,
+                        Qty = detail.Qty,
+                        Satuan = detail.Satuan,
+                        NeededQty = 0 // Will be calculated below
+                    });
+                }
+            }
+
+            // Calculate stock after this PO arrives
+            var stockAfterPO = new Dictionary<string, decimal>(currentStockByItem, StringComparer.OrdinalIgnoreCase);
+            foreach (var item in scenario.Items)
+            {
+                if (stockAfterPO.TryGetValue(item.ItemCode, out var currentStock))
+                    stockAfterPO[item.ItemCode] = currentStock + item.Qty;
+                else
+                    stockAfterPO[item.ItemCode] = item.Qty;
+            }
+
+            // Evaluate which SO will be ready
+            foreach (var so in matrix.Rows)
+            {
+                if (!so.IsComplete) // Only check incomplete SO
+                {
+                    var canBeReady = true;
+                    var willBeCompletedItems = new List<string>();
+                    var stillMissingItems = new List<string>();
+
+                    foreach (var cell in so.Cells.Where(c => c.IsOrdered))
+                    {
+                        var stockAfterThis = stockAfterPO.TryGetValue(cell.ItemCode, out var s) ? s : 0;
+
+                        if (stockAfterThis >= cell.QtyOrder)
+                        {
+                            willBeCompletedItems.Add(cell.ItemCode);
+                        }
+                        else
+                        {
+                            canBeReady = false;
+                            stillMissingItems.Add(cell.ItemCode);
+                        }
+                    }
+
+                    var result = new SOReadinessResult
+                    {
+                        NoSO = so.NoLpb,
+                        NamaCustomer = so.NamaCustomer,
+                        TanggalSO = so.Tanggal,
+                        NoPrj = so.NoPrj,
+                        Keterangan = so.Keterangan,
+                        MissingItems = so.Cells.Where(c => c.IsOrdered && 
+                            (!stockAfterPO.TryGetValue(c.ItemCode, out var stock) || stock < c.QtyOrder))
+                            .Select(c => c.ItemCode)
+                            .ToList(),
+                        WillBeCompletedItems = willBeCompletedItems
+                    };
+
+                    if (canBeReady)
+                    {
+                        scenario.ReadySalesOrders.Add(result);
+                    }
+                    else if (willBeCompletedItems.Any())
+                    {
+                        // Ada progress tapi belum lengkap
+                        var missingItem = stillMissingItems.FirstOrDefault();
+                        result.ReasonIfStillPending = $"Masih kurang: {missingItem}";
+                        scenario.PendingSalesOrders.Add(result);
+                    }
+                    else
+                    {
+                        scenario.PendingSalesOrders.Add(result);
+                    }
+                }
+            }
+
+            if (matrix.Rows.Count > 0)
+                scenario.PercentageReady = (decimal)scenario.ReadySalesOrders.Count / matrix.Rows.Count * 100;
+
+            return scenario;
+        }
+
+        /// <summary>
+        /// Generate data progression SO seiring kedatangan PI yang berbeda
+        /// </summary>
+        private SOProgressionView GenerateSOProgressionData(
+            SalesOrderStockMatrixView matrix,
+            List<PoTransH> purchaseOrders,
+            List<PoTransD> purchaseDetails)
+        {
+            var progression = new SOProgressionView();
+
+            // Get unique PIs in order
+            progression.PIsInOrder = GetActivePIsInOrder(purchaseOrders, purchaseDetails);
+
+            // Build stock availability for each PI cumulative scenario
+            var baseStock = matrix.ItemHeaders
+                .ToDictionary(h => h.ItemCode, h => h.QtyStock, StringComparer.OrdinalIgnoreCase);
+
+            // For each SO
+            foreach (var soRow in matrix.Rows)
+            {
+                var soProgression = new SOProgressionRow
+                {
+                    NoSO = soRow.NoLpb,
+                    NamaCustomer = soRow.NamaCustomer,
+                    TanggalSO = soRow.Tanggal,
+                    StatusSekarang = soRow.IsComplete ? "Lengkap" : "Belum"
+                };
+
+                // Calculate current status items
+                var missingItems = new List<ItemStatus>();
+                foreach (var cell in soRow.Cells.Where(c => c.IsOrdered))
+                {
+                    var available = baseStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
+                    var kurang = Math.Max(cell.QtyOrder - available, 0);
+
+                    soProgression.ItemStatusSekarang.Add(new ItemStatus
+                    {
+                        ItemCode = cell.ItemCode,
+                        NamaItem = matrix.ItemHeaders.FirstOrDefault(h => h.ItemCode == cell.ItemCode)?.NamaItem ?? "",
+                        QtyOrder = cell.QtyOrder,
+                        QtyAvailable = available,
+                        QtyKurang = kurang
+                    });
+
+                    if (kurang > 0)
+                        missingItems.Add(new ItemStatus
+                        {
+                            ItemCode = cell.ItemCode,
+                            QtyKurang = kurang
+                        });
+                }
+
+                // Count missing items for summary
+                if (missingItems.Count == 0)
+                    soProgression.StatusSekarang = "Lengkap";
+                else if (missingItems.Count == soProgression.ItemStatusSekarang.Count)
+                    soProgression.StatusSekarang = "Banyak Kurang";
+                else
+                    soProgression.StatusSekarang = "Sebagian Kurang";
+
+                // Calculate progression for each PI
+                var cumulativeStock = new Dictionary<string, decimal>(baseStock, StringComparer.OrdinalIgnoreCase);
+
+                foreach (var pi in progression.PIsInOrder)
+                {
+                    // Add stock from all POs for this PI
+                    var piPOs = purchaseOrders.Where(p => p.NoPrj == pi.NoPrj).ToList();
+                    var piDetails = purchaseDetails.Where(d => piPOs.Any(p => p.NoLpb == d.NoLpb)).ToList();
+
+                    foreach (var detail in piDetails)
+                    {
+                        if (!string.IsNullOrWhiteSpace(detail.ItemCode))
+                        {
+                            if (cumulativeStock.TryGetValue(detail.ItemCode, out var stock))
+                                cumulativeStock[detail.ItemCode] = stock + detail.Qty;
+                            else
+                                cumulativeStock[detail.ItemCode] = detail.Qty;
+                        }
+                    }
+
+                    // Check readiness after this PI
+                    var stillMissing = new List<string>();
+                    var newlyCompleted = new List<string>();
+                    var isReady = true;
+
+                    foreach (var cell in soRow.Cells.Where(c => c.IsOrdered))
+                    {
+                        var available = cumulativeStock.TryGetValue(cell.ItemCode, out var s) ? s : 0;
+                        var wasMissing = baseStock.TryGetValue(cell.ItemCode, out var baseS) ? baseS < cell.QtyOrder : true;
+                        var isNowMissing = available < cell.QtyOrder;
+
+                        if (isNowMissing)
+                        {
+                            stillMissing.Add(cell.ItemCode);
+                            isReady = false;
+                        }
+                        else if (wasMissing)
+                        {
+                            newlyCompleted.Add(cell.ItemCode);
+                        }
+                    }
+
+                    var piStatus = new PIProgressionStatus
+                    {
+                        NoPrj = pi.NoPrj,
+                        IsComplete = isReady,
+                        NewlyCompletedItems = newlyCompleted,
+                        StillMissingItems = stillMissing,
+                        StatusSummary = isReady
+                            ? "✓ Lengkap"
+                            : (newlyCompleted.Any() ? $"~ Progres: {string.Join(", ", newlyCompleted)}" : $"✗ Kurang: {string.Join(", ", stillMissing)}")
+                    };
+
+                    soProgression.ProgressionPerPI[pi.NoPrj] = piStatus;
+                }
+
+                progression.Rows.Add(soProgression);
+            }
+
+            return progression;
+        }
+
+        /// <summary>
+        /// Get list of active PIs sorted by order of appearance in POs
+        /// </summary>
+        private List<PIInfo> GetActivePIsInOrder(
+            List<PoTransH> purchaseOrders,
+            List<PoTransD> purchaseDetails)
+        {
+            var piMap = new Dictionary<string, PIInfo>(StringComparer.OrdinalIgnoreCase);
+            int index = 0;
+
+            foreach (var po in purchaseOrders.Where(p => !string.IsNullOrWhiteSpace(p.NoPrj)))
+            {
+                if (!piMap.ContainsKey(po.NoPrj))
+                {
+                    var details = purchaseDetails.Where(d => d.NoLpb == po.NoLpb).ToList();
+                    var totalQty = details.Sum(d => d.Qty);
+
+                    piMap[po.NoPrj] = new PIInfo
+                    {
+                        NoPrj = po.NoPrj,
+                        NamaVendor = po.NamaVendor,
+                        TotalQty = totalQty,
+                        PiIndex = index++
+                    };
+                }
+            }
+
+            return piMap.Values.OrderBy(p => p.PiIndex).ToList();
+        }
+
+        #endregion
     }
 }
