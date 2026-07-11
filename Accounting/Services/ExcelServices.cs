@@ -1327,7 +1327,7 @@ namespace Accounting.Services
             var headerRow = currentRow;
             currentCol = 1;
 
-            string[] fixedHeaders = { "No SO", "Customer", "Tanggal Order", "Status Qty Sekarang", "Keterangan" };
+            string[] fixedHeaders = { "No SO", "Customer", "Tanggal Order", "Status Qty Sekarang", "Keterangan", "Item Dipesan" };
             foreach (var header in fixedHeaders)
             {
                 var c = ws.Cell(currentRow, currentCol);
@@ -1404,15 +1404,45 @@ namespace Accounting.Services
                 ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
                 currentCol++;
 
-                // PI progression columns
+                // Item Dipesan - format dengan line break
+                var itemDipesanCell = ws.Cell(currentRow, currentCol);
+                var itemsFormatted = string.Join("\n", row.ItemStatusSekarang
+                    .Select(i => $"{i.NamaItem} ({i.ItemCode})"));
+                itemDipesanCell.Value = itemsFormatted;
+                itemDipesanCell.Style.Alignment.WrapText = true;
+                itemDipesanCell.Style.Fill.BackgroundColor = rowColor;
+                currentCol++;
+
+                // PI progression columns - with auto-empty logic
+                int piColIndex = 0;
                 var piCol = piStartCol;
+                int completedAtPiIndex = -1;
+
+                // Find at which PI the SO becomes complete
+                foreach (var pi in progression.PIsInOrder)
+                {
+                    if (row.ProgressionPerPI.TryGetValue(pi.NoPrj, out var piStatus) && piStatus.IsComplete)
+                    {
+                        completedAtPiIndex = piColIndex;
+                        break;
+                    }
+                    piColIndex++;
+                }
+
+                piColIndex = 0;
                 foreach (var pi in progression.PIsInOrder)
                 {
                     if (row.ProgressionPerPI.TryGetValue(pi.NoPrj, out var piStatus))
                     {
                         var piCell = ws.Cell(currentRow, piCol);
 
-                        if (piStatus.IsComplete)
+                        // If SO was already complete in previous PI, just show green
+                        if (completedAtPiIndex >= 0 && piColIndex > completedAtPiIndex)
+                        {
+                            piCell.Value = "";
+                            piCell.Style.Fill.BackgroundColor = YellowGreenFill();
+                        }
+                        else if (piStatus.IsComplete)
                         {
                             piCell.Value = "✓ Lengkap";
                             piCell.Style.Font.FontColor = XLColor.FromHtml("#198754");
@@ -1420,17 +1450,17 @@ namespace Accounting.Services
                         }
                         else if (piStatus.NewlyCompletedItems.Any())
                         {
-                            var newlyCompletedFormatted = FormatItemList(piStatus.NewlyCompletedItems, row.ItemStatusSekarang);
-                            var stillMissingFormatted = FormatItemList(piStatus.StillMissingItems, row.ItemStatusSekarang);
-                            var text = $"✓ Selesai: {newlyCompletedFormatted}\n✗ Masih Kurang: {stillMissingFormatted}";
+                            var newlyCompletedFormatted = FormatItemListWithLineBreak(piStatus.NewlyCompletedItems, row.ItemStatusSekarang);
+                            var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
+                            var text = $"✓ Selesai:\n{newlyCompletedFormatted}\n✗ Masih Kurang:\n{stillMissingFormatted}";
                             piCell.Value = text;
                             piCell.Style.Font.FontColor = XLColor.FromHtml("#856404");
                             piCell.Style.Fill.BackgroundColor = yellowFill;
                         }
                         else
                         {
-                            var stillMissingFormatted = FormatItemList(piStatus.StillMissingItems, row.ItemStatusSekarang);
-                            piCell.Value = $"✗ Kurang\n{stillMissingFormatted}";
+                            var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
+                            piCell.Value = $"✗ Kurang:\n{stillMissingFormatted}";
                             piCell.Style.Font.FontColor = XLColor.FromHtml("#dc3545");
                             piCell.Style.Fill.BackgroundColor = redFill;
                         }
@@ -1440,6 +1470,7 @@ namespace Accounting.Services
                     }
 
                     piCol++;
+                    piColIndex++;
                 }
 
                 currentRow++;
@@ -1466,7 +1497,7 @@ namespace Accounting.Services
         }
 
         /// <summary>
-        /// Helper untuk format item list dengan nama dan kode dalam kurung
+        /// Helper untuk format item list dengan nama dan kode dalam kurung (dengan comma)
         /// </summary>
         private string FormatItemList(List<string> itemCodes, List<ItemStatus> itemStatusMap)
         {
@@ -1485,6 +1516,28 @@ namespace Accounting.Services
             }
 
             return string.Join(", ", formatted);
+        }
+
+        /// <summary>
+        /// Helper untuk format item list dengan nama dan kode dalam kurung (dengan line break)
+        /// </summary>
+        private string FormatItemListWithLineBreak(List<string> itemCodes, List<ItemStatus> itemStatusMap)
+        {
+            if (itemCodes == null || itemCodes.Count == 0)
+                return "";
+
+            var formatted = new List<string>();
+            var itemMap = itemStatusMap.ToDictionary(i => i.ItemCode, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var code in itemCodes)
+            {
+                if (itemMap.TryGetValue(code, out var item))
+                    formatted.Add($"{item.NamaItem} ({code})");
+                else
+                    formatted.Add(code);
+            }
+
+            return string.Join("\n", formatted);
         }
 
         /// <summary>
