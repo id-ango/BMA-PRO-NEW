@@ -1196,55 +1196,85 @@ namespace Accounting.Services
             ws.Cell(detailHeaderRow, 1).Style.Fill.BackgroundColor = blueFill;
             currentRow += 2;
 
-            foreach (var scenario in prediction.Scenarios.OrderByDescending(s => s.ReadySalesOrders.Count))
+            foreach (var scenario in prediction.Scenarios.OrderBy(s => s.Tanggal))
             {
-                // PO Header
-                ws.Cell(currentRow, 1).Value = $"PO: {scenario.NoLpb} | {scenario.NoPrj} | Tgl: {scenario.Tanggal:dd/MM/yyyy}";
+                // PO Header dengan info lengkap
+                ws.Cell(currentRow, 1).Value = $"PO: {scenario.NoLpb}";
                 ws.Cell(currentRow, 1).Style.Font.Bold = true;
-                ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = greenFill;
-                ws.Range(currentRow, 1, currentRow, 8).Merge();
+                ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = blueFill;
+                ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.White;
+
+                ws.Cell(currentRow, 2).Value = $"PI: {scenario.NoPrj ?? "-"}";
+                ws.Cell(currentRow, 2).Style.Fill.BackgroundColor = blueFill;
+                ws.Cell(currentRow, 2).Style.Font.FontColor = XLColor.White;
+
+                ws.Cell(currentRow, 3).Value = $"Tanggal: {scenario.Tanggal:dd/MM/yyyy}";
+                ws.Cell(currentRow, 3).Style.Fill.BackgroundColor = blueFill;
+                ws.Cell(currentRow, 3).Style.Font.FontColor = XLColor.White;
+
+                ws.Cell(currentRow, 4).Value = $"Supplier: {scenario.NamaSupplier}";
+                ws.Cell(currentRow, 4).Style.Fill.BackgroundColor = blueFill;
+                ws.Cell(currentRow, 4).Style.Font.FontColor = XLColor.White;
+
                 currentRow++;
 
-                // Sub-header: Items dalam PO
-                ws.Cell(currentRow, 1).Value = "Item dalam PO:";
+                // Items dalam PO dengan summary
+                ws.Cell(currentRow, 1).Value = $"Items dalam PO ({scenario.Items.Count})";
                 ws.Cell(currentRow, 1).Style.Font.Bold = true;
                 ws.Cell(currentRow, 1).Style.Font.Italic = true;
                 currentRow++;
 
                 foreach (var item in scenario.Items)
                 {
-                    ws.Cell(currentRow, 1).Value = "  " + item.ItemCode;
+                    ws.Cell(currentRow, 1).Value = item.ItemCode;
                     ws.Cell(currentRow, 2).Value = item.NamaItem;
-                    ws.Cell(currentRow, 3).Value = item.Qty;
+                    ws.Cell(currentRow, 3).Value = (int)item.Qty;
                     ws.Cell(currentRow, 4).Value = item.Satuan;
                     currentRow++;
                 }
                 currentRow++;
 
                 // SO yang akan ready
-                ws.Cell(currentRow, 1).Value = $"SO AKAN READY ({scenario.ReadySalesOrders.Count})";
+                var readyCount = scenario.ReadySalesOrders.Count;
+                ws.Cell(currentRow, 1).Value = $"✓ SO AKAN READY ({readyCount})";
                 ws.Cell(currentRow, 1).Style.Font.Bold = true;
                 ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.White;
                 ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#198754");
-                ws.Range(currentRow, 1, currentRow, 5).Merge();
+                ws.Range(currentRow, 1, currentRow, 8).Merge();
                 currentRow++;
 
                 if (scenario.ReadySalesOrders.Any())
                 {
+                    // Header untuk tabel ready SO
+                    string[] readyHeaders = { "No SO", "Customer", "Tgl", "PI/Project", "Keterangan", "Item Selesai" };
+                    for (int i = 0; i < readyHeaders.Length; i++)
+                    {
+                        var c = ws.Cell(currentRow, i + 1);
+                        c.Value = readyHeaders[i];
+                        c.Style.Font.Bold = true;
+                        c.Style.Fill.BackgroundColor = greenFill;
+                        c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    currentRow++;
+
                     foreach (var so in scenario.ReadySalesOrders)
                     {
                         ws.Cell(currentRow, 1).Value = so.NoSO;
                         ws.Cell(currentRow, 2).Value = so.NamaCustomer;
                         ws.Cell(currentRow, 3).Value = so.TanggalSO.ToString("dd/MM/yy");
-                        ws.Cell(currentRow, 4).Value = so.NoPrj;
-                        ws.Cell(currentRow, 5).Value = so.Keterangan;
-                        ws.Range(currentRow, 1, currentRow, 5).Style.Fill.BackgroundColor = lightGrayFill;
+                        ws.Cell(currentRow, 4).Value = so.NoPrj ?? "-";
+                        ws.Cell(currentRow, 5).Value = so.Keterangan ?? "-";
+                        ws.Cell(currentRow, 6).Value = string.Join("\n", so.WillBeCompletedItems.Count > 0 
+                            ? so.WillBeCompletedItems 
+                            : new List<string> { "-" });
+                        ws.Cell(currentRow, 6).Style.Alignment.WrapText = true;
+                        ws.Range(currentRow, 1, currentRow, 6).Style.Fill.BackgroundColor = lightGrayFill;
                         currentRow++;
                     }
                 }
                 else
                 {
-                    ws.Cell(currentRow, 1).Value = "(Tidak ada SO yang akan ready)";
+                    ws.Cell(currentRow, 1).Value = "(Tidak ada SO yang akan lengkap)";
                     ws.Cell(currentRow, 1).Style.Font.Italic = true;
                     ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.Gray;
                     currentRow++;
@@ -1254,20 +1284,44 @@ namespace Accounting.Services
                 // SO yang masih pending
                 if (scenario.PendingSalesOrders.Any())
                 {
-                    ws.Cell(currentRow, 1).Value = $"SO MASIH PENDING ({scenario.PendingSalesOrders.Count})";
+                    var pendingSOCount = scenario.PendingSalesOrders.Count;
+                    ws.Cell(currentRow, 1).Value = $"◐ SO MASIH PENDING ({pendingSOCount})";
                     ws.Cell(currentRow, 1).Style.Font.Bold = true;
                     ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.White;
-                    ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#dc3545");
-                    ws.Range(currentRow, 1, currentRow, 6).Merge();
+                    ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = redFill;
+                    ws.Range(currentRow, 1, currentRow, 8).Merge();
                     currentRow++;
 
-                    foreach (var so in scenario.PendingSalesOrders.Take(5))
+                    // Header untuk tabel pending SO
+                    string[] pendingHeaders = { "No SO", "Customer", "Tgl", "PI/Project", "Item Selesai", "Item Masih Kurang" };
+                    for (int i = 0; i < pendingHeaders.Length; i++)
+                    {
+                        var c = ws.Cell(currentRow, i + 1);
+                        c.Value = pendingHeaders[i];
+                        c.Style.Font.Bold = true;
+                        c.Style.Fill.BackgroundColor = redFill;
+                        c.Style.Font.FontColor = XLColor.White;
+                        c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    currentRow++;
+
+                    foreach (var so in scenario.PendingSalesOrders)
                     {
                         ws.Cell(currentRow, 1).Value = so.NoSO;
                         ws.Cell(currentRow, 2).Value = so.NamaCustomer;
-                        ws.Cell(currentRow, 3).Value = string.Join(", ", so.MissingItems);
-                        ws.Cell(currentRow, 4).Value = so.ReasonIfStillPending ?? "-";
-                        ws.Range(currentRow, 1, currentRow, 4).Style.Fill.BackgroundColor = lightGrayFill;
+                        ws.Cell(currentRow, 3).Value = so.TanggalSO.ToString("dd/MM/yy");
+                        ws.Cell(currentRow, 4).Value = so.NoPrj ?? "-";
+                        ws.Cell(currentRow, 5).Value = string.Join("\n", so.WillBeCompletedItems.Count > 0 
+                            ? so.WillBeCompletedItems 
+                            : new List<string> { "-" });
+                        ws.Cell(currentRow, 5).Style.Alignment.WrapText = true;
+                        ws.Cell(currentRow, 5).Style.Font.FontColor = XLColor.FromHtml("#198754");
+                        ws.Cell(currentRow, 6).Value = string.Join("\n", so.MissingItems.Count > 0 
+                            ? so.MissingItems 
+                            : new List<string> { "-" });
+                        ws.Cell(currentRow, 6).Style.Alignment.WrapText = true;
+                        ws.Cell(currentRow, 6).Style.Font.FontColor = XLColor.FromHtml("#dc3545");
+                        ws.Range(currentRow, 1, currentRow, 6).Style.Fill.BackgroundColor = lightGrayFill;
                         currentRow++;
                     }
                     currentRow++;
@@ -1628,7 +1682,7 @@ namespace Accounting.Services
 
             foreach (var po in purchaseOrders.Where(p => !string.IsNullOrWhiteSpace(p.NoLpb)))
             {
-                var scenario = CalculateSinglePOScenario(po, poByDocNo, matrix, currentStockByItem);
+                var scenario = CalculateSinglePOScenario(po, poByDocNo, matrix, currentStockByItem, purchaseOrders);
                 if (scenario != null)
                 {
                     prediction.Scenarios.Add(scenario);
@@ -1701,7 +1755,8 @@ namespace Accounting.Services
             PoTransH po,
             Dictionary<string, List<PoTransD>> poByDocNo,
             SalesOrderStockMatrixView matrix,
-            Dictionary<string, decimal> currentStockByItem)
+            Dictionary<string, decimal> currentStockByItem,
+            List<PoTransH> allPurchaseOrders)
         {
             if (string.IsNullOrWhiteSpace(po.NoLpb) || !poByDocNo.TryGetValue(po.NoLpb, out var details))
                 return null;
@@ -1725,23 +1780,65 @@ namespace Accounting.Services
                         NamaItem = detail.NamaItem,
                         Qty = detail.Qty,
                         Satuan = detail.Satuan,
-                        NeededQty = 0 // Will be calculated below
+                        NeededQty = 0
                     });
                 }
             }
 
-            // Calculate stock after this PO arrives
-            var stockAfterPO = new Dictionary<string, decimal>(currentStockByItem, StringComparer.OrdinalIgnoreCase);
-            foreach (var item in scenario.Items)
+            // Calculate cumulative stock: current + all POs up to and including this one (sorted by date)
+            var soRows = matrix.Rows.ToList();
+            var cumulativeStock = new Dictionary<string, decimal>(currentStockByItem, StringComparer.OrdinalIgnoreCase);
+
+            // Add stock from all POs up to and including this one (chronologically)
+            var posTillNow = allPurchaseOrders
+                .Where(p => !string.IsNullOrWhiteSpace(p.NoLpb) && p.Tanggal <= po.Tanggal)
+                .OrderBy(p => p.Tanggal)
+                .ToList();
+
+            foreach (var poTill in posTillNow)
             {
-                if (stockAfterPO.TryGetValue(item.ItemCode, out var currentStock))
-                    stockAfterPO[item.ItemCode] = currentStock + item.Qty;
-                else
-                    stockAfterPO[item.ItemCode] = item.Qty;
+                if (poByDocNo.TryGetValue(poTill.NoLpb, out var poDetails))
+                {
+                    foreach (var poDetail in poDetails)
+                    {
+                        if (!string.IsNullOrWhiteSpace(poDetail.ItemCode))
+                        {
+                            if (cumulativeStock.TryGetValue(poDetail.ItemCode, out var stock))
+                                cumulativeStock[poDetail.ItemCode] = stock + poDetail.Qty;
+                            else
+                                cumulativeStock[poDetail.ItemCode] = poDetail.Qty;
+                        }
+                    }
+                }
+            }
+
+            // Sequential allocation: earlier SOs consume stock first
+            var allocationAfterThisPO = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            var remainingStock = new Dictionary<string, decimal>(cumulativeStock, StringComparer.OrdinalIgnoreCase);
+
+            // Allocate for all SO sequentially (oldest SO first gets priority)
+            foreach (var so in soRows.OrderBy(s => s.Tanggal))
+            {
+                foreach (var cell in so.Cells.Where(c => c.IsOrdered))
+                {
+                    var needed = cell.QtyOrder;
+                    var available = remainingStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
+                    var allocated = Math.Min(needed, available);
+
+                    if (!allocationAfterThisPO.ContainsKey(cell.ItemCode))
+                        allocationAfterThisPO[cell.ItemCode] = 0;
+
+                    allocationAfterThisPO[cell.ItemCode] += allocated;
+
+                    if (remainingStock.TryGetValue(cell.ItemCode, out _))
+                        remainingStock[cell.ItemCode] -= allocated;
+                    else
+                        remainingStock[cell.ItemCode] = 0;
+                }
             }
 
             // Evaluate which SO will be ready
-            foreach (var so in matrix.Rows)
+            foreach (var so in soRows)
             {
                 if (!so.IsComplete) // Only check incomplete SO
                 {
@@ -1751,9 +1848,9 @@ namespace Accounting.Services
 
                     foreach (var cell in so.Cells.Where(c => c.IsOrdered))
                     {
-                        var stockAfterThis = stockAfterPO.TryGetValue(cell.ItemCode, out var s) ? s : 0;
+                        var allocatedQty = allocationAfterThisPO.TryGetValue(cell.ItemCode, out var a) ? a : 0;
 
-                        if (stockAfterThis >= cell.QtyOrder)
+                        if (allocatedQty >= cell.QtyOrder)
                         {
                             willBeCompletedItems.Add(cell.ItemCode);
                         }
@@ -1771,10 +1868,7 @@ namespace Accounting.Services
                         TanggalSO = so.Tanggal,
                         NoPrj = so.NoPrj,
                         Keterangan = so.Keterangan,
-                        MissingItems = so.Cells.Where(c => c.IsOrdered && 
-                            (!stockAfterPO.TryGetValue(c.ItemCode, out var stock) || stock < c.QtyOrder))
-                            .Select(c => c.ItemCode)
-                            .ToList(),
+                        MissingItems = stillMissingItems,
                         WillBeCompletedItems = willBeCompletedItems
                     };
 
