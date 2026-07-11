@@ -1776,6 +1776,7 @@ namespace Accounting.Services
 
         /// <summary>
         /// Generate data progression SO seiring kedatangan PI yang berbeda
+        /// Dengan sequential stock allocation: SO pertama mendapat prioritas pertama
         /// </summary>
         private SOProgressionView GenerateSOProgressionData(
             SalesOrderStockMatrixView matrix,
@@ -1787,13 +1788,45 @@ namespace Accounting.Services
             // Get unique PIs in order
             progression.PIsInOrder = GetActivePIsInOrder(purchaseOrders, purchaseDetails);
 
-            // Build stock availability for each PI cumulative scenario
+            // Build initial stock availability
             var baseStock = matrix.ItemHeaders
                 .ToDictionary(h => h.ItemCode, h => h.QtyStock, StringComparer.OrdinalIgnoreCase);
 
-            // For each SO
+            // Convert matrix rows to list for multiple passes
+            var soRows = matrix.Rows.ToList();
+
+            // FIRST PASS: Calculate current status with sequential allocation
+            var currentRemainingStock = new Dictionary<string, decimal>(baseStock, StringComparer.OrdinalIgnoreCase);
+            var soAllocationMap = new Dictionary<int, Dictionary<string, decimal>>(); // soIndex -> item allocations
+
             int soIndex = 0;
-            foreach (var soRow in matrix.Rows)
+            foreach (var soRow in soRows)
+            {
+                var soAllocations = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+                // For each item in this SO, allocate from remaining stock
+                foreach (var cell in soRow.Cells.Where(c => c.IsOrdered))
+                {
+                    var needed = cell.QtyOrder;
+                    var available = currentRemainingStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
+                    var allocated = Math.Min(needed, available);
+
+                    soAllocations[cell.ItemCode] = allocated;
+
+                    // Reduce remaining stock for next SO
+                    if (currentRemainingStock.TryGetValue(cell.ItemCode, out _))
+                        currentRemainingStock[cell.ItemCode] -= allocated;
+                    else
+                        currentRemainingStock[cell.ItemCode] = 0;
+                }
+
+                soAllocationMap[soIndex] = soAllocations;
+                soIndex++;
+            }
+
+            // SECOND PASS: Create SOProgressionRow with allocated quantities
+            soIndex = 0;
+            foreach (var soRow in soRows)
             {
                 soIndex++;
                 var soProgression = new SOProgressionRow
@@ -1806,12 +1839,14 @@ namespace Accounting.Services
                     CatatanSO = soRow.Keterangan ?? ""
                 };
 
-                // Calculate current status items
+                var allocations = soAllocationMap[soIndex - 1];
                 var missingItems = new List<ItemStatus>();
+
+                // Calculate status with allocated stock
                 foreach (var cell in soRow.Cells.Where(c => c.IsOrdered))
                 {
-                    var available = baseStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
-                    var kurang = Math.Max(cell.QtyOrder - available, 0);
+                    var allocated = allocations.TryGetValue(cell.ItemCode, out var qty) ? qty : 0;
+                    var kurang = Math.Max(cell.QtyOrder - allocated, 0);
                     var itemHeader = matrix.ItemHeaders.FirstOrDefault(h => h.ItemCode == cell.ItemCode);
 
                     soProgression.ItemStatusSekarang.Add(new ItemStatus
@@ -1820,7 +1855,7 @@ namespace Accounting.Services
                         NamaItem = itemHeader?.NamaItem ?? "",
                         Satuan = itemHeader?.Satuan ?? "",
                         QtyOrder = cell.QtyOrder,
-                        QtyAvailable = available,
+                        QtyAvailable = allocated,
                         QtyKurang = kurang
                     });
 
@@ -1840,36 +1875,85 @@ namespace Accounting.Services
                 else
                     soProgression.StatusSekarang = "Sebagian Kurang";
 
-                // Calculate progression for each PI
-                var cumulativeStock = new Dictionary<string, decimal>(baseStock, StringComparer.OrdinalIgnoreCase);
+                // PI Progression - will be calculated after all SOs are processed
+                soProgression.ProgressionPerPI = new Dictionary<string, PIProgressionStatus>();
+
+                progression.Rows.Add(soProgression);
+            }
+
+            // THIRD PASS: Calculate PI progression for each SO with sequential allocation per PI
+            soIndex = 0;
+            foreach (var soRow in soRows)
+            {
+                var soProgression = progression.Rows[soIndex];
 
                 foreach (var pi in progression.PIsInOrder)
                 {
-                    // Add stock from all POs for this PI
-                    var piPOs = purchaseOrders.Where(p => p.NoPrj == pi.NoPrj).ToList();
-                    var piDetails = purchaseDetails.Where(d => piPOs.Any(p => p.NoLpb == d.NoLpb)).ToList();
+                    // Build cumulative stock: baseStock + all prior PIs + this PI
+                    var piRemainingStock = new Dictionary<string, decimal>(baseStock, StringComparer.OrdinalIgnoreCase);
 
-                    foreach (var detail in piDetails)
+                    // Add stock from all PIs up to and including this one
+                    var allPisTillNow = progression.PIsInOrder.TakeWhile(p => p.NoPrj != pi.NoPrj).Append(pi).ToList();
+                    foreach (var currentPi in allPisTillNow)
                     {
-                        if (!string.IsNullOrWhiteSpace(detail.ItemCode))
+                        var piPOs = purchaseOrders.Where(p => p.NoPrj == currentPi.NoPrj).ToList();
+                        var piDetails = purchaseDetails.Where(d => piPOs.Any(p => p.NoLpb == d.NoLpb)).ToList();
+
+                        foreach (var detail in piDetails)
                         {
-                            if (cumulativeStock.TryGetValue(detail.ItemCode, out var stock))
-                                cumulativeStock[detail.ItemCode] = stock + detail.Qty;
-                            else
-                                cumulativeStock[detail.ItemCode] = detail.Qty;
+                            if (!string.IsNullOrWhiteSpace(detail.ItemCode))
+                            {
+                                if (piRemainingStock.TryGetValue(detail.ItemCode, out var stock))
+                                    piRemainingStock[detail.ItemCode] = stock + detail.Qty;
+                                else
+                                    piRemainingStock[detail.ItemCode] = detail.Qty;
+                            }
                         }
                     }
 
-                    // Check readiness after this PI
+                    // Allocate sequentially: prior SOs consume first, then this SO
+                    var piAllocated = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+                    for (int i = 0; i < soIndex; i++)
+                    {
+                        var priorSO = soRows[i];
+                        foreach (var cell in priorSO.Cells.Where(c => c.IsOrdered))
+                        {
+                            var needed = cell.QtyOrder;
+                            var available = piRemainingStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
+                            var allocated = Math.Min(needed, available);
+
+                            if (piRemainingStock.TryGetValue(cell.ItemCode, out _))
+                                piRemainingStock[cell.ItemCode] -= allocated;
+                            else
+                                piRemainingStock[cell.ItemCode] = 0;
+                        }
+                    }
+
+                    // Now allocate for this SO
+                    foreach (var cell in soRow.Cells.Where(c => c.IsOrdered))
+                    {
+                        var needed = cell.QtyOrder;
+                        var available = piRemainingStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
+                        var allocated = Math.Min(needed, available);
+                        piAllocated[cell.ItemCode] = allocated;
+
+                        if (piRemainingStock.TryGetValue(cell.ItemCode, out _))
+                            piRemainingStock[cell.ItemCode] -= allocated;
+                        else
+                            piRemainingStock[cell.ItemCode] = 0;
+                    }
+
+                    // Check readiness
                     var stillMissing = new List<string>();
                     var newlyCompleted = new List<string>();
                     var isReady = true;
 
                     foreach (var cell in soRow.Cells.Where(c => c.IsOrdered))
                     {
-                        var available = cumulativeStock.TryGetValue(cell.ItemCode, out var s) ? s : 0;
-                        var wasMissing = baseStock.TryGetValue(cell.ItemCode, out var baseS) ? baseS < cell.QtyOrder : true;
-                        var isNowMissing = available < cell.QtyOrder;
+                        var allocatedQty = piAllocated.TryGetValue(cell.ItemCode, out var qty) ? qty : 0;
+                        var currentAllocated = soAllocationMap[soIndex].TryGetValue(cell.ItemCode, out var curQty) ? curQty : 0;
+                        var wasMissing = currentAllocated < cell.QtyOrder;
+                        var isNowMissing = allocatedQty < cell.QtyOrder;
 
                         if (isNowMissing)
                         {
@@ -1896,7 +1980,7 @@ namespace Accounting.Services
                     soProgression.ProgressionPerPI[pi.NoPrj] = piStatus;
                 }
 
-                progression.Rows.Add(soProgression);
+                soIndex++;
             }
 
             return progression;
