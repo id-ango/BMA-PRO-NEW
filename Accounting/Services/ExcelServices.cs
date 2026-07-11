@@ -1459,8 +1459,7 @@ namespace Accounting.Services
                         }
                         else if (piStatus.IsComplete)
                         {
-                            // Show just checkmark when first becomes complete
-                            piCell.Value = "✓";
+                            piCell.Value = "✓ Lengkap";
                             piCell.Style.Fill.BackgroundColor = YellowGreenFill();
                         }
                         else if (piStatus.NewlyCompletedItems.Any())
