@@ -1433,9 +1433,8 @@ namespace Accounting.Services
                 var piCol = piStartCol;
                 int completedAtPiIndex = -1;
 
-                // Check if SO is already complete in current status
-                var statusValue = statusSekarangCell.Value.ToString();
-                var isAlreadyComplete = statusValue == "✓ Lengkap";
+                // Check if SO is already complete in current status - based on missing items, not cell value
+                var isAlreadyComplete = string.IsNullOrWhiteSpace(missingItemsText);
 
                 if (isAlreadyComplete)
                 {
