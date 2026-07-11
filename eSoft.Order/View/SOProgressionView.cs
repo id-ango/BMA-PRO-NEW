@@ -45,6 +45,11 @@ namespace eSoft.Order.View
         public DateTime Tanggal { get; set; }
 
         /// <summary>
+        /// Keterangan dari PO (untuk informasi tambahan di header)
+        /// </summary>
+        public string Keterangan { get; set; }
+
+        /// <summary>
         /// Index PI dalam urutan (0, 1, 2, ...)
         /// </summary>
         public int PiIndex { get; set; }
@@ -96,6 +101,7 @@ namespace eSoft.Order.View
         public string NamaItem { get; set; }
         public decimal QtyOrder { get; set; }
         public decimal QtyAvailable { get; set; }
+        public string Satuan { get; set; }
 
         /// <summary>
         /// Qty yang kurang (0 jika cukup)

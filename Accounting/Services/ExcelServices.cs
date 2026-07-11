@@ -1315,7 +1315,7 @@ namespace Accounting.Services
 
             // Title
             var titleCell = ws.Cell(currentRow, 1);
-            titleCell.Value = "Status SO Progression seiring Kedatangan PI";
+            titleCell.Value = $"Status SO Progression seiring Kedatangan PI - {DateTime.Today:dd MMM yyyy}";
             titleCell.Style.Font.Bold = true;
             titleCell.Style.Font.FontColor = XLColor.White;
             titleCell.Style.Fill.BackgroundColor = headerFill;
@@ -1327,7 +1327,7 @@ namespace Accounting.Services
             var headerRow = currentRow;
             currentCol = 1;
 
-            string[] fixedHeaders = { "No SO", "Customer", "Tanggal Order", "Status Qty Sekarang", "Keterangan", "Item Dipesan" };
+            string[] fixedHeaders = { "No SO", "Customer", "Tanggal Order", "Item Dipesan", "Status Qty Sekarang", "Keterangan" };
             foreach (var header in fixedHeaders)
             {
                 var c = ws.Cell(currentRow, currentCol);
@@ -1345,7 +1345,10 @@ namespace Accounting.Services
             foreach (var pi in progression.PIsInOrder)
             {
                 var c = ws.Cell(currentRow, currentCol);
-                c.Value = $"Status setelah\n{pi.NoPrj}\n({pi.Tanggal:dd-MMM-yyyy})";
+                var piHeaderText = $"Status setelah\n{pi.NoPrj}\n({pi.Tanggal:dd-MMM-yyyy})";
+                if (!string.IsNullOrWhiteSpace(pi.Keterangan))
+                    piHeaderText += $"\n{pi.Keterangan}";
+                c.Value = piHeaderText;
                 c.Style.Font.Bold = true;
                 c.Style.Font.FontColor = XLColor.White;
                 c.Style.Fill.BackgroundColor = headerFill;
@@ -1355,7 +1358,7 @@ namespace Accounting.Services
             }
 
             // Set header row height
-            ws.Row(currentRow).Height = 45;
+            ws.Row(currentRow).Height = 55;
             currentRow++;
 
             // Data rows
@@ -1377,6 +1380,15 @@ namespace Accounting.Services
                 // Tanggal
                 ws.Cell(currentRow, currentCol).Value = row.TanggalSO.ToString("dd/MM/yyyy");
                 ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
+                currentCol++;
+
+                // Item Dipesan - format dengan line break dan qty
+                var itemDipesanCell = ws.Cell(currentRow, currentCol);
+                var itemsFormatted = string.Join("\n", row.ItemStatusSekarang
+                    .Select(i => $"{i.NamaItem} ({i.ItemCode})\n{(int)i.QtyOrder} {i.Satuan ?? ""}"));
+                itemDipesanCell.Value = itemsFormatted;
+                itemDipesanCell.Style.Alignment.WrapText = true;
+                itemDipesanCell.Style.Fill.BackgroundColor = rowColor;
                 currentCol++;
 
                 // Status Qty Sekarang
@@ -1402,15 +1414,6 @@ namespace Accounting.Services
                 // Keterangan
                 ws.Cell(currentRow, currentCol).Value = row.StatusSekarang;
                 ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
-                currentCol++;
-
-                // Item Dipesan - format dengan line break
-                var itemDipesanCell = ws.Cell(currentRow, currentCol);
-                var itemsFormatted = string.Join("\n", row.ItemStatusSekarang
-                    .Select(i => $"{i.NamaItem} ({i.ItemCode})"));
-                itemDipesanCell.Value = itemsFormatted;
-                itemDipesanCell.Style.Alignment.WrapText = true;
-                itemDipesanCell.Style.Fill.BackgroundColor = rowColor;
                 currentCol++;
 
                 // PI progression columns - with auto-empty logic
@@ -1478,11 +1481,12 @@ namespace Accounting.Services
 
             // Formatting
             ws.Columns().AdjustToContents();
-            ws.Column(1).Width = 20;
-            ws.Column(2).Width = 18;
-            ws.Column(3).Width = 16;
-            ws.Column(4).Width = 28;
-            ws.Column(5).Width = 18;
+            ws.Column(1).Width = 18;
+            ws.Column(2).Width = 16;
+            ws.Column(3).Width = 14;
+            ws.Column(4).Width = 24;
+            ws.Column(5).Width = 22;
+            ws.Column(6).Width = 16;
 
             for (int i = piStartCol; i < piStartCol + progression.PIsInOrder.Count; i++)
                 ws.Column(i).Width = 22;
@@ -1785,11 +1789,13 @@ namespace Accounting.Services
                 {
                     var available = baseStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
                     var kurang = Math.Max(cell.QtyOrder - available, 0);
+                    var itemHeader = matrix.ItemHeaders.FirstOrDefault(h => h.ItemCode == cell.ItemCode);
 
                     soProgression.ItemStatusSekarang.Add(new ItemStatus
                     {
                         ItemCode = cell.ItemCode,
-                        NamaItem = matrix.ItemHeaders.FirstOrDefault(h => h.ItemCode == cell.ItemCode)?.NamaItem ?? "",
+                        NamaItem = itemHeader?.NamaItem ?? "",
+                        Satuan = itemHeader?.Satuan ?? "",
                         QtyOrder = cell.QtyOrder,
                         QtyAvailable = available,
                         QtyKurang = kurang
@@ -1895,6 +1901,7 @@ namespace Accounting.Services
                         NamaVendor = po.NamaVendor,
                         TotalQty = totalQty,
                         Tanggal = po.Tanggal,
+                        Keterangan = po.Keterangan,
                         PiIndex = 0 // Will be set after sorting
                     };
                 }
