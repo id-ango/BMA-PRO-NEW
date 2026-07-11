@@ -61,6 +61,11 @@ namespace eSoft.Order.View
     public class SOProgressionRow
     {
         /// <summary>
+        /// No urut SO dalam list (1, 2, 3, ...)
+        /// </summary>
+        public int NoUrut { get; set; }
+
+        /// <summary>
         /// No SO
         /// </summary>
         public string NoSO { get; set; }
@@ -79,6 +84,11 @@ namespace eSoft.Order.View
         /// Status saat ini (Lengkap / Sebagian Kurang / Banyak Kurang)
         /// </summary>
         public string StatusSekarang { get; set; }
+
+        /// <summary>
+        /// Catatan / Keterangan SO
+        /// </summary>
+        public string CatatanSO { get; set; }
 
         /// <summary>
         /// Status item saat ini - daftar item yang kurang

@@ -1319,15 +1319,15 @@ namespace Accounting.Services
             titleCell.Style.Font.Bold = true;
             titleCell.Style.Font.FontColor = XLColor.White;
             titleCell.Style.Fill.BackgroundColor = headerFill;
-            ws.Range(currentRow, 1, currentRow, 6 + progression.PIsInOrder.Count).Merge();
-            ws.Range(currentRow, 1, currentRow, 6 + progression.PIsInOrder.Count).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            ws.Range(currentRow, 1, currentRow, 8 + progression.PIsInOrder.Count).Merge();
+            ws.Range(currentRow, 1, currentRow, 8 + progression.PIsInOrder.Count).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             currentRow += 2;
 
             // Header columns
             var headerRow = currentRow;
             currentCol = 1;
 
-            string[] fixedHeaders = { "No SO", "Customer", "Tanggal Order", "Item Dipesan", "Status Qty Sekarang", "Keterangan" };
+            string[] fixedHeaders = { "No. Urut", "No SO", "Customer", "Tanggal Order", "Item Dipesan", "Status Qty Sekarang", "Keterangan", "Catatan SO" };
             foreach (var header in fixedHeaders)
             {
                 var c = ws.Cell(currentRow, currentCol);
@@ -1366,6 +1366,12 @@ namespace Accounting.Services
             {
                 currentCol = 1;
                 var rowColor = row.ProgressionPerPI.Values.Last().IsComplete ? yellowFill : XLColor.White;
+
+                // No. Urut
+                ws.Cell(currentRow, currentCol).Value = row.NoUrut;
+                ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
+                ws.Cell(currentRow, currentCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                currentCol++;
 
                 // No SO
                 ws.Cell(currentRow, currentCol).Value = row.NoSO;
@@ -1416,6 +1422,12 @@ namespace Accounting.Services
                 ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
                 currentCol++;
 
+                // Catatan SO
+                ws.Cell(currentRow, currentCol).Value = row.CatatanSO;
+                ws.Cell(currentRow, currentCol).Style.Fill.BackgroundColor = rowColor;
+                ws.Cell(currentRow, currentCol).Style.Alignment.WrapText = true;
+                currentCol++;
+
                 // PI progression columns - with auto-empty logic
                 int piColIndex = 0;
                 var piCol = piStartCol;
@@ -1445,10 +1457,9 @@ namespace Accounting.Services
                             piCell.Value = "";
                             piCell.Style.Fill.BackgroundColor = YellowGreenFill();
                         }
-                        else if (piStatus.IsComplete)
+                        if (piStatus.IsComplete)
                         {
                             piCell.Value = "✓ Lengkap";
-                            piCell.Style.Font.FontColor = XLColor.FromHtml("#198754");
                             piCell.Style.Fill.BackgroundColor = YellowGreenFill();
                         }
                         else if (piStatus.NewlyCompletedItems.Any())
@@ -1458,8 +1469,6 @@ namespace Accounting.Services
                             var text = $"✓ Selesai:\n{newlyCompletedFormatted}\n✗ Masih Kurang:\n{stillMissingFormatted}";
                             piCell.Value = text;
                             piCell.Style.Fill.BackgroundColor = yellowFill;
-                            // Apply multi-color RichText formatting
-                            ApplyPIProgressionRichTextColoring(piCell, text);
                         }
                         else
                         {
@@ -1467,8 +1476,6 @@ namespace Accounting.Services
                             var text = $"✗ Kurang:\n{stillMissingFormatted}";
                             piCell.Value = text;
                             piCell.Style.Fill.BackgroundColor = rowColor;
-                            // Apply red coloring for "Kurang" status
-                            ApplyPIProgressionRichTextColoring(piCell, text);
                         }
 
                         piCell.Style.Alignment.WrapText = true;
@@ -1484,12 +1491,14 @@ namespace Accounting.Services
 
             // Formatting
             ws.Columns().AdjustToContents();
-            ws.Column(1).Width = 18;
-            ws.Column(2).Width = 16;
-            ws.Column(3).Width = 14;
-            ws.Column(4).Width = 24;
-            ws.Column(5).Width = 22;
-            ws.Column(6).Width = 16;
+            ws.Column(1).Width = 10;    // No. Urut
+            ws.Column(2).Width = 18;    // No SO
+            ws.Column(3).Width = 16;    // Customer
+            ws.Column(4).Width = 14;    // Tanggal Order
+            ws.Column(5).Width = 24;    // Item Dipesan
+            ws.Column(6).Width = 22;    // Status Qty Sekarang
+            ws.Column(7).Width = 16;    // Keterangan
+            ws.Column(8).Width = 24;    // Catatan SO
 
             for (int i = piStartCol; i < piStartCol + progression.PIsInOrder.Count; i++)
                 ws.Column(i).Width = 22;
@@ -1552,23 +1561,7 @@ namespace Accounting.Services
         /// Apply multi-color rich text formatting untuk PI progression cells
         /// Menggunakan approach sederhana: memberikan warna consistent untuk setiap type
         /// </summary>
-        private void ApplyPIProgressionRichTextColoring(IXLCell cell, string text)
-        {
-            if (string.IsNullOrEmpty(text))
-                return;
 
-            // Untuk sekarang, apply warna berdasarkan content:
-            // Jika ada "✓ Selesai:" → Hijau
-            // Jika ada "✗ Kurang" atau "✗ Masih Kurang" → Merah
-            if (text.Contains("✓ Selesai:"))
-            {
-                cell.Style.Font.FontColor = XLColor.FromHtml("#198754"); // Hijau untuk selesai
-            }
-            else if (text.Contains("✗ Kurang:") || text.Contains("✗ Masih Kurang:"))
-            {
-                cell.Style.Font.FontColor = XLColor.FromHtml("#dc3545"); // Merah untuk kurang
-            }
-        }
 
         /// <summary>
         /// Helper untuk yellow-green color
@@ -1799,14 +1792,18 @@ namespace Accounting.Services
                 .ToDictionary(h => h.ItemCode, h => h.QtyStock, StringComparer.OrdinalIgnoreCase);
 
             // For each SO
+            int soIndex = 0;
             foreach (var soRow in matrix.Rows)
             {
+                soIndex++;
                 var soProgression = new SOProgressionRow
                 {
+                    NoUrut = soIndex,
                     NoSO = soRow.NoLpb,
                     NamaCustomer = soRow.NamaCustomer,
                     TanggalSO = soRow.Tanggal,
-                    StatusSekarang = soRow.IsComplete ? "Lengkap" : "Belum"
+                    StatusSekarang = soRow.IsComplete ? "Lengkap" : "Belum",
+                    CatatanSO = soRow.Keterangan ?? ""
                 };
 
                 // Calculate current status items
