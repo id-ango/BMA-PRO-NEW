@@ -1428,20 +1428,19 @@ namespace Accounting.Services
                 ws.Cell(currentRow, currentCol).Style.Alignment.WrapText = true;
                 currentCol++;
 
-                // PI progression columns - with auto-empty logic
+                // PI progression columns
+                // Logic: 
+                // - If Status Qty Sekarang is complete (no missing items), all PI cols empty + green
+                // - If belum lengkap, show each PI status until complete, even if never complete show all
+
                 int piColIndex = 0;
                 var piCol = piStartCol;
-                int completedAtPiIndex = -1;
+                int completedAtPiIndex = -1; // -1 = never found
 
-                // Check if SO is already complete in current status - based on missing items, not cell value
+                // Check if SO is already complete in current status
                 var isAlreadyComplete = string.IsNullOrWhiteSpace(missingItemsText);
 
-                if (isAlreadyComplete)
-                {
-                    // SO already complete, no need to show PI status - all PI cols should be empty with green
-                    completedAtPiIndex = -1; // Mark as already complete before first PI
-                }
-                else
+                if (!isAlreadyComplete)
                 {
                     // Find at which PI the SO becomes complete
                     foreach (var pi in progression.PIsInOrder)
@@ -1453,9 +1452,6 @@ namespace Accounting.Services
                         }
                         piColIndex++;
                     }
-                    // If never completed, set to -2 to indicate "incomplete till end"
-                    if (completedAtPiIndex == -1)
-                        completedAtPiIndex = -2;
                 }
 
                 piColIndex = 0;
@@ -1465,20 +1461,14 @@ namespace Accounting.Services
                     {
                         var piCell = ws.Cell(currentRow, piCol);
 
-                        // If SO was already complete before first PI (in current status), all PI cols empty with green
-                        if (completedAtPiIndex == -1)
+                        // If SO is already complete in current status, all PI cols are empty + green
+                        if (isAlreadyComplete)
                         {
                             piCell.Value = "";
                             piCell.Style.Fill.BackgroundColor = YellowGreenFill();
                         }
-                        // If SO was already complete in previous PI, just show empty with green background
-                        else if (completedAtPiIndex >= 0 && piColIndex > completedAtPiIndex)
-                        {
-                            piCell.Value = "";
-                            piCell.Style.Fill.BackgroundColor = YellowGreenFill();
-                        }
-                        // If never completed (completedAtPiIndex == -2), always show status
-                        else if (completedAtPiIndex == -2 || piStatus.IsComplete)
+                        // If SO becomes complete at this PI or later, show status
+                        else if (completedAtPiIndex == -1 || piColIndex <= completedAtPiIndex)
                         {
                             if (piStatus.IsComplete)
                             {
@@ -1509,11 +1499,11 @@ namespace Accounting.Services
                                 piCell.Style.Fill.BackgroundColor = yellowFill;
                             }
                         }
+                        // After SO is complete, PI cols are empty + green
                         else
                         {
-                            // Fallback for edge cases - shouldn't happen with corrected logic above
                             piCell.Value = "";
-                            piCell.Style.Fill.BackgroundColor = lightGrayFill;
+                            piCell.Style.Fill.BackgroundColor = YellowGreenFill();
                         }
 
                         piCell.Style.Alignment.WrapText = true;
