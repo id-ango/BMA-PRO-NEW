@@ -1479,20 +1479,26 @@ namespace Accounting.Services
                             piCell.Value = "✓ Lengkap";
                             piCell.Style.Fill.BackgroundColor = YellowGreenFill();
                         }
-                        else if (piStatus.NewlyCompletedItems.Any())
-                        {
-                            var newlyCompletedFormatted = FormatItemListWithLineBreak(piStatus.NewlyCompletedItems, row.ItemStatusSekarang);
-                            var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
-                            var text = $"✓ Selesai:\n{newlyCompletedFormatted}\n✗ Masih Kurang:\n{stillMissingFormatted}";
-                            piCell.Value = text;
-                            piCell.Style.Fill.BackgroundColor = yellowFill;
-                        }
                         else
                         {
-                            var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
-                            var text = $"✗ Kurang:\n{stillMissingFormatted}";
+                            // Show mix of completed and still missing items
+                            var textParts = new List<string>();
+
+                            if (piStatus.NewlyCompletedItems.Any())
+                            {
+                                var newlyCompletedFormatted = FormatItemListWithLineBreak(piStatus.NewlyCompletedItems, row.ItemStatusSekarang);
+                                textParts.Add($"✓ Selesai:\n{newlyCompletedFormatted}");
+                            }
+
+                            if (piStatus.StillMissingItems.Any())
+                            {
+                                var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
+                                textParts.Add($"✗ Masih Kurang:\n{stillMissingFormatted}");
+                            }
+
+                            var text = string.Join("\n", textParts);
                             piCell.Value = text;
-                            piCell.Style.Fill.BackgroundColor = rowColor;
+                            piCell.Style.Fill.BackgroundColor = yellowFill;
                         }
 
                         piCell.Style.Alignment.WrapText = true;
