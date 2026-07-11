@@ -1453,6 +1453,9 @@ namespace Accounting.Services
                         }
                         piColIndex++;
                     }
+                    // If never completed, set to -2 to indicate "incomplete till end"
+                    if (completedAtPiIndex == -1)
+                        completedAtPiIndex = -2;
                 }
 
                 piColIndex = 0;
@@ -1474,48 +1477,43 @@ namespace Accounting.Services
                             piCell.Value = "";
                             piCell.Style.Fill.BackgroundColor = YellowGreenFill();
                         }
-                        else if (piStatus.IsComplete)
+                        // If never completed (completedAtPiIndex == -2), always show status
+                        else if (completedAtPiIndex == -2 || piStatus.IsComplete)
                         {
-                            piCell.Value = "✓ Lengkap";
-                            piCell.Style.Fill.BackgroundColor = YellowGreenFill();
+                            if (piStatus.IsComplete)
+                            {
+                                piCell.Value = "✓ Lengkap";
+                                piCell.Style.Fill.BackgroundColor = YellowGreenFill();
+                            }
+                            else
+                            {
+                                // Not complete - show what's completed and what's still missing
+                                var textParts = new List<string>();
+
+                                // Show newly completed items if any
+                                if (piStatus.NewlyCompletedItems.Count > 0)
+                                {
+                                    var newlyCompletedFormatted = FormatItemListWithLineBreak(piStatus.NewlyCompletedItems, row.ItemStatusSekarang);
+                                    textParts.Add($"✓ Selesai:\n{newlyCompletedFormatted}");
+                                }
+
+                                // Show still missing items if any
+                                if (piStatus.StillMissingItems.Count > 0)
+                                {
+                                    var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
+                                    textParts.Add($"✗ Masih Kurang:\n{stillMissingFormatted}");
+                                }
+
+                                var text = string.Join("\n", textParts);
+                                piCell.Value = text;
+                                piCell.Style.Fill.BackgroundColor = yellowFill;
+                            }
                         }
                         else
                         {
-                            // Not complete - show what's completed and what's still missing
-                            // Always show status if there are items still missing, even if empty newly completed
-                            var textParts = new List<string>();
-
-                            // Show newly completed items if any
-                            if (piStatus.NewlyCompletedItems.Count > 0)
-                            {
-                                var newlyCompletedFormatted = FormatItemListWithLineBreak(piStatus.NewlyCompletedItems, row.ItemStatusSekarang);
-                                textParts.Add($"✓ Selesai:\n{newlyCompletedFormatted}");
-                            }
-
-                            // Show still missing items if any
-                            if (piStatus.StillMissingItems.Count > 0)
-                            {
-                                var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
-                                textParts.Add($"✗ Masih Kurang:\n{stillMissingFormatted}");
-                            }
-
-                            // If still no content, show from current row items that are still missing
-                            if (textParts.Count == 0)
-                            {
-                                var allMissingItems = row.ItemStatusSekarang
-                                    .Where(i => i.QtyKurang > 0)
-                                    .Select(i => i.ItemCode)
-                                    .ToList();
-                                if (allMissingItems.Count > 0)
-                                {
-                                    var missingFormatted = FormatItemListWithLineBreak(allMissingItems, row.ItemStatusSekarang);
-                                    textParts.Add($"✗ Masih Kurang:\n{missingFormatted}");
-                                }
-                            }
-
-                            var text = string.Join("\n", textParts);
-                            piCell.Value = text;
-                            piCell.Style.Fill.BackgroundColor = yellowFill;
+                            // Fallback for edge cases - shouldn't happen with corrected logic above
+                            piCell.Value = "";
+                            piCell.Style.Fill.BackgroundColor = lightGrayFill;
                         }
 
                         piCell.Style.Alignment.WrapText = true;
