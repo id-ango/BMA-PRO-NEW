@@ -1451,15 +1451,16 @@ namespace Accounting.Services
                     {
                         var piCell = ws.Cell(currentRow, piCol);
 
-                        // If SO was already complete in previous PI, just show green
+                        // If SO was already complete in previous PI, just show empty with green background
                         if (completedAtPiIndex >= 0 && piColIndex > completedAtPiIndex)
                         {
                             piCell.Value = "";
                             piCell.Style.Fill.BackgroundColor = YellowGreenFill();
                         }
-                        if (piStatus.IsComplete)
+                        else if (piStatus.IsComplete)
                         {
-                            piCell.Value = "✓ Lengkap";
+                            // Show just checkmark when first becomes complete
+                            piCell.Value = "✓";
                             piCell.Style.Fill.BackgroundColor = YellowGreenFill();
                         }
                         else if (piStatus.NewlyCompletedItems.Any())
