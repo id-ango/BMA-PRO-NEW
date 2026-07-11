@@ -1433,15 +1433,27 @@ namespace Accounting.Services
                 var piCol = piStartCol;
                 int completedAtPiIndex = -1;
 
-                // Find at which PI the SO becomes complete
-                foreach (var pi in progression.PIsInOrder)
+                // Check if SO is already complete in current status
+                var statusValue = statusSekarangCell.Value.ToString();
+                var isAlreadyComplete = statusValue == "✓ Lengkap";
+
+                if (isAlreadyComplete)
                 {
-                    if (row.ProgressionPerPI.TryGetValue(pi.NoPrj, out var piStatus) && piStatus.IsComplete)
+                    // SO already complete, no need to show PI status - all PI cols should be empty with green
+                    completedAtPiIndex = -1; // Mark as already complete before first PI
+                }
+                else
+                {
+                    // Find at which PI the SO becomes complete
+                    foreach (var pi in progression.PIsInOrder)
                     {
-                        completedAtPiIndex = piColIndex;
-                        break;
+                        if (row.ProgressionPerPI.TryGetValue(pi.NoPrj, out var piStatus) && piStatus.IsComplete)
+                        {
+                            completedAtPiIndex = piColIndex;
+                            break;
+                        }
+                        piColIndex++;
                     }
-                    piColIndex++;
                 }
 
                 piColIndex = 0;
@@ -1451,8 +1463,14 @@ namespace Accounting.Services
                     {
                         var piCell = ws.Cell(currentRow, piCol);
 
+                        // If SO was already complete before first PI (in current status), all PI cols empty with green
+                        if (completedAtPiIndex == -1)
+                        {
+                            piCell.Value = "";
+                            piCell.Style.Fill.BackgroundColor = YellowGreenFill();
+                        }
                         // If SO was already complete in previous PI, just show empty with green background
-                        if (completedAtPiIndex >= 0 && piColIndex > completedAtPiIndex)
+                        else if (completedAtPiIndex >= 0 && piColIndex > completedAtPiIndex)
                         {
                             piCell.Value = "";
                             piCell.Style.Fill.BackgroundColor = YellowGreenFill();
