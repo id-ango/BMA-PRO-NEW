@@ -1457,15 +1457,18 @@ namespace Accounting.Services
                             var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
                             var text = $"✓ Selesai:\n{newlyCompletedFormatted}\n✗ Masih Kurang:\n{stillMissingFormatted}";
                             piCell.Value = text;
-                            piCell.Style.Font.FontColor = XLColor.FromHtml("#856404");
                             piCell.Style.Fill.BackgroundColor = yellowFill;
+                            // Apply multi-color RichText formatting
+                            ApplyPIProgressionRichTextColoring(piCell, text);
                         }
                         else
                         {
                             var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
-                            piCell.Value = $"✗ Kurang:\n{stillMissingFormatted}";
-                            piCell.Style.Font.FontColor = XLColor.FromHtml("#dc3545");
-                            piCell.Style.Fill.BackgroundColor = redFill;
+                            var text = $"✗ Kurang:\n{stillMissingFormatted}";
+                            piCell.Value = text;
+                            piCell.Style.Fill.BackgroundColor = rowColor;
+                            // Apply red coloring for "Kurang" status
+                            ApplyPIProgressionRichTextColoring(piCell, text);
                         }
 
                         piCell.Style.Alignment.WrapText = true;
@@ -1495,6 +1498,7 @@ namespace Accounting.Services
             var allCells = ws.Range(1, 1, currentRow - 1, piStartCol + progression.PIsInOrder.Count - 1);
             allCells.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             allCells.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            allCells.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
 
             // Freeze panes
             ws.SheetView.FreezeRows(3);
@@ -1542,6 +1546,28 @@ namespace Accounting.Services
             }
 
             return string.Join("\n", formatted);
+        }
+
+        /// <summary>
+        /// Apply multi-color rich text formatting untuk PI progression cells
+        /// Menggunakan approach sederhana: memberikan warna consistent untuk setiap type
+        /// </summary>
+        private void ApplyPIProgressionRichTextColoring(IXLCell cell, string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return;
+
+            // Untuk sekarang, apply warna berdasarkan content:
+            // Jika ada "✓ Selesai:" → Hijau
+            // Jika ada "✗ Kurang" atau "✗ Masih Kurang" → Merah
+            if (text.Contains("✓ Selesai:"))
+            {
+                cell.Style.Font.FontColor = XLColor.FromHtml("#198754"); // Hijau untuk selesai
+            }
+            else if (text.Contains("✗ Kurang:") || text.Contains("✗ Masih Kurang:"))
+            {
+                cell.Style.Font.FontColor = XLColor.FromHtml("#dc3545"); // Merah untuk kurang
+            }
         }
 
         /// <summary>
