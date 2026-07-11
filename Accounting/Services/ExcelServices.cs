@@ -1481,19 +1481,36 @@ namespace Accounting.Services
                         }
                         else
                         {
-                            // Show mix of completed and still missing items
+                            // Not complete - show what's completed and what's still missing
+                            // Always show status if there are items still missing, even if empty newly completed
                             var textParts = new List<string>();
 
-                            if (piStatus.NewlyCompletedItems.Any())
+                            // Show newly completed items if any
+                            if (piStatus.NewlyCompletedItems.Count > 0)
                             {
                                 var newlyCompletedFormatted = FormatItemListWithLineBreak(piStatus.NewlyCompletedItems, row.ItemStatusSekarang);
                                 textParts.Add($"✓ Selesai:\n{newlyCompletedFormatted}");
                             }
 
-                            if (piStatus.StillMissingItems.Any())
+                            // Show still missing items if any
+                            if (piStatus.StillMissingItems.Count > 0)
                             {
                                 var stillMissingFormatted = FormatItemListWithLineBreak(piStatus.StillMissingItems, row.ItemStatusSekarang);
                                 textParts.Add($"✗ Masih Kurang:\n{stillMissingFormatted}");
+                            }
+
+                            // If still no content, show from current row items that are still missing
+                            if (textParts.Count == 0)
+                            {
+                                var allMissingItems = row.ItemStatusSekarang
+                                    .Where(i => i.QtyKurang > 0)
+                                    .Select(i => i.ItemCode)
+                                    .ToList();
+                                if (allMissingItems.Count > 0)
+                                {
+                                    var missingFormatted = FormatItemListWithLineBreak(allMissingItems, row.ItemStatusSekarang);
+                                    textParts.Add($"✗ Masih Kurang:\n{missingFormatted}");
+                                }
                             }
 
                             var text = string.Join("\n", textParts);
