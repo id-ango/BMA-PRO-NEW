@@ -1813,28 +1813,42 @@ namespace Accounting.Services
             }
 
             // Sequential allocation: earlier SOs consume stock first
-            var allocationAfterThisPO = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
             var remainingStock = new Dictionary<string, decimal>(cumulativeStock, StringComparer.OrdinalIgnoreCase);
+            var soAllocationMap = new Dictionary<int, Dictionary<string, decimal>>(); // soIndex -> item allocations
+            var soIndexMap = new Dictionary<string, int>(); // NoLpb -> soIndex for lookup
+
+            // Build soIndexMap first
+            int soIdx = 0;
+            foreach (var so in soRows)
+            {
+                soIndexMap[so.NoLpb] = soIdx;
+                soIdx++;
+            }
 
             // Allocate for all SO sequentially (oldest SO first gets priority)
+            soIdx = 0;
             foreach (var so in soRows.OrderBy(s => s.Tanggal))
             {
+                var soAllocations = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
                 foreach (var cell in so.Cells.Where(c => c.IsOrdered))
                 {
                     var needed = cell.QtyOrder;
                     var available = remainingStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
                     var allocated = Math.Min(needed, available);
 
-                    if (!allocationAfterThisPO.ContainsKey(cell.ItemCode))
-                        allocationAfterThisPO[cell.ItemCode] = 0;
-
-                    allocationAfterThisPO[cell.ItemCode] += allocated;
+                    soAllocations[cell.ItemCode] = allocated;
 
                     if (remainingStock.TryGetValue(cell.ItemCode, out _))
                         remainingStock[cell.ItemCode] -= allocated;
                     else
                         remainingStock[cell.ItemCode] = 0;
                 }
+
+                if (soIndexMap.TryGetValue(so.NoLpb, out var origIdx))
+                    soAllocationMap[origIdx] = soAllocations;
+
+                soIdx++;
             }
 
             // Evaluate which SO will be ready
@@ -1846,9 +1860,15 @@ namespace Accounting.Services
                     var willBeCompletedItems = new List<string>();
                     var stillMissingItems = new List<string>();
 
+                    // Get this SO's allocation
+                    if (!soIndexMap.TryGetValue(so.NoLpb, out var soIndexForAllocation))
+                        soIndexForAllocation = -1;
+
+                    var thisSOAllocation = soAllocationMap.TryGetValue(soIndexForAllocation, out var alloc) ? alloc : new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
                     foreach (var cell in so.Cells.Where(c => c.IsOrdered))
                     {
-                        var allocatedQty = allocationAfterThisPO.TryGetValue(cell.ItemCode, out var a) ? a : 0;
+                        var allocatedQty = thisSOAllocation.TryGetValue(cell.ItemCode, out var a) ? a : 0;
 
                         if (allocatedQty >= cell.QtyOrder)
                         {
