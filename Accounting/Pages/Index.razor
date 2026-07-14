@@ -178,9 +178,14 @@
 
 <!-- Sales & Order Transactions Section -->
 <section style="margin-top: 30px;">
-    <div style="margin-bottom: 15px;">
-        <h4>Transaksi Penjualan & Sales Order</h4>
-        <button class="btn btn-outline-primary btn-sm" @onclick="() => showTransactionDetailAsync()">
+    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+        <div>
+            <h4 style="margin-bottom: 5px;">Penjualan Menunggu Kurir</h4>
+            <span class="badge bg-warning text-dark">
+                <span class="oi oi-alert"></span> Belum Terisi Kurir
+            </span>
+        </div>
+        <button class="btn btn-outline-primary btn-sm ms-auto" @onclick="() => showTransactionDetailAsync()">
             @(showTransactionDetail ? "Sembunyikan Detail" : "Tampilkan Detail")
         </button>
     </div>
@@ -195,7 +200,10 @@
         {
             <div class="card" style="margin-top: 15px;">
                 <div class="card-body">
-                    <h5>Daftar Transaksi</h5>
+                    <h5>Daftar Penjualan Menunggu Assign Kurir</h5>
+                    <p class="text-muted small mb-3">
+                        <span class="oi oi-info"></span> Transaksi di bawah belum memiliki kurir yang ditugaskan. Silakan assign kurir untuk melanjutkan pengiriman.
+                    </p>
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead>
@@ -210,7 +218,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var trans in TransHeader.Take(10))
+                                @foreach (var trans in TransHeader)
                                 {
                                     var summary = GetTransactionSummary(trans.NoLpb);
                                     <tr>
@@ -339,7 +347,9 @@
         }
         else
         {
-            <div class="alert alert-info">Tidak ada transaksi yang perlu diproses.</div>
+            <div class="alert alert-success">
+                <span class="oi oi-check"></span> Semua penjualan sudah terisi kurir. Tidak ada yang menunggu pengiriman.
+            </div>
         }
     }
 </section>
@@ -907,7 +917,7 @@ else
 
         // Load detail untuk setiap transaksi dalam cache untuk summary
         TransDetailCache.Clear();
-        foreach (var trans in TransHeader.Take(10))
+        foreach (var trans in TransHeader)
         {
             try
             {

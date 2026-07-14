@@ -104,11 +104,12 @@ namespace eSoft.Penjualan.Services
 
         public async Task<List<OeTransH>> GetTransKurirAsync()
         {
-            DateTime date1 = new DateTime(2022, 4, 17, 0, 0, 0);
+            // Filter transaksi 2 bulan terakhir ke belakang (tanpa batasan masa depan) yang belum ada kurir
+            DateTime twoMonthsAgo = DateTime.Today.AddMonths(-2);
 
             var query = _context.OeTransHs
                 .AsNoTracking()
-                .Where(e => e.Kode == "94" && (e.Kurir == null || e.Kurir == "") && e.Tanggal > date1)
+                .Where(e => e.Kode == "94" && (e.Kurir == null || e.Kurir == "") && e.Tanggal >= twoMonthsAgo)
                 .OrderByDescending(e => e.Tanggal)
                 .Select(e => new OeTransH
                 {
