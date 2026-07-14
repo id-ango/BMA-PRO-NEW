@@ -229,7 +229,9 @@
                                         <td>
                                             @if (trans.Kode == "76")
                                             {
-                                                <span class="badge bg-info">Sales Order</span>
+                                                <span class="badge bg-warning text-dark" style="font-size: 1.1em; font-weight: bold;">
+                                                    <span class="oi oi-list-rich"></span> Sales Order
+                                                </span>
                                             }
                                             else
                                             {
@@ -266,9 +268,12 @@
                                             }
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenAssignKurirDialog(trans)">
-                                                <span class="oi oi-person"></span> Assign Kurir
-                                            </button>
+                                            @if (trans.Kode != "76")
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenAssignKurirDialog(trans)">
+                                                    <span class="oi oi-person"></span> Assign Kurir
+                                                </button>
+                                            }
                                             <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenDetail3(trans.NoLpb)">
                                                 <span class="oi oi-layers"></span> Detail
                                             </button>
