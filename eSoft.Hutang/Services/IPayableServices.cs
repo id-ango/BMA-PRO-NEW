@@ -45,7 +45,14 @@ namespace eSoft.Hutang.Services
         List<ApHutang> Detail1(string xKdHeader);
         List<ApAgingView> GetAgingSchedule();
         Task ProsesHutang();
-        List<ApHutang> GetAllApHutangBySupplier(string supplier, DateTime sampaiTanggal);
+                List<ApHutang> GetAllApHutangBySupplier(string supplier, DateTime sampaiTanggal);
+                Task<bool> UpdateApHutangWithPaymentAsync(string dokumen, decimal bayar, decimal discount);
+                Task<ApTransH> CreateApPaymentTransactionAsync(
+                    DateTime tanggal,
+                    string kdBank,
+                    string supplier,
+                    string keterangan,
+                    List<(string dokumen, decimal bayar, decimal discount)> allocations);
 
-    }
-}
+            }
+        }

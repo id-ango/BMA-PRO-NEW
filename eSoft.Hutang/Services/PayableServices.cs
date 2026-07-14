@@ -674,40 +674,6 @@ namespace eSoft.Hutang.Services
             return _context.ApTransHs.Include(p => p.ApTransDs).Where(x => x.Bukti == docno).FirstOrDefault();
         }
 
-        public string GetNumber()
-        {
-            string kodeno = "API";
-            string kodeurut = kodeno + '-';
-            string thnbln = DateTime.Now.ToString("yyMM");
-            string xbukti = kodeurut + thnbln.Substring(0, 2) + '2' + thnbln.Substring(2, 2) + '-';
-            var maxvalue = "";
-            var maxlist = _context.ApTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
-            if (maxlist != null)
-            {
-                maxvalue = maxlist.Max(x => x.Bukti);
-
-            }
-
-            //            var maxvalue = (from e in db.CbTransHs where  e.Docno.Substring(0, 7) == kodeno + thnbln select e).Max();
-            string nourut = "00000";
-            if (maxvalue == null)
-            {
-                nourut = "00000";
-            }
-            else
-            {
-                nourut = maxvalue.Substring(10, 5);
-            }
-
-            //  nourut =Convert.ToString(Int32.Parse(nourut) + 1);
-
-
-            string cAngNo = xbukti + (Int32.Parse(nourut) + 1).ToString("00000");
-            // var maxvalue = (from e in db.AptTranss where e.NoRef.Substring(0, 7) == "ANG" + cAngNo select e.NoRef.Max()).FirstOrDefault();
-            return cAngNo;
-
-        }
-
         public List<ApAgingView> GetAgingSchedule()
         {
             List<ApHutang> trans = new List<ApHutang>();
@@ -863,6 +829,179 @@ namespace eSoft.Hutang.Services
                 .OrderBy(x => x.Tanggal)
                 .ThenBy(x => x.Kode)
                 .ToList();
+        }
+
+        public async Task<bool> UpdateApHutangWithPaymentAsync(string dokumen, decimal bayar, decimal discount)
+        {
+            try
+            {
+                var hutang = await _context.ApHutangs.FirstOrDefaultAsync(h => h.Dokumen == dokumen);
+                if (hutang == null) return false;
+
+                hutang.Bayar += bayar;
+                hutang.Discount += discount;
+                hutang.Sisa = Math.Max(0, hutang.Jumlah - hutang.Bayar - hutang.Discount);
+
+                _context.ApHutangs.Update(hutang);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<ApTransH> CreateApPaymentTransactionAsync(
+            DateTime tanggal,
+            string kdBank,
+            string supplier,
+            string keterangan,
+            List<(string dokumen, decimal bayar, decimal discount)> allocations)
+        {
+            try
+            {
+                // Generate Bukti number for payment: BKY-yy3MM-XXXXX
+                string buktiNo = GetNumberPayment();
+
+                // Get supplier info
+                var supplierInfo = await _context.ApSuppls.FirstOrDefaultAsync(s => s.Supplier == supplier);
+
+                // Create ApTransH header with Kode = "API" for payment transactions
+                var transH = new ApTransH
+                {
+                    Bukti = buktiNo,
+                    Kode = "24",  // Payment code for AP (from BMA-PT)
+                    Tanggal = tanggal,
+                    KdBank = kdBank,
+                    Supplier = supplier,
+                    Keterangan = keterangan,
+                    ApSupplId = supplierInfo?.ApSupplId ?? 0,
+                    NamaSup = supplierInfo?.NamaSup ?? supplier,
+                    Currency = "IDR",
+                    Kurs = 1,
+                    ApTransDs = new List<ApTransD>()
+                };
+
+                decimal totalBayar = 0;
+                decimal totalDiscount = 0;
+
+                // Create ApTransD details for each allocation
+                foreach (var alloc in allocations)
+                {
+                    // Get the outstanding doc info
+                    var hutangItem = await _context.ApHutangs.FirstOrDefaultAsync(h => h.Dokumen == alloc.dokumen);
+                    if (hutangItem == null) continue;
+
+                    var transD = new ApTransD
+                    {
+                        Bukti = buktiNo,
+                        Tanggal = tanggal,
+                        DueDate = hutangItem.Tanggal,
+                        Kode = "24",
+                        KodeTran = "24",  // Payment transaction code (from BMA-PT)
+                        Lpb = alloc.dokumen,
+                        Jumlah = hutangItem.Sisa,
+                        Bayar = alloc.bayar,
+                        Discount = alloc.discount,
+                        Sisa = Math.Max(0, hutangItem.Sisa - alloc.bayar - alloc.discount),
+                        Keterangan = keterangan
+                    };
+                    transH.ApTransDs.Add(transD);
+
+                    totalBayar += alloc.bayar;
+                    totalDiscount += alloc.discount;
+
+                    // Update ApHutang balance
+                    hutangItem.Bayar += alloc.bayar;
+                    hutangItem.Discount += alloc.discount;
+                    hutangItem.Sisa = Math.Max(0, hutangItem.Jumlah - hutangItem.Bayar - hutangItem.Discount);
+                    _context.ApHutangs.Update(hutangItem);
+                }
+
+                // Set header totals
+                transH.Jumlah = totalBayar;
+                transH.Discount = totalDiscount;
+                transH.Hutang = totalBayar + totalDiscount;
+
+                // Save transaction header and details
+                _context.ApTransHs.Add(transH);
+                await _context.SaveChangesAsync();
+
+                return transH;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error creating AP payment transaction: {ex.Message}", ex);
+            }
+        }
+
+        private string GetNumber()
+        {
+            // Generate invoice bukti number: API-yy2MM-XXXXX (for AddTransH)
+            string kodeno = "API";
+            string kodeurut = kodeno + '-';
+            string thnbln = DateTime.Now.ToString("yyMM");
+            string xbukti = kodeurut + thnbln.Substring(0, 2) + '2' + thnbln.Substring(2, 2) + '-';
+            var maxvalue = "";
+            var maxlist = _context.ApTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
+            if (maxlist != null && maxlist.Count > 0)
+            {
+                maxvalue = maxlist.Max(x => x.Bukti);
+            }
+
+            string nourut = "00000";
+            if (string.IsNullOrEmpty(maxvalue))
+            {
+                nourut = "00000";
+            }
+            else
+            {
+                nourut = maxvalue.Substring(10, 5);
+            }
+
+            string cAngNo = xbukti + (Int32.Parse(nourut) + 1).ToString("00000");
+            return cAngNo;
+        }
+
+        private string GetNumberPayment()
+        {
+            // Generate payment bukti number: BKY-yy3MM-XXXXX (for bank payments)
+            string kodeno = "BKY";
+            string kodeurut = kodeno + '-';
+            string thnbln = DateTime.Now.ToString("yyMM");
+            string xbukti = kodeurut + thnbln.Substring(0, 2) + '3' + thnbln.Substring(2, 2) + '-';
+            var maxvalue = "";
+            var maxlist = _context.ApTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
+            if (maxlist != null && maxlist.Count > 0)
+            {
+                maxvalue = maxlist.Max(x => x.Bukti);
+            }
+
+            string nourut = "00000";
+            if (string.IsNullOrEmpty(maxvalue))
+            {
+                nourut = "00000";
+            }
+            else
+            {
+                nourut = maxvalue.Substring(10, 5);
+            }
+
+            string cAngNo = xbukti + (Int32.Parse(nourut) + 1).ToString("00000");
+            return cAngNo;
+        }
+
+        private int GetSupplierIdByCode(string supplierCode)
+        {
+            var supplier = _context.ApSuppls.FirstOrDefault(s => s.Supplier == supplierCode);
+            return supplier?.ApSupplId ?? 0;
+        }
+
+        private string GetSupplierNameByCode(string supplierCode)
+        {
+            var supplier = _context.ApSuppls.FirstOrDefault(s => s.Supplier == supplierCode);
+            return supplier?.NamaSup ?? supplierCode;
         }
 
     }

@@ -704,40 +704,6 @@ namespace eSoft.Piutang.Services
         }
         #endregion
 
-        public string GetNumber()
-        {
-            string kodeno = "ARI";
-            string kodeurut = kodeno + '-';
-            string thnbln = DateTime.Now.ToString("yyMM");
-            string xbukti = kodeurut + thnbln.Substring(0, 2) + '2' + thnbln.Substring(2, 2) + '-';
-            var maxvalue = "";
-            var maxlist = _context.ArTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
-            if (maxlist != null)
-            {
-                maxvalue = maxlist.Max(x => x.Bukti);
-
-            }
-
-            //            var maxvalue = (from e in db.CbTransHs where  e.Docno.Substring(0, 7) == kodeno + thnbln select e).Max();
-            string nourut = "00000";
-            if (maxvalue == null)
-            {
-                nourut = "00000";
-            }
-            else
-            {
-                nourut = maxvalue.Substring(10, 5);
-            }
-
-            //  nourut =Convert.ToString(Int32.Parse(nourut) + 1);
-
-
-            string cAngNo = xbukti + (Int32.Parse(nourut) + 1).ToString("00000");
-            // var maxvalue = (from e in db.AptTranss where e.NoRef.Substring(0, 7) == "ANG" + cAngNo select e.NoRef.Max()).FirstOrDefault();
-            return cAngNo;
-
-        }
-
         public List<ArAgingView> GetAgingSchedule()
         {
             List<ArPiutng> trans = new List<ArPiutng>();
@@ -748,6 +714,7 @@ namespace eSoft.Piutang.Services
             DateTime duedate = DateTime.Today.Date;
 
             DateTime currentDate = DateTime.Today.Date;
+
             DateTime date1 = currentDate.AddMonths(1);
             DateTime date2 = currentDate.AddMonths(2);
             DateTime date3 = currentDate.AddMonths(3);
@@ -1436,6 +1403,177 @@ namespace eSoft.Piutang.Services
                 .ToList();
 
             return grouped;
+        }
+
+        public async Task<bool> UpdateArPiutangWithPaymentAsync(string dokumen, decimal bayar, decimal discount)
+        {
+            try
+            {
+                var piutang = await _context.ArPiutngs.FirstOrDefaultAsync(p => p.Dokumen == dokumen);
+                if (piutang == null) return false;
+
+                piutang.Bayar += bayar;
+                piutang.Discount += discount;
+                piutang.Sisa = Math.Max(0, piutang.Jumlah - piutang.Bayar - piutang.Discount);
+
+                _context.ArPiutngs.Update(piutang);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<ArTransH> CreateArPaymentTransactionAsync(
+            DateTime tanggal,
+            string kdBank,
+            string customer,
+            string keterangan,
+            List<(string dokumen, decimal bayar, decimal discount)> allocations)
+        {
+            try
+            {
+                // Generate Bukti number for payment: BMY-yy3MM-XXXXX
+                string buktiNo = GetNumberPayment();
+
+                // Get customer info
+                var customerInfo = await _context.ArCusts.FirstOrDefaultAsync(c => c.Customer == customer);
+
+                // Create ArTransH header with Kode = "14" for payment transactions (from BMA-PT)
+                var transH = new ArTransH
+                {
+                    Bukti = buktiNo,
+                    Kode = "14",  // Payment code for AR (from BMA-PT)
+                    Tanggal = tanggal,
+                    KdBank = kdBank,
+                    Customer = customer,
+                    Keterangan = keterangan,
+                    ArCustId = customerInfo?.ArCustId ?? 0,
+                    NamaCust = customerInfo?.NamaCust ?? customer,
+                    ArTransDs = new List<ArTransD>()
+                };
+
+                decimal totalBayar = 0;
+                decimal totalDiscount = 0;
+
+                // Create ArTransD details for each allocation
+                foreach (var alloc in allocations)
+                {
+                    // Get the outstanding doc info
+                    var piutangItem = await _context.ArPiutngs.FirstOrDefaultAsync(p => p.Dokumen == alloc.dokumen);
+                    if (piutangItem == null) continue;
+
+                    var transD = new ArTransD
+                    {
+                        Bukti = buktiNo,
+                        Tanggal = tanggal,
+                        DueDate = piutangItem.Tanggal,
+                        Kode = "14",
+                        KodeTran = "14",  // Payment transaction code (from BMA-PT)
+                        Lpb = alloc.dokumen,
+                        Jumlah = piutangItem.Sisa,
+                        Bayar = alloc.bayar,
+                        Discount = alloc.discount,
+                        Sisa = Math.Max(0, piutangItem.Sisa - alloc.bayar - alloc.discount),
+                        Keterangan = keterangan
+                    };
+                    transH.ArTransDs.Add(transD);
+
+                    totalBayar += alloc.bayar;
+                    totalDiscount += alloc.discount;
+
+                    // Update ArPiutang balance
+                    piutangItem.Bayar += alloc.bayar;
+                    piutangItem.Discount += alloc.discount;
+                    piutangItem.Sisa = Math.Max(0, piutangItem.Jumlah - piutangItem.Bayar - piutangItem.Discount);
+                    _context.ArPiutngs.Update(piutangItem);
+                }
+
+                // Set header totals
+                transH.Jumlah = totalBayar;
+                transH.Discount = totalDiscount;
+                transH.Piutang = totalBayar + totalDiscount;
+
+                // Save transaction header and details
+                _context.ArTransHs.Add(transH);
+                await _context.SaveChangesAsync();
+
+                return transH;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error creating AR payment transaction: {ex.Message}", ex);
+            }
+        }
+
+        private string GetNumber()
+        {
+            // Generate invoice bukti number: ARI-yy2MM-XXXXX (for AddTransH)
+            string kodeno = "ARI";
+            string kodeurut = kodeno + '-';
+            string thnbln = DateTime.Now.ToString("yyMM");
+            string xbukti = kodeurut + thnbln.Substring(0, 2) + '2' + thnbln.Substring(2, 2) + '-';
+            var maxvalue = "";
+            var maxlist = _context.ArTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
+            if (maxlist != null && maxlist.Count > 0)
+            {
+                maxvalue = maxlist.Max(x => x.Bukti);
+            }
+
+            string nourut = "00000";
+            if (string.IsNullOrEmpty(maxvalue))
+            {
+                nourut = "00000";
+            }
+            else
+            {
+                nourut = maxvalue.Substring(10, 5);
+            }
+
+            string cAngNo = xbukti + (Int32.Parse(nourut) + 1).ToString("00000");
+            return cAngNo;
+        }
+
+        private string GetNumberPayment()
+        {
+            // Generate payment bukti number: BMY-yy3MM-XXXXX (for bank payments)
+            string kodeno = "BMY";
+            string kodeurut = kodeno + '-';
+            string thnbln = DateTime.Now.ToString("yyMM");
+            string xbukti = kodeurut + thnbln.Substring(0, 2) + '3' + thnbln.Substring(2, 2) + '-';
+            var maxvalue = "";
+            var maxlist = _context.ArTransHs.Where(x => x.Bukti.Substring(0, 10).Equals(xbukti)).ToList();
+            if (maxlist != null && maxlist.Count > 0)
+            {
+                maxvalue = maxlist.Max(x => x.Bukti);
+            }
+
+            string nourut = "00000";
+            if (string.IsNullOrEmpty(maxvalue))
+            {
+                nourut = "00000";
+            }
+            else
+            {
+                nourut = maxvalue.Substring(10, 5);
+            }
+
+            string cAngNo = xbukti + (Int32.Parse(nourut) + 1).ToString("00000");
+            return cAngNo;
+        }
+
+        private int GetCustomerIdByCode(string customerCode)
+        {
+            var customer = _context.ArCusts.FirstOrDefault(c => c.Customer == customerCode);
+            return customer?.ArCustId ?? 0;
+        }
+
+        private string GetCustomerNameByCode(string customerCode)
+        {
+            var customer = _context.ArCusts.FirstOrDefault(c => c.Customer == customerCode);
+            return customer?.NamaCust ?? customerCode;
         }
     }
 }

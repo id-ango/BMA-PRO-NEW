@@ -280,12 +280,8 @@
                                 <span style="@amtStyle">@ctx.Amount.ToString("N2")</span>
                             </td>
                             <td style="padding-top:10px; text-align:right; white-space:nowrap; font-size:0.9rem;">@ctx.Balance.ToString("N2")</td>
-                            <td style="position: relative;">
+                            <td>
                                 <input type="date" @bind="ctx.Tanggal" class="form-control form-control-sm" />
-                                @if (ctx.Date.Equals("PEND", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    <span class="badge badge-warning" style="position: absolute; top: 2px; right: 2px; font-size: 0.7rem;">PEND</span>
-                                }
                             </td>
                             <td>
                                 <InputSelect class="form-control form-control-sm" @bind-Value="ctx.SrcCode">
@@ -447,8 +443,7 @@
         string.IsNullOrWhiteSpace(searchText)
             ? transactions
             : transactions.Where(t => (t.Description ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
-                                   || (t.Type ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
-                                   || (t.NoPrj ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase));
+                                   || (t.Type ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
     private async Task PartySelectionChanged(BankTransactionView ctx, ChangeEventArgs e)
     {
@@ -584,14 +579,6 @@
                 allText = await reader.ReadToEndAsync();
             }
 
-            // Auto-detect statement period date from PT CSV header, e.g. "Periode : 25/06/2026 - 25/06/2026"
-            // Only use detected date if formModel.Date is still at default (DateTime.MinValue or not set)
-            var detectedDate = DetectStatementDate(allText);
-            if (detectedDate.HasValue && formModel.Date == DateTime.MinValue)
-            {
-                formModel.Date = detectedDate.Value;
-            }
-
             var lines = allText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
             // Try detect header line for 'Tanggal Transaksi' (Indonesian export)
@@ -634,7 +621,6 @@
             }
 
             parseErrors.Clear();
-            var delimiter = DetectCsvDelimiter(dataLines);
             int row = startIndex >= 0 ? startIndex + 1 : 5;
             foreach (var line in dataLines)
             {
@@ -656,7 +642,7 @@
                         continue;
                     }
 
-                    var values = SplitCsvLine(line, delimiter);
+                    var values = SplitCsvLine(line);
                     if (values.Count < 5)
                     {
                         // not enough columns
@@ -700,8 +686,6 @@
                     Console.Error.WriteLine($"Error checking duplicates: {ex.Message}");
                 }
             }
-
-            selectAll = transactions.All(x => x.IsSelected);
         }
         catch (Exception ex)
         {
@@ -754,42 +738,18 @@
             var amount = ParseDecimalFromString(rawAmount);
             var balance = ParseDecimalFromString(rawBalance);
 
-            // Parse date from CSV with these priorities:
-            // 1. If rawDate == "PEND", use formModel.Date but mark as pending
-            // 2. If rawDate is a valid date, parse it
-            // 3. If rawDate is empty/missing, use formModel.Date as fallback
-            DateTime tanggal = DateTime.MinValue;
-
-            if (string.IsNullOrEmpty(rawDate))
+            DateTime tanggal = formModel.Date;
+            if (!string.IsNullOrEmpty(rawDate) && !rawDate.Equals("PEND", StringComparison.OrdinalIgnoreCase))
             {
-                // No date in CSV, use formModel.Date
-                tanggal = formModel.Date;
-            }
-            else if (rawDate.Equals("PEND", StringComparison.OrdinalIgnoreCase))
-            {
-                // PEND transaction - use formModel.Date as the transaction date
-                // but keep rawDate as "PEND" to indicate it was originally pending
-                tanggal = formModel.Date;
-            }
-            else
-            {
-                // Try to parse the date
                 if (!DateTime.TryParseExact(rawDate, new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out tanggal))
                 {
                     DateTime.TryParse(rawDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out tanggal);
-                }
-
-                // If parsing still failed, use formModel.Date
-                if (tanggal == DateTime.MinValue)
-                {
-                    tanggal = formModel.Date;
                 }
             }
 
             return new BankTransactionView
             {
                 Date = rawDate,
-              //   Date = tanggal.ToString("dd/MM/yyyy"),
                 Description = rawDesc,
                 Branch = rawBranch,
                 Amount = amount,
@@ -806,95 +766,7 @@
         }
     }
 
-    private static DateTime? DetectStatementDate(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return null;
-        }
-
-        var match = System.Text.RegularExpressions.Regex.Match(text, @"Periode\s*:\s*(?<date>\d{1,2}/\d{1,2}/\d{4})\s*-", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (!match.Success)
-        {
-            return null;
-        }
-
-        if (DateTime.TryParseExact(match.Groups["date"].Value, new[] { "dd/MM/yyyy", "d/M/yyyy" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result))
-        {
-            return result.Date;
-        }
-
-        return null;
-    }
-
-    private static char DetectCsvDelimiter(IEnumerable<string> lines)
-    {
-        if (lines == null)
-        {
-            return ',';
-        }
-
-        var sampleLines = lines.Where(x => !string.IsNullOrWhiteSpace(x)).Take(10).ToList();
-
-        // Excel exports often use tabs, and numeric values may contain commas,
-        // so prefer tab when it is present in the sample.
-        if (sampleLines.Any(x => x.Contains('\t')))
-        {
-            return '\t';
-        }
-
-        var candidates = new[] { ',', ';', '\t', '|' };
-        var bestDelimiter = ',';
-        var bestScore = -1;
-
-        foreach (var candidate in candidates)
-        {
-            var score = 0;
-            foreach (var line in sampleLines)
-            {
-                var columnCount = SplitCsvLine(line, candidate).Count;
-                if (columnCount > 1)
-                {
-                    score += columnCount;
-                }
-            }
-
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestDelimiter = candidate;
-            }
-        }
-
-        return bestDelimiter;
-    }
-
-    private static int CountDelimiterOccurrences(string line, char delimiter)
-    {
-        if (string.IsNullOrEmpty(line))
-        {
-            return 0;
-        }
-
-        var count = 0;
-        var inQuotes = false;
-
-        foreach (var c in line)
-        {
-            if (c == '"')
-            {
-                inQuotes = !inQuotes;
-            }
-            else if (!inQuotes && c == delimiter)
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static List<string> SplitCsvLine(string line, char delimiter)
+    private static List<string> SplitCsvLine(string line)
     {
         var result = new List<string>();
         if (line == null) return result;
@@ -917,7 +789,7 @@
                     inQuotes = !inQuotes;
                 }
             }
-            else if (c == delimiter && !inQuotes)
+            else if (c == ',' && !inQuotes)
             {
                 result.Add(current.ToString());
                 current.Clear();

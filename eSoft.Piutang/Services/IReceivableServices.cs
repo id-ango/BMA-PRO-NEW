@@ -22,6 +22,7 @@ namespace eSoft.Piutang.Services
         bool AddAkunSet(ArAcctView codeview);
         Task<bool> EditAkunSet(ArAcctView codeview);
         Task<bool> DelAkunSet(int codeview);
+
         bool CekDistCode(string distcode);
         List<ArDist> GetDist();
         ArDist GetDistId(int id);
@@ -50,11 +51,18 @@ namespace eSoft.Piutang.Services
 
         Task ProsesPiutang();
         List<ArAgingDetailView> GetAgingDetailView();
-        
+
         // HANYA INI yang dibutuhkan untuk forecast (tanpa tabel baru)
         List<ArForecastPiutangView> GetForecastPiutang(DateTime tanggalMulai, int jumlahBulan = 12);
         List<ArTransD> GetPembayaranByDokumen(string dokumen);
         List<ArCustomerAnalysisView> GetCustomerAnalysis();
-        List<ArMonthlyCollectionView> GetMonthlyCollection(int bulanKebelakang = 12);
-    }
-}
+                List<ArMonthlyCollectionView> GetMonthlyCollection(int bulanKebelakang = 12);
+                Task<bool> UpdateArPiutangWithPaymentAsync(string dokumen, decimal bayar, decimal discount);
+                Task<ArTransH> CreateArPaymentTransactionAsync(
+                    DateTime tanggal,
+                    string kdBank,
+                    string customer,
+                    string keterangan,
+                    List<(string dokumen, decimal bayar, decimal discount)> allocations);
+            }
+        }

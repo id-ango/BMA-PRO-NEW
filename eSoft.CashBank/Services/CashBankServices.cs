@@ -1,23 +1,26 @@
-﻿using System;
+﻿using eSoft.CashBank.Data;
+using eSoft.CashBank.Model;
+using eSoft.CashBank.View;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using eSoft.CashBank.Data;
-using eSoft.CashBank.Model;
-using eSoft.CashBank.View;
-using Microsoft.EntityFrameworkCore;
 
 namespace eSoft.CashBank.Services
 {
     public class CashBankServices : ICashBankServices
     {
         private readonly DbContextBank _context;
+        private readonly IServiceProvider _serviceProvider;
 
-        public CashBankServices(DbContextBank context)
+        public CashBankServices(DbContextBank context, IServiceProvider serviceProvider)
         {
             _context = context;
+            _serviceProvider = serviceProvider;
         }
 
         #region Bank Class
@@ -1176,89 +1179,403 @@ namespace eSoft.CashBank.Services
 
         public async Task SaveTransactionsAsync(List<BankTransactionView> transactions, DateTime formDate, string kodeBank, string tambah, string kurang)
         {
-            // Filter transactions that are selected in the page
-            var filteredTransactions = transactions?.Where(t => t.IsSelected).ToList() ?? new List<BankTransactionView>();
+            // Filter transactions that are selected (IsSelected == true)
+            var filteredTransactions = transactions?.Where(t => t != null && t.IsSelected).ToList() ?? new List<BankTransactionView>();
 
-            if (!filteredTransactions.Any())
+            // Group transactions by date (date part only) so different times do not split groups
+            var groupedTransactions = filteredTransactions.GroupBy(t => t.Tanggal.Date).ToList();
+
+            try
             {
-                return;
-            }
-
-            // Group transactions by date
-            var groupedTransactions = filteredTransactions.GroupBy(t => t.Tanggal).ToList();
-
-            foreach (var group in groupedTransactions)
-            {
-                var tgl = group.Key;
-                var dokumen = GenerateDocumentNumber(kodeBank, tgl);
-
-                // Find existing header for the same document number
-                var existingCbTransH = await _context.CbTransHs
-                    .Include(h => h.CbTransDs)
-                    .SingleOrDefaultAsync(h => h.DocNo == dokumen);
-
-                // If existing header found, remove it and its details
-                if (existingCbTransH != null)
+                foreach (var group in groupedTransactions)
                 {
-                    // Update bank balance before removal
-                    var bank = await _context.CbBanks.SingleOrDefaultAsync(b => b.KodeBank == existingCbTransH.KodeBank);
-                    if (bank != null)
+                    var tgl = group.Key; // DateTime representing date part
+                    var dokumen = await GenerateDocumentNumberSequenceAsync(kodeBank, tgl);
+
+                    // Determine AP/AR transactions using per-row Target when present, otherwise fall back to SrcCode
+                    var apArTransactions = group.Where(t =>
+                                                            ((t.Target != null) && (t.Target.Equals("AP", StringComparison.OrdinalIgnoreCase) || t.Target.Equals("AR", StringComparison.OrdinalIgnoreCase)))
+                                                            || (string.IsNullOrEmpty(t.Target) && !string.IsNullOrEmpty(t.SrcCode) && (t.SrcCode.Equals("AP", StringComparison.OrdinalIgnoreCase) || t.SrcCode.Equals("AR", StringComparison.OrdinalIgnoreCase)))
+                                                        ).ToList();
+
+                    // Transactions that should be created directly in CashBank
+                    var cashBankTransactions = group.Except(apArTransactions).ToList();
+
+                    // First, handle AP/AR transactions by calling respective payment services.
+                    // Call payment services before starting any local DB transaction to avoid transaction conflicts across DbContexts.
+                    foreach (var trx in apArTransactions)
                     {
-                        bank.Saldo -= existingCbTransH.Saldo;
+                        try
+                        {
+                            // AP/AR payments from CSV must follow the payment date in each CSV row.
+                            var paymentDate = ResolveCsvPaymentDate(trx, formDate);
+
+                            // Route by Target first, fall back to SrcCode for legacy rows
+                            var effectiveTarget = !string.IsNullOrEmpty(trx.Target)
+                                ? trx.Target
+                                : (trx.SrcCode ?? string.Empty);
+
+                            if (string.Equals(effectiveTarget, "AP", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var apServiceType = AppDomain.CurrentDomain.GetAssemblies()
+                                    .SelectMany(a => a.GetTypesSafe())
+                                    .FirstOrDefault(t => t.FullName == "eSoft.Hutang.Services.IPaymentApServices" || t.FullName == "eSoft.Hutang.Services.PaymentApServices");
+
+                                var apViewType = AppDomain.CurrentDomain.GetAssemblies()
+                                    .SelectMany(a => a.GetTypesSafe())
+                                    .FirstOrDefault(t => t.FullName == "eSoft.Hutang.View.ApTransHView");
+
+                                var apDType = AppDomain.CurrentDomain.GetAssemblies()
+                                    .SelectMany(a => a.GetTypesSafe())
+                                    .FirstOrDefault(t => t.FullName == "eSoft.Hutang.View.ApTransDView");
+
+                                if (apServiceType == null || apViewType == null || apDType == null)
+                                    throw new InvalidOperationException("AP payment service or view types not found in loaded assemblies.");
+
+                                var apService = _serviceProvider.GetService(apServiceType) ?? _serviceProvider.GetService(apServiceType.GetInterfaces().FirstOrDefault());
+                                if (apService == null)
+                                    throw new InvalidOperationException("AP payment service not registered in DI container.");
+
+                                var apInstance = Activator.CreateInstance(apViewType);
+                                var apPaymentDate = paymentDate;
+                                apViewType.GetProperty("Tanggal")?.SetValue(apInstance, apPaymentDate);
+                                var apHeaderDate = (DateTime)(apViewType.GetProperty("Tanggal")?.GetValue(apInstance) ?? apPaymentDate);
+                                apViewType.GetProperty("KdBank")?.SetValue(apInstance, kodeBank);
+                                var supplierCode = !string.IsNullOrWhiteSpace(trx.PartyCode) ? trx.PartyCode : (string.IsNullOrWhiteSpace(trx.NoPrj) ? trx.Description : trx.NoPrj);
+                                apViewType.GetProperty("Supplier")?.SetValue(apInstance, supplierCode);
+                                apViewType.GetProperty("Keterangan")?.SetValue(apInstance, trx.Description);
+
+                                var listType = typeof(List<>).MakeGenericType(apDType);
+                                var listInstance = Activator.CreateInstance(listType);
+                                var apTransDsProp = apViewType.GetProperty("ApTransDs");
+                                if (apTransDsProp != null)
+                                {
+                                    if (apTransDsProp.CanWrite)
+                                    {
+                                        apTransDsProp.SetValue(apInstance, listInstance);
+                                    }
+                                    else
+                                    {
+                                        // read-only collection: get existing and copy items into it
+                                        var existing = apTransDsProp.GetValue(apInstance);
+                                        if (existing != null)
+                                        {
+                                            var addItemMethod = existing.GetType().GetMethod("Add");
+                                            if (addItemMethod != null)
+                                            {
+                                                var enumItems = listInstance as System.Collections.IEnumerable;
+                                                if (enumItems != null)
+                                                {
+                                                    foreach (var it in enumItems)
+                                                    {
+                                                        addItemMethod.Invoke(existing, new[] { it });
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                var selDocsAp = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
+                                if (selDocsAp != null && selDocsAp.Any())
+                                {
+                                    foreach (var sdoc in selDocsAp)
+                                    {
+                                        var apd = Activator.CreateInstance(apDType);
+                                        // payment header date
+                                        apDType.GetProperty("Tanggal")?.SetValue(apd, apHeaderDate);
+                                        // store original invoice date into DueDate (per UX expectation)
+                                        apDType.GetProperty("DueDate")?.SetValue(apd, sdoc.Tanggal);
+                                        apDType.GetProperty("Jumlah")?.SetValue(apd, sdoc.Sisa);
+                                        apDType.GetProperty("Bayar")?.SetValue(apd, sdoc.Bayar);
+                                        apDType.GetProperty("Discount")?.SetValue(apd, sdoc.Discount);
+                                        var prop = apDType.GetProperty("Lpb") ?? apDType.GetProperty("Dokumen");
+                                        prop?.SetValue(apd, sdoc.Dokumen);
+                                        apDType.GetProperty("Keterangan")?.SetValue(apd, trx.Description);
+                                        // set transaction code for AP details from source document if available
+                                        apDType.GetProperty("KodeTran")?.SetValue(apd, string.IsNullOrEmpty(sdoc.KodeTran) ? "24" : sdoc.KodeTran);
+                                        listType.GetMethod("Add")?.Invoke(listInstance, new[] { apd });
+                                    }
+                                }
+                                else
+                                {
+                                    var apd = Activator.CreateInstance(apDType);
+                                    apDType.GetProperty("Tanggal")?.SetValue(apd, apHeaderDate);
+                                    apDType.GetProperty("Jumlah")?.SetValue(apd, trx.Amount);
+                                    apDType.GetProperty("Bayar")?.SetValue(apd, trx.Amount);
+                                    apDType.GetProperty("Keterangan")?.SetValue(apd, trx.Description);
+                                    apDType.GetProperty("KodeTran")?.SetValue(apd, "24");
+                                    listType.GetMethod("Add")?.Invoke(listInstance, new object[] { apd });
+                                }
+
+                                decimal totalBayarAp = 0m;
+                                decimal totalDiscountAp = 0m;
+                                var selDocsForAp = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
+                                if (selDocsForAp != null && selDocsForAp.Any())
+                                {
+                                    totalBayarAp = selDocsForAp.Sum(s => s.Bayar);
+                                    totalDiscountAp = selDocsForAp.Sum(s => s.Discount);
+                                }
+                                else
+                                {
+                                    totalBayarAp = trx.Amount;
+                                    totalDiscountAp = 0m;
+                                }
+
+                                var propJumBayar = apViewType.GetProperty("JumBayar");
+                                if (propJumBayar != null && propJumBayar.CanWrite)
+                                    propJumBayar.SetValue(apInstance, totalBayarAp);
+
+                                var propJumDiskon = apViewType.GetProperty("JumDiskon");
+                                if (propJumDiskon != null && propJumDiskon.CanWrite)
+                                    propJumDiskon.SetValue(apInstance, totalDiscountAp);
+
+                                var propJumHutang = apViewType.GetProperty("JumHutang");
+                                if (propJumHutang != null && propJumHutang.CanWrite)
+                                    propJumHutang.SetValue(apInstance, totalBayarAp + totalDiscountAp);
+
+                                var addMethod = apService.GetType().GetMethod("AddTransH");
+                                if (addMethod == null) throw new InvalidOperationException("AddTransH method not found on AP service.");
+
+                                addMethod.Invoke(apService, new object[] { apInstance });
+                            }
+                            else if (string.Equals(effectiveTarget, "AR", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var arServiceType = AppDomain.CurrentDomain.GetAssemblies()
+                                    .SelectMany(a => a.GetTypesSafe())
+                                    .FirstOrDefault(t => t.FullName == "eSoft.Piutang.Services.IPaymentArServices" || t.FullName == "eSoft.Piutang.Services.PaymentArServices");
+
+                                var arViewType = AppDomain.CurrentDomain.GetAssemblies()
+                                    .SelectMany(a => a.GetTypesSafe())
+                                    .FirstOrDefault(t => t.FullName == "eSoft.Piutang.View.ArTransHView");
+
+                                var arDType = AppDomain.CurrentDomain.GetAssemblies()
+                                    .SelectMany(a => a.GetTypesSafe())
+                                    .FirstOrDefault(t => t.FullName == "eSoft.Piutang.View.ArTransDView");
+
+                                if (arServiceType == null || arViewType == null || arDType == null)
+                                    throw new InvalidOperationException("AR payment service or view types not found in loaded assemblies.");
+
+                                var arService = _serviceProvider.GetService(arServiceType) ?? _serviceProvider.GetService(arServiceType.GetInterfaces().FirstOrDefault());
+                                if (arService == null)
+                                    throw new InvalidOperationException("AR payment service not registered in DI container.");
+
+                                var arInstance = Activator.CreateInstance(arViewType);
+                                arViewType.GetProperty("Tanggal")?.SetValue(arInstance, paymentDate);
+                                var arHeaderDate = (DateTime)(arViewType.GetProperty("Tanggal")?.GetValue(arInstance) ?? paymentDate);
+                                arViewType.GetProperty("KdBank")?.SetValue(arInstance, kodeBank);
+                                var customerCode = !string.IsNullOrWhiteSpace(trx.PartyCode) ? trx.PartyCode : (string.IsNullOrWhiteSpace(trx.NoPrj) ? trx.Description : trx.NoPrj);
+                                arViewType.GetProperty("Customer")?.SetValue(arInstance, customerCode);
+                                arViewType.GetProperty("Keterangan")?.SetValue(arInstance, trx.Description);
+
+                                var listType = typeof(List<>).MakeGenericType(arDType);
+                                var listInstance = Activator.CreateInstance(listType);
+                                var arTransDsProp = arViewType.GetProperty("ArTransDs");
+                                if (arTransDsProp != null)
+                                {
+                                    if (arTransDsProp.CanWrite)
+                                    {
+                                        arTransDsProp.SetValue(arInstance, listInstance);
+                                    }
+                                    else
+                                    {
+                                        var existing = arTransDsProp.GetValue(arInstance);
+                                        if (existing != null)
+                                        {
+                                            var addItemMethod = existing.GetType().GetMethod("Add");
+                                            if (addItemMethod != null)
+                                            {
+                                                var enumItems = listInstance as System.Collections.IEnumerable;
+                                                if (enumItems != null)
+                                                {
+                                                    foreach (var it in enumItems)
+                                                    {
+                                                        addItemMethod.Invoke(existing, new[] { it });
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                var selDocsAr = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
+                                if (selDocsAr != null && selDocsAr.Any())
+                                {
+                                    foreach (var sdoc in selDocsAr)
+                                    {
+                                        var ard = Activator.CreateInstance(arDType);
+                                        // payment header date
+                                        arDType.GetProperty("Tanggal")?.SetValue(ard, arHeaderDate);
+                                        // store original invoice date into DueDate (per UX expectation)
+                                        arDType.GetProperty("DueDate")?.SetValue(ard, sdoc.Tanggal);
+                                        arDType.GetProperty("Jumlah")?.SetValue(ard, sdoc.Sisa);
+                                        arDType.GetProperty("Bayar")?.SetValue(ard, sdoc.Bayar);
+                                        arDType.GetProperty("Discount")?.SetValue(ard, sdoc.Discount);
+                                        var prop = arDType.GetProperty("Lpb") ?? arDType.GetProperty("Dokumen");
+                                        prop?.SetValue(ard, sdoc.Dokumen);
+                                        arDType.GetProperty("Keterangan")?.SetValue(ard, trx.Description);
+                                        // set transaction code for AR details from source document if available
+                                        arDType.GetProperty("KodeTran")?.SetValue(ard, string.IsNullOrEmpty(sdoc.KodeTran) ? "14" : sdoc.KodeTran);
+                                        listType.GetMethod("Add")?.Invoke(listInstance, new[] { ard });
+                                    }
+                                }
+                                else
+                                {
+                                    var ard = Activator.CreateInstance(arDType);
+                                    arDType.GetProperty("Tanggal")?.SetValue(ard, arHeaderDate);
+                                    arDType.GetProperty("Jumlah")?.SetValue(ard, trx.Amount);
+                                    arDType.GetProperty("Bayar")?.SetValue(ard, trx.Amount);
+                                    arDType.GetProperty("Keterangan")?.SetValue(ard, trx.Description);
+                                    arDType.GetProperty("KodeTran")?.SetValue(ard, "14");
+                                    listType.GetMethod("Add")?.Invoke(listInstance, new[] { ard });
+                                }
+
+                                decimal totalBayarAr = 0m;
+                                decimal totalDiscountAr = 0m;
+                                var selDocsForAr = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
+                                if (selDocsForAr != null && selDocsForAr.Any())
+                                {
+                                    totalBayarAr = selDocsForAr.Sum(s => s.Bayar);
+                                    totalDiscountAr = selDocsForAr.Sum(s => s.Discount);
+                                }
+                                else
+                                {
+                                    totalBayarAr = trx.Amount;
+                                    totalDiscountAr = 0m;
+                                }
+
+                                var propArJumBayar = arViewType.GetProperty("JumBayar");
+                                if (propArJumBayar != null && propArJumBayar.CanWrite)
+                                    propArJumBayar.SetValue(arInstance, totalBayarAr);
+
+                                var propArJumDiskon = arViewType.GetProperty("JumDiskon");
+                                if (propArJumDiskon != null && propArJumDiskon.CanWrite)
+                                    propArJumDiskon.SetValue(arInstance, totalDiscountAr);
+
+                                var propArJumPiutang = arViewType.GetProperty("JumPiutang");
+                                if (propArJumPiutang != null && propArJumPiutang.CanWrite)
+                                    propArJumPiutang.SetValue(arInstance, totalBayarAr + totalDiscountAr);
+
+                                var addMethod = arService.GetType().GetMethod("AddTransH");
+                                if (addMethod == null) throw new InvalidOperationException("AddTransH method not found on AR service.");
+
+                                addMethod.Invoke(arService, new[] { arInstance });
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // Payment service failed - rethrow so caller can handle/report. Do not attempt to rollback here because services manage their own transactions.
+                            throw;
+                        }
                     }
 
-                    _context.CbTransHs.Remove(existingCbTransH);
-                    _context.CbTransDs.RemoveRange(existingCbTransH.CbTransDs);
-                }
-
-                // Calculate saldo for the new header
-                decimal totalSaldo = group.Sum(trx => trx.Type == "CR" ? trx.Amount : -trx.Amount);
-
-                var newCbTransH = new CbTransH
-                {
-                    KodeBank = kodeBank,
-                    DocNo = dokumen,
-                    Tanggal = tgl,
-                    Keterangan = "Transaksi " + tgl.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
-                    Saldo = totalSaldo,
-                    CbTransDs = new List<CbTransD>() // Initialize CbTransDs list
-                };
-
-                foreach (var transaction in group)
-                {
-                    var newCbTransD = new CbTransD
+                    // If there are no cash-bank transactions for this date, skip creating a CbTransH here
+                    if (!cashBankTransactions.Any())
                     {
-                        NoPrj = transaction.NoPrj,
-                        SrcCode = (string.IsNullOrEmpty(transaction.SrcCode) ? (transaction.Type == "CR" ? tambah : kurang) : transaction.SrcCode),
-                        Keterangan = transaction.Description,
-                        Jumlah = transaction.Type == "CR" ? transaction.Amount : -transaction.Amount,
-                        Terima = transaction.Type == "CR" ? transaction.Amount : 0,
-                        Bayar = transaction.Type == "CR" ? 0 : transaction.Amount,
-                        CbTransH = newCbTransH // Associate the detail with the header
-                    };
+                        continue;
+                    }
 
-                    newCbTransH.CbTransDs.Add(newCbTransD);
-
-                    var bankUpdate = await _context.CbBanks.SingleOrDefaultAsync(b => b.KodeBank == kodeBank);
-                    if (bankUpdate != null)
+                    // Retrieve bank info for kurs and update operations
+                    var bankInfo = await _context.CbBanks.SingleOrDefaultAsync(b => b.KodeBank == kodeBank);
+                    decimal bankKurs = 0m;
+                    if (bankInfo != null && !string.IsNullOrWhiteSpace(bankInfo.Kurs))
                     {
-                        if (transaction.Type == "CR")
+                        var tmp = System.Text.RegularExpressions.Regex.Replace(bankInfo.Kurs ?? string.Empty, "[^0-9,.-]", "");
+                        tmp = tmp.Replace(',', '.');
+                        if (!decimal.TryParse(tmp, NumberStyles.Any, CultureInfo.InvariantCulture, out bankKurs))
+                            bankKurs = 0m;
+                    }
+
+                    // Calculate saldo for the new header (base currency) only for cash-bank transactions
+                    decimal totalSaldo = cashBankTransactions.Sum(trx => trx.Type == "CR" ? trx.Amount : -trx.Amount);
+                    decimal totalKSaldo = bankKurs != 0m ? cashBankTransactions.Sum(trx => (trx.Type == "CR" ? trx.Amount : -trx.Amount)) : 0m;
+
+                    // Use a local DB transaction for cash-bank DB updates for this group
+                    await using (var dbTrans = await _context.Database.BeginTransactionAsync())
+                    {
+                        // Find existing header for the same document number
+                        var existingCbTransH = await _context.CbTransHs
+                            .Include(h => h.CbTransDs)
+                            .SingleOrDefaultAsync(h => h.DocNo == dokumen);
+
+                        if (existingCbTransH != null)
                         {
-                            bankUpdate.Saldo += transaction.Amount;
+                            var bank = await _context.CbBanks.SingleOrDefaultAsync(b => b.KodeBank == existingCbTransH.KodeBank);
+                            if (bank != null)
+                            {
+                                bank.Saldo -= existingCbTransH.Saldo;
+                                bank.KSaldo -= existingCbTransH.KSaldo;
+                                _context.CbBanks.Update(bank);
+                            }
+
+                            _context.CbTransDs.RemoveRange(existingCbTransH.CbTransDs);
+                            _context.CbTransHs.Remove(existingCbTransH);
                         }
-                        else
+
+                        var newCbTransH = new CbTransH
                         {
-                            bankUpdate.Saldo -= transaction.Amount;
+                            KodeBank = kodeBank,
+                            DocNo = dokumen,
+                            Tanggal = tgl,
+                            Keterangan = "Transaksi " + tgl.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+                            Saldo = totalSaldo,
+                            KSaldo = totalKSaldo,
+                            CbTransDs = new List<CbTransD>()
+                        };
+
+                        foreach (var transaction in cashBankTransactions)
+                        {
+                            var jumlah = transaction.Type == "CR" ? transaction.Amount : -transaction.Amount;
+                            var kjumlah = bankKurs != 0m ? jumlah : 0m;
+
+                            var newCbTransD = new CbTransD
+                            {
+                                NoPrj = transaction.NoPrj,
+                                SrcCode = (string.IsNullOrEmpty(transaction.SrcCode) ? (transaction.Type == "CR" ? tambah : kurang) : transaction.SrcCode),
+                                Keterangan = transaction.Description,
+                                Jumlah = jumlah,
+                                Terima = transaction.Type == "CR" ? transaction.Amount : 0,
+                                Bayar = transaction.Type == "CR" ? 0 : transaction.Amount,
+                                KTerima = (bankKurs != 0m && transaction.Type == "CR") ? transaction.Amount : 0,
+                                KBayar = (bankKurs != 0m && transaction.Type != "CR") ? transaction.Amount : 0,
+                                KJumlah = kjumlah,
+                                KValue = bankKurs != 0m ? bankKurs : 0m,
+                                Kurs = bankInfo?.Kurs,
+                                CbTransH = newCbTransH
+                            };
+
+                            newCbTransH.CbTransDs.Add(newCbTransD);
+
+                            if (bankInfo != null)
+                            {
+                                if (transaction.Type == "CR")
+                                {
+                                    bankInfo.Saldo += transaction.Amount;
+                                    if (bankKurs != 0m) bankInfo.KSaldo += transaction.Amount;
+                                }
+                                else
+                                {
+                                    bankInfo.Saldo -= transaction.Amount;
+                                    if (bankKurs != 0m) bankInfo.KSaldo -= transaction.Amount;
+                                }
+                                _context.CbBanks.Update(bankInfo);
+                            }
                         }
+
+                        _context.CbTransHs.Add(newCbTransH);
+                        await _context.SaveChangesAsync();
+                        await dbTrans.CommitAsync();
                     }
                 }
-
-                _context.CbTransHs.Add(newCbTransH);
             }
-
-            await _context.SaveChangesAsync(); // Save changes after processing all groups
+            catch (Exception)
+            {
+                // Rethrow to caller; individual group DB transactions are rolled back locally.
+                throw;
+            }
         }
 
+        
         private string GenerateDocumentNumber(string kodeBank, DateTime tgl)
         {
             var cTh = tgl.Year.ToString();
@@ -1267,6 +1584,61 @@ namespace eSoft.CashBank.Services
 
             return kodeBank + cTh + cBl + cDay;
         }
+
+        private async Task<string> GenerateDocumentNumberSequenceAsync(string kodeBank, DateTime tgl)
+        {
+            // base format: KodeBank + yyyyMMdd
+            var baseNo = kodeBank + tgl.ToString("yyyyMMdd");
+
+            // get existing docnos that start with the base
+            var existing = await _context.CbTransHs
+                .Where(h => h.DocNo.StartsWith(baseNo))
+                .Select(h => h.DocNo)
+                .ToListAsync();
+
+            if (existing == null || existing.Count == 0)
+            {
+                return baseNo + "-00001";
+            }
+
+            int maxSeq = 0;
+            foreach (var doc in existing)
+            {
+                var idx = doc.LastIndexOf('-');
+                if (idx >= 0 && idx + 1 < doc.Length)
+                {
+                    var suffix = doc.Substring(idx + 1);
+                    if (int.TryParse(suffix, out int seq))
+                    {
+                        if (seq > maxSeq) maxSeq = seq;
+                    }
+                }
+            }
+
+            return baseNo + "-" + (maxSeq + 1).ToString("00000");
+        }
+
+        private DateTime ResolveCsvPaymentDate(BankTransactionView trx, DateTime fallbackDate)
+        {
+            if (trx != null && trx.Tanggal != default)
+                return trx.Tanggal.Date;
+
+            if (!string.IsNullOrWhiteSpace(trx?.Date))
+            {
+                var raw = trx.Date.Trim();
+                if (DateTime.TryParseExact(raw,
+                                           new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd" },
+                                           CultureInfo.InvariantCulture,
+                                           DateTimeStyles.None,
+                                           out var parsed))
+                {
+                    return parsed.Date;
+                }
+            }
+
+            return fallbackDate.Date;
+        }
+
 
         #endregion
     }
