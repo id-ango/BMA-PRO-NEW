@@ -209,7 +209,7 @@ namespace eSoft.Order.Services
                 }
 
                 transH.PoTransDs.Add(MapToPoTransD(item, transH, trans.Tanggal));
-                UpdateItemPurchasePrice(item);
+                UpdateItemPurchasePrice(item, trans.Currency);
             }
 
             _context.PoTransHs.Add(transH);
@@ -239,7 +239,7 @@ namespace eSoft.Order.Services
         public string GetNumber()
         {
             const string prefix = "P/I";
-            const string separator = "-";
+          //  const string separator = "-";
             const string defaultSequence = "00000";
 
             var thnbln = DateTime.Now.ToString("yyMM");

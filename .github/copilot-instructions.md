@@ -6,3 +6,7 @@
 - Use a variable/source of truth for the company name and reuse it in the layout/menu instead of hardcoding it; move login/user display into the menu area.
 - For grid search UX, include a quick clear 'x' button to reset the search text.
 - Do not add a DistCode field to the customer and supplier database-backed models, as it is not applicable.
+
+## Service Refactoring Guidelines
+- When refactoring `OrderPurchaseServices`, preserve original intent: `AddTransH` passes header currency (`trans.Currency`) to item price updates; `EditTransH` originally also passed `trans.Currency`, so helpers should allow an explicit currency override.
+- Validate that refactored service logic is identical to the original before accepting changes. Continue to perform side-by-side equivalence checks when refactoring and explicitly flag any behavioral differences.
