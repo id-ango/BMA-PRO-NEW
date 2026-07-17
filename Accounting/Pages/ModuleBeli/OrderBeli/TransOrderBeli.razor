@@ -1,6 +1,7 @@
 ﻿@page "/ModuleBeli/TransOrderBeli"
 @using eSoft.Order.Model
 @using eSoft.Order.Services
+@using eSoft.Order.View
 
 
 @inject IOrderPurchaseServices service
@@ -45,10 +46,19 @@
                 @transaksi.NamaVendor
                 <br />
                 <span class="badge bg-primary">@transaksi.NoPrj</span>
-            
+
             </td>
 
-            <td style="width:20%; background-color:@(transaksi.Cek == "3" ? "yellow" : "")">@transaksi.Keterangan</td>
+            <td style="width:20%; background-color:@(transaksi.Cek == "3" ? "yellow" : "")">
+                @if (EditModeState.ContainsKey(transaksi.PoTransHId) && EditModeState[transaksi.PoTransHId])
+                {
+                    <input type="text" class="form-control" @bind="EditKeteranganValues[transaksi.PoTransHId]" />
+                }
+                else
+                {
+                    @transaksi.Keterangan
+                }
+            </td>
             <td style="width:10%; background-color:@(transaksi.Cek == "3" ? "yellow" : "")">@transaksi.Jumlah.ToString("N")</td>
             <td style="width:20%; background-color:@(transaksi.Cek == "3" ? "yellow" : "")">
                 <span>Jumlah. &nbsp;</span>@transaksi.TtlJumlah.ToString("N") <br />
@@ -58,23 +68,49 @@
 
 
             <td style="background-color:@(transaksi.Cek == "3" ? "yellow" : "")">
-                <button @onclick="() => OpenRubah(transaksi)" class="btn btn-success">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
-                        <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z" />
-                    </svg>
-                </button>
-                <button @onclick="() => OpenDeleteDialog(transaksi)" class="btn btn-danger">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
-                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
-                    </svg>
-                </button>
-                <button @onclick="() => OpenPrint(transaksi.PoTransHId)" class="btn btn-info">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
-                        <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
-                        <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
-                    </svg>
-                </button>
+                @if (EditModeState.ContainsKey(transaksi.PoTransHId) && EditModeState[transaksi.PoTransHId])
+                {
+                    <!-- Edit mode buttons -->
+                    <button @onclick="() => SaveKeterangan(transaksi)" class="btn btn-success btn-sm" title="Save">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check" viewBox="0 0 16 16">
+                            <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z" />
+                        </svg>
+                    </button>
+                    <button @onclick="() => ToggleEditMode(transaksi)" class="btn btn-secondary btn-sm" title="Cancel">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
+                            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+                        </svg>
+                    </button>
+                }
+                else
+                {
+                    <!-- Normal mode buttons -->
+                    @if (transaksi.Cek != "3")
+                    {
+                        <button @onclick="() => ToggleEditMode(transaksi)" class="btn btn-warning btn-sm" title="Edit Description">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                <path d="M15.502 1.94a.5.5 0 0 1 0 .706l-1.459 1.459-2.121-2.121 1.459-1.459a.5.5 0 0 1 .706 0l1.415 1.415zM13.676 2.828l2.121-2.121a.75.75 0 1 1 1.06 1.06L14.74 3.89l-1.06-1.06zm2.896 6.63l-10-10A.5.5 0 1 0 3.058 3.3l10 10a.5.5 0 0 0 .707-.707zM3 13v2.5a.5.5 0 0 0 .5.5H6v-3H3z" />
+                            </svg>
+                        </button>
+                    }
+                    <button @onclick="() => OpenRubah(transaksi)" class="btn btn-success btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+                            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z" />
+                        </svg>
+                    </button>
+                    <button @onclick="() => OpenDeleteDialog(transaksi)" class="btn btn-danger btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+                            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+                        </svg>
+                    </button>
+                    <button @onclick="() => OpenPrint(transaksi.PoTransHId)" class="btn btn-info btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
+                            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+                            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
+                        </svg>
+                    </button>
+                }
             </td>
         </RowTemplate>
     </DataGridVerticalComponent>
@@ -99,6 +135,8 @@
     private List<PoTransH> TransHeader;
     private List<PoTransD> TransDetail;
     private PoTransH _bankToDelete;
+    private Dictionary<int, bool> EditModeState = new();
+    private Dictionary<int, string> EditKeteranganValues = new();
 
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
@@ -181,6 +219,45 @@
         navigationmanager.NavigateTo($"/ModulePrinting/PrintNotaPI/{xKdBank}");
     }
 
+    private void ToggleEditMode(PoTransH transaction)
+    {
+        int id = transaction.PoTransHId;
+
+        if (EditModeState.ContainsKey(id) && EditModeState[id])
+        {
+            // Disable edit mode
+            EditModeState[id] = false;
+            EditKeteranganValues.Remove(id);
+        }
+        else
+        {
+            // Enable edit mode
+            if (!EditModeState.ContainsKey(id))
+                EditModeState[id] = true;
+            else
+                EditModeState[id] = true;
+
+            // Initialize edit value with current keterangan
+            if (!EditKeteranganValues.ContainsKey(id))
+                EditKeteranganValues[id] = transaction.Keterangan ?? "";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SaveKeterangan(PoTransH transaction)
+    {
+        int id = transaction.PoTransHId;
+
+        if (EditKeteranganValues.ContainsKey(id))
+        {
+            await service.UpdateKeterangan(id, EditKeteranganValues[id]);
+            EditModeState[id] = false;
+            EditKeteranganValues.Remove(id);
+            LoadGet();
+            StateHasChanged();
+        }
+    }
 
     public void Dispose()
     {

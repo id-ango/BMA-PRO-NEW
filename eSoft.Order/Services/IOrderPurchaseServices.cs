@@ -24,6 +24,7 @@ namespace eSoft.Order.Services
         PoTransH AddTransH(PoTransHView trans);
         Task<bool> DelTransH(int id);
         Task<bool> EditTransH(PoTransHView trans);
+        Task<bool> UpdateKeterangan(int id, string keterangan);
         void SaveOrderAktif(string customer);
         void  DelOrderAktif(string customer);
         List<PoItemQtyByLocationView> GetAllIcItemQtyByLocation(string KodeVendor);
