@@ -21,7 +21,7 @@
                                 <div class="form-group">
                                     <label>
                                         Item
-                                        <InputSelect class="form-control" @bind-Value="Detail.ItemCode" style="width:75%; display:inline" @oninput="OnChangeItem">
+                                        <InputSelect class="form-control" @bind-Value="Detail.ItemCode" @bind-Value:after="OnItemChanged" style="width:75%; display:inline">
                                             <option value="">&nbsp;&nbsp;---Select Item Code---&nbsp;&nbsp;</option>
                                             @foreach (var item in SrcCode)
                                             {
@@ -238,15 +238,14 @@
     }
 
 
-    public void OnChangeItem(ChangeEventArgs args)
+    private void OnItemChanged()
     {
-        var itemCode = args?.Value?.ToString();
-        if (string.IsNullOrWhiteSpace(itemCode) || SrcCode == null)
+        if (string.IsNullOrWhiteSpace(Detail.ItemCode) || SrcCode == null)
         {
             return;
         }
 
-        var itemcode = SrcCode.FirstOrDefault(e => e.ItemCode == itemCode);
+        var itemcode = SrcCode.FirstOrDefault(e => e.ItemCode == Detail.ItemCode);
         if (itemcode == null)
         {
             return;
@@ -256,13 +255,27 @@
         Detail.Satuan = itemcode.Satuan;
         Detail.CurrencyCode = itemcode.CurrencyCode;
         Detail.HargaBeli = itemcode.HrgUsd;
-        Detail.Kurs = itemcode.CurrencyCode?.ToUpperInvariant() switch
-        {
-            "CNY" => CNY,
-            "USD" => USD,
-            _ => 1
-        };
+        ApplyCurrencyToKurs();
         StateHasChanged();
+    }
+
+    private void OnCurrencyCodeChanged()
+    {
+        ApplyCurrencyToKurs();
+        StateHasChanged();
+    }
+
+    private void ApplyCurrencyToKurs()
+    {
+        Detail.Kurs = string.IsNullOrWhiteSpace(Detail.CurrencyCode)
+            ? 1
+            : Detail.CurrencyCode.Trim().ToUpperInvariant() switch
+            {
+                "CNY" => CNY,
+                "USD" => USD,
+                "IDR" => 1,
+                _ => 1
+            };
     }
 
     private void rubahDiskon()
