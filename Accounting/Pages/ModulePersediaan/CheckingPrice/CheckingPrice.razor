@@ -278,6 +278,7 @@
         {
             loaded.IcPriceDs ??= new List<IcPriceDView>();
             Transh = loaded;
+            Transh.RecalculateTotals();
             _draftRestored = true;
         }
     }
@@ -298,6 +299,7 @@
 
         loaded.IcPriceDs ??= new List<IcPriceDView>();
         Transh = loaded;
+        Transh.RecalculateTotals();
         return true;
     }
 
@@ -451,8 +453,9 @@
            
         }
 
-        
+
       //  HitungTotalCost();
+        Transh.RecalculateTotals();
         await SaveDraftAsync();
         StateHasChanged();
     }

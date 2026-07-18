@@ -202,5 +202,14 @@ namespace eSoft.Persediaan.View
 
         public List<IcPriceDView> IcPriceDs { get; set; }
 
+        public void RecalculateTotals()
+        {
+            harga = 0;
+            totalcost = 0;
+            keuntungan = 0;
+            markup = 0;
+            gprofit = 0;
+            HargabefPPn = 0;
+        }
     }
 }

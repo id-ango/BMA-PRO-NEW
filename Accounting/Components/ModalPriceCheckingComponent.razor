@@ -33,6 +33,7 @@
 
                                         @Detail.CurrencyCode
 
+
                                     </label>
                                 </div>
                             </td>
@@ -239,16 +240,29 @@
 
     public void OnChangeItem(ChangeEventArgs args)
     {
+        var itemCode = args?.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(itemCode) || SrcCode == null)
+        {
+            return;
+        }
 
-        var itemcode = (from e in SrcCode where e.ItemCode == args.Value.ToString() select e).FirstOrDefault();
+        var itemcode = SrcCode.FirstOrDefault(e => e.ItemCode == itemCode);
+        if (itemcode == null)
+        {
+            return;
+        }
+
         Detail.NamaItem = itemcode.NamaItem;
         Detail.Satuan = itemcode.Satuan;
         Detail.CurrencyCode = itemcode.CurrencyCode;
         Detail.HargaBeli = itemcode.HrgUsd;
-        if (itemcode.CurrencyCode == nameof(CNY))
-            Detail.Kurs = CNY;
-        if (itemcode.CurrencyCode == nameof(USD))
-            Detail.Kurs = USD;
+        Detail.Kurs = itemcode.CurrencyCode?.ToUpperInvariant() switch
+        {
+            "CNY" => CNY,
+            "USD" => USD,
+            _ => 1
+        };
+        StateHasChanged();
     }
 
     private void rubahDiskon()
