@@ -63,7 +63,7 @@
                                 <div class="form-group">
                                     <label>
                                         Currency Code
-                                        <InputText class="form-control" @bind-Value="@Detail.CurrencyCode"></InputText>
+                                        <InputText class="form-control" @bind-Value="@Detail.CurrencyCode" @bind-Value:after="OnCurrencyCodeChanged"></InputText>
                                     </label>
                                 </div>
                             </td>
@@ -214,14 +214,25 @@
         {
             Detail.ItemCode = textSearch;
             var itemcode = (from e in SrcCode where e.ItemCode == Detail.ItemCode select e).FirstOrDefault();
+            if (itemcode == null)
+            {
+                SearchOpen = false;
+                StateHasChanged();
+                return;
+            }
+
             Detail.NamaItem = itemcode.NamaItem;
             Detail.Satuan = itemcode.Satuan;
             Detail.CurrencyCode = itemcode.CurrencyCode;
-            Detail.HargaBeli = itemcode.HrgUsd;
+            Detail.HargaBeli = string.IsNullOrWhiteSpace(itemcode.CurrencyCode)
+                ? itemcode.HrgNetto
+                : itemcode.HrgUsd;
             if (itemcode.CurrencyCode == nameof(CNY))
                 Detail.Kurs = CNY;
-            if (itemcode.CurrencyCode == nameof(USD))
+            else if (itemcode.CurrencyCode == nameof(USD))
                 Detail.Kurs = USD;
+            else
+                Detail.Kurs = 1;
 
         }
 
