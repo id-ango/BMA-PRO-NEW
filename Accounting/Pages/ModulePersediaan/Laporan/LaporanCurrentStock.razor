@@ -74,7 +74,7 @@
                                     <td colspan="8" style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px;  border-left:1px solid #333;  border-right:1px solid #333;" align="center">
                                         @item.Divisi
                                        <span class="dontprint">
-                                           <button class="btn btn-primary btn-sm btn-primary-custom @(item.IsSelectedForPrinting ? "yellow" : "")" @onclick="@(() => ToggleRowsWithSameDivision(item.KodeDivisi))">Cetak</button>
+                                           <button type="button" class="btn btn-primary btn-sm btn-primary-custom @(item.IsSelectedForPrinting ? "yellow" : "")" style="background-color: @(item.IsSelectedForPrinting ? "yellow" : ""); color: @(item.IsSelectedForPrinting ? "black" : "")" @onclick="@(() => ToggleRowsWithSameDivision(item.KodeDivisi))">Cetak</button>
                                         </span>
                                        </td>
                                 </tr>
@@ -293,28 +293,17 @@
 
     private void ToggleRowsWithSameDivision(string divisionCode)
     {
-        // Mengubah status cetak dan warna latar belakang tombol
-        IsBackgroundYellow = !IsBackgroundYellow;
+        // Tentukan status saat ini divisi dari item pertamanya, lalu balikkan
+        var firstItem = TransDetail.FirstOrDefault(x => x.KodeDivisi == divisionCode);
+        bool newState = !(firstItem?.IsSelectedForPrinting ?? true);
 
-        // Mengatur properti IsSelectedForPrinting pada item-item yang memiliki divisi yang sama dengan divisionCode
-        foreach (var item in TransDetail)
+        foreach (var item in TransDetail.Where(x => x.KodeDivisi == divisionCode))
         {
-            if (item.KodeDivisi == divisionCode)
-            {
-                item.IsSelectedForPrinting = IsBackgroundYellow; // Mengatur status cetak
-            }
+            item.IsSelectedForPrinting = newState;
+            item.IsSubTitleSelectedForPrinting = newState;
         }
 
-        // Mengatur properti IsSubTitleSelectedForPrinting pada subjudul divisi
-        foreach (var item in TransDetail)
-        {
-            if (item.Divisi == divisionCode)
-            {
-                item.IsSubTitleSelectedForPrinting = IsBackgroundYellow; // Mengatur warna latar belakang subjudul
-            }
-        }
-
-        StateHasChanged(); // Memperbarui tampilan komponen
+        StateHasChanged();
     }
 
     private void TogglePrintAll()
