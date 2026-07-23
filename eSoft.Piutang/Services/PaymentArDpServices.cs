@@ -163,10 +163,11 @@ namespace eSoft.Piutang.Services
                 Customer = transH.Customer,
                 Keterangan = transH.Keterangan,
                 KodeTran = "13",
-                Jumlah = -1 * transH.Jumlah,
+                Jumlah = 0,                               // No invoice amount for DP
                 SldSisa = -1 * transH.Jumlah,
+                Bayar = -1 * transH.Jumlah,               // Payment recorded here
                 Discount = 0,
-
+                UnApplied = -1 * transH.Unapplied,        // Remaining payment to use
                 Sisa = -1 * transH.Unapplied,
 
                 Dpp = 0,
@@ -175,17 +176,28 @@ namespace eSoft.Piutang.Services
                 SldBayar = 0,
                 SldDisc = 0,
                 SldUnpl = 0
-                //       Bayar = -1 * transH.Jumlah,
-                // UnApplied = -1 * transH.Unapplied,
             };
 
-            var customer = (from e in _context.ArCusts where e.Customer == trans.Customer select e).FirstOrDefault();
+            // Verify customer exists before updating
+            var customer = _context.ArCusts.FirstOrDefault(e => e.Customer == trans.Customer);
+            if (customer == null)
+            {
+                throw new InvalidOperationException($"Customer '{trans.Customer}' not found in ArCust master data. Please create customer record first.");
+            }
+
             customer.Piutang -= transH.Jumlah;
 
-            _context.ArCusts.Update(customer);
-            _context.ArTransHs.Add(transH);
-            _context.ArPiutngs.Add(transaksi);
-            _context.SaveChanges();
+            try
+            {
+                _context.ArCusts.Update(customer);
+                _context.ArTransHs.Add(transH);
+                _context.ArPiutngs.Add(transaksi); // ← ADD TRACKING RECORD
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error saving AR Down Payment transaction for customer '{trans.Customer}': {ex.Message}", ex);
+            }
 
             var cekBukti = (from e in _contextBank.CbTransHs where e.DocNo == transH.Bukti select e).FirstOrDefault();
 

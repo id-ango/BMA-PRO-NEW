@@ -155,7 +155,13 @@ namespace eSoft.Hutang.Services
             transH.ApTransDs.RemoveAll(x => x.Bayar == 0 && x.Discount == 0);
             transaksi.RemoveAll(x => x.Bayar == 0 && x.Discount == 0);
 
-            var Supplier = (from e in _context.ApSuppls where e.Supplier == trans.Supplier select e).FirstOrDefault();
+            // Verify supplier exists before updating
+            var Supplier = _context.ApSuppls.FirstOrDefault(e => e.Supplier == trans.Supplier);
+            if (Supplier == null)
+            {
+                throw new InvalidOperationException($"Supplier '{trans.Supplier}' not found in ApSuppl master data. Please create supplier record first.");
+            }
+
             Supplier.Hutang -= trans.JumHutang;
 
             ApHutang Newtransaksi = new ApHutang

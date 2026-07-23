@@ -71,6 +71,7 @@ namespace eSoft.Hutang.View
         public string AcctSet { get; set; }
         public List<ApTransDView> ApTransDs { get; set; }
         public int ApSupplId { get; set; }
+        public string NamaSup { get; set; }
         public ApSuppl ApSuppl { get; set; }
         public decimal JumBayar { get; set; }
         public decimal UpdateUnapplied

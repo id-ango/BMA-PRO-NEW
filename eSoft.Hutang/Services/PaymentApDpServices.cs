@@ -164,11 +164,11 @@ namespace eSoft.Hutang.Services
                 Supplier = transH.Supplier,               
                 Keterangan = transH.Keterangan,
                 KodeTran = "23",
-                Jumlah = -1 * transH.Jumlah,
+                Jumlah = 0,                               // No invoice amount for DP
                 SldSisa = -1 * transH.Jumlah,
-              //  Bayar = -1 * transH.Jumlah,
+                Bayar = -1 * transH.Jumlah,               // Payment recorded here
                 Discount = 0,
-             //   UnApplied = -1 * transH.Unapplied,
+                UnApplied = -1 * transH.Unapplied,        // Remaining payment to use
                 Sisa = -1 * transH.Unapplied,
                 Kurs = transH.Kurs,
                 Currency = trans.Currency,
@@ -181,13 +181,26 @@ namespace eSoft.Hutang.Services
                 SldUnpl = 0
             };
 
-            var supplier = (from e in _context.ApSuppls where e.Supplier == trans.Supplier select e).FirstOrDefault();
+            // Verify supplier exists before updating
+            var supplier = _context.ApSuppls.FirstOrDefault(e => e.Supplier == trans.Supplier);
+            if (supplier == null)
+            {
+                throw new InvalidOperationException($"Supplier '{trans.Supplier}' not found in ApSuppl master data. Please create supplier record first.");
+            }
+
             supplier.Hutang -= transH.Jumlah;
 
-            _context.ApSuppls.Update(supplier);
-            _context.ApTransHs.Add(transH);
-            _context.ApHutangs.Add(transaksi);
-            _context.SaveChanges();
+            try
+            {
+                _context.ApSuppls.Update(supplier);
+                _context.ApTransHs.Add(transH);
+                _context.ApHutangs.Add(transaksi);  // ← ADD TRACKING RECORD
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error saving AP Down Payment transaction for supplier '{trans.Supplier}': {ex.Message}", ex);
+            }
 
             var bank = (from e in _contextBank.CbBanks where e.KodeBank == trans.KdBank select e).FirstOrDefault();
 

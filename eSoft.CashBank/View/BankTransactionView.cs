@@ -27,6 +27,45 @@ namespace eSoft.CashBank.View
         // Outstanding documents for selected customer/supplier
         public List<OutstandingDocView> OutstandingDocs { get; set; } = new List<OutstandingDocView>();
 
+        // ============== NEW FIELDS FOR APDP/ARDP SUPPORT ==============
+        /// <summary>
+        /// Currency code (USD, EUR, SGD, etc.) for multi-currency transactions
+        /// Only used for AP/APDP transactions. Defaults to "IDR"
+        /// </summary>
+        public string Currency { get; set; } = "IDR";
+
+        /// <summary>
+        /// Exchange rate (e.g., 15500 = 1 USD = 15,500 IDR)
+        /// Only used for AP/APDP with foreign currency. Defaults to 1 (IDR only)
+        /// </summary>
+        public decimal Kurs { get; set; } = 1m;
+
+        /// <summary>
+        /// Amount in foreign currency (e.g., 300 USD)
+        /// Calculated from Amount / Kurs when needed
+        /// </summary>
+        public decimal Nilai { get; set; }
+
+        /// <summary>
+        /// Transaction type: "PAYMENT" or "DOWNPAYMENT"
+        /// Used to distinguish regular payments from down payments
+        /// Visible for AR/AP, auto-set for ARDP/APDP
+        /// </summary>
+        public string TransactionType { get; set; } = "PAYMENT";
+
+        /// <summary>
+        /// Supplier/Customer ID (for setting master data links)
+        /// Populated when party (supplier/customer) is selected
+        /// </summary>
+        public int PartyId { get; set; }
+
+        /// <summary>
+        /// Supplier/Customer Name (for display and audit trail)
+        /// Populated when party (supplier/customer) is selected
+        /// </summary>
+        public string PartyName { get; set; }
+        // ============================================================
+
         public class OutstandingDocView
         {
             public string Dokumen { get; set; }

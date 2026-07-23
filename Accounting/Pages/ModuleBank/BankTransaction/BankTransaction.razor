@@ -258,9 +258,11 @@
                             </td>
                             <td>
                                 <InputSelect class="form-control form-control-sm" @bind-Value="ctx.Target">
-                                    <option value="CB">CB</option>
-                                    <option value="AP">AP</option>
-                                    <option value="AR">AR</option>
+                                    <option value="CB">CB (Bank)</option>
+                                    <option value="AR">AR (Regular)</option>
+                                    <option value="ARDP">ARDP (DP)</option>
+                                    <option value="AP">AP (Regular)</option>
+                                    <option value="APDP">APDP (DP)</option>
                                 </InputSelect>
                             </td>
                             <td style="padding-top:10px;">
@@ -293,12 +295,24 @@
                                 </InputSelect>
                             </td>
                         </tr>
-                        @if (ctx.Target == "AR" || ctx.Target == "AP")
+                        @if (ctx.Target == "AR" || ctx.Target == "AP" || ctx.Target == "ARDP" || ctx.Target == "APDP")
                         {
                             <tr class="trx-detail-row">
                                 <td colspan="9">
                                     <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;">
                                         @if (ctx.Target == "AR")
+                                        {
+                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Customer</label>
+                                            <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
+                                                    @onchange="@(async (ChangeEventArgs e) => await PartySelectionChanged(ctx, e))">
+                                                <option value="">--- Pilih Customer ---</option>
+                                                @foreach (var c in customers)
+                                                {
+                                                    <option value="@c.Customer">[@c.Customer] @c.NamaCust</option>
+                                                }
+                                            </select>
+                                        }
+                                        else if (ctx.Target == "ARDP")
                                         {
                                             <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Customer</label>
                                             <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
@@ -322,38 +336,110 @@
                                                 }
                                             </select>
                                         }
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => AllocateAmount(ctx)">
-                                            <i class="bi bi-lightning-charge"></i> Auto Alokasi
-                                        </button>
-                                        @if (!string.IsNullOrEmpty(ctx.PartyCode))
+
+                                        @* TransactionType selector for AR & AP *@
+                                        @if (ctx.Target == "AR" || ctx.Target == "AP")
                                         {
-                                            var allocDocs = ctx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
-                                            var totalBayar = allocDocs?.Sum(d => d.Bayar * (d.Kurs > 1 ? d.Kurs : 1m)) ?? 0m;
-                                            var totalDiscount = allocDocs?.Sum(d => d.Discount * (d.Kurs > 1 ? d.Kurs : 1m)) ?? 0m;
-                                            var srcAmt = Math.Abs(ctx.Amount);
-                                            var selisih = srcAmt - totalBayar;
-                                            var isShortfall = selisih > 0.01m;
-                                            var isOver = selisih < -0.01m;
-                                            <span class="alloc-badge @(isShortfall ? "warn" : isOver ? "over" : "exact")">
-                                                @(allocDocs?.Count ?? 0) dok | Bayar @totalBayar.ToString("N2") / @srcAmt.ToString("N2") | Disc @totalDiscount.ToString("N2")
-                                                @if (isShortfall)
-                                                {
-                                                    <text> ⚠ Selisih: @selisih.ToString("N2")</text>
-                                                }
-                                                @if (isOver)
-                                                {
-                                                    <text> ❌ Lebih: @((-selisih).ToString("N2"))</text>
-                                                }
-                                                @if (!isShortfall && !isOver)
-                                                {
-                                                    <text> ✓</text>
-                                                }
-                                            </span>
+                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0; margin-left:12px;">Tipe</label>
+                                            <select class="form-control form-control-sm" style="max-width:180px;" @bind="ctx.TransactionType">
+                                                <option value="PAYMENT">Regular Payment</option>
+                                                <option value="DOWNPAYMENT">Down Payment</option>
+                                            </select>
+                                        }
+
+                                        @* Currency & Kurs for AP & APDP *@
+                                        @if (ctx.Target == "AP" || ctx.Target == "APDP")
+                                        {
+                                            @* For AP: Currency loaded from supplier master (read-only display) *@
+                                            @if (ctx.Target == "AP")
+                                            {
+                                                <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0; margin-left:12px;">Currency (from Supplier)</label>
+                                                <input type="text" class="form-control form-control-sm" style="max-width:100px;" @bind="ctx.Currency" readonly />
+                                                <small style="color:#6c757d; font-size:0.75rem;">Loaded from supplier master data</small>
+                                            }
+                                            @* For APDP: Currency can be edited (user may override) *@
+                                            @if (ctx.Target == "APDP")
+                                            {
+                                                <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0; margin-left:12px;">Currency <span style="color:red;">*</span></label>
+                                                <input type="text" class="form-control form-control-sm" placeholder="USD, EUR, SGD..." style="max-width:100px;" @bind="ctx.Currency" />
+                                            }
+
+                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Kurs @if (ctx.Target == "APDP") { <span style="color:red;">*</span> }</label>
+                                            <input type="number" class="form-control form-control-sm" placeholder="15500.00" style="max-width:150px;" @bind="ctx.Kurs" @bind:event="oninput" step="0.0001" min="0" />
+
+                                            @if (ctx.Kurs > 1m && !string.IsNullOrEmpty(ctx.Currency))
+                                            {
+                                                <small style="color:#198754; font-weight:600;">1 @ctx.Currency = @(ctx.Kurs.ToString("N2")) IDR</small>
+                                            }
+                                            else if (ctx.Target == "APDP")
+                                            {
+                                                <small style="color:#dc3545; font-weight:600;">⚠️ Required for APDP</small>
+                                            }
                                         }
                                     </div>
-                                    @if (ctx.OutstandingDocs != null && ctx.OutstandingDocs.Any())
+
+                                    @* Foreign Amount Section for AP/APDP *@
+                                    @if (ctx.Target == "AP" || ctx.Target == "APDP")
                                     {
-                                        <table class="doc-table">
+                                        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; border-top:1px solid #dee2e6; padding-top:8px;">
+                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Amount (@(ctx.Currency ?? "Foreign"))</label>
+                                            <input type="number" class="form-control form-control-sm" placeholder="300.75" style="max-width:150px;" @bind="ctx.Nilai" @bind:event="oninput" step="0.0001" min="0" />
+
+                                            @if (ctx.Nilai > 0 && ctx.Kurs > 1m)
+                                            {
+                                                var idrAmount = ctx.Nilai * ctx.Kurs;
+                                                <small style="color:#198754; font-weight:600;">= IDR @(idrAmount.ToString("N2"))</small>
+                                            }
+                                            else if (string.IsNullOrEmpty(ctx.Currency))
+                                            {
+                                                <small style="color:#6c757d;">(Optional - only if foreign currency)</small>
+                                            }
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(ctx.PartyCode))
+                                    {
+                                        <div style="margin-top:8px;">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => AllocateAmount(ctx)">
+                                                <i class="bi bi-lightning-charge"></i> Auto Alokasi
+                                            </button>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(ctx.PartyCode))
+                                    {
+                                        var allocDocs = ctx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
+                                        var totalBayar = allocDocs?.Sum(d => d.Bayar * (d.Kurs > 1 ? d.Kurs : 1m)) ?? 0m;
+                                        var totalDiscount = allocDocs?.Sum(d => d.Discount * (d.Kurs > 1 ? d.Kurs : 1m)) ?? 0m;
+                                        var srcAmt = Math.Abs(ctx.Amount);
+                                        var selisih = srcAmt - totalBayar;
+                                        var isShortfall = selisih > 0.01m;
+                                        var isOver = selisih < -0.01m;
+                                        <span class="alloc-badge @(isShortfall ? "warn" : isOver ? "over" : "exact")">
+                                            @(allocDocs?.Count ?? 0) dok | Bayar @totalBayar.ToString("N2") / @srcAmt.ToString("N2") | Disc @totalDiscount.ToString("N2")
+                                            @if (isShortfall)
+                                            {
+                                                <text> ⚠ Selisih: @selisih.ToString("N2")</text>
+                                            }
+                                            @if (isOver)
+                                            {
+                                                <text> ❌ Lebih: @((-selisih).ToString("N2"))</text>
+                                            }
+                                            @if (!isShortfall && !isOver)
+                                            {
+                                                <text> ✓</text>
+                                            }
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+
+                        @if ((ctx.Target == "AR" || ctx.Target == "AP" || ctx.Target == "ARDP" || ctx.Target == "APDP") && ctx.OutstandingDocs != null && ctx.OutstandingDocs.Any())
+                        {
+                            <tr class="trx-detail-row">
+                                <td colspan="9">
+                                    <table class="doc-table">
                                             <thead>
                                                 <tr>
                                                     <th style="width:32px"></th>
@@ -407,13 +493,17 @@
                                                 }
                                             </tbody>
                                         </table>
-                                    }
-                                    else if (!string.IsNullOrEmpty(ctx.PartyCode))
-                                    {
+                                    </td>
+                                </tr>
+                            }
+                            else if (!string.IsNullOrEmpty(ctx.PartyCode))
+                            {
+                                <tr class="trx-detail-row">
+                                    <td colspan="9">
                                         <div style="color:#888; font-size:0.85rem; padding:4px 0;">Tidak ada dokumen outstanding</div>
-                                    }
-                                </td>
-                            </tr>
+                                    </td>
+                                </tr>
+                            }
                         }
                     }
                 </tbody>
@@ -492,6 +582,20 @@
             ctx.PartyCode = e?.Value?.ToString();
         }
         if (string.IsNullOrEmpty(ctx.PartyCode)) return;
+
+        // Load customer master info
+        var selectedCustomer = customers?.FirstOrDefault(c => c.Customer == ctx.PartyCode);
+        if (selectedCustomer != null)
+        {
+            // Set customer ID and name for AR/ARDP transactions
+            ctx.PartyId = selectedCustomer.ArCustId;
+            ctx.PartyName = selectedCustomer.NamaCust;
+        }
+
+        // AR customers don't support multicurrency - always use IDR
+        ctx.Currency = "IDR";
+        ctx.Kurs = 1m;
+
         try
         {
             var docs = receivableService.Detail1(ctx.PartyCode);
@@ -529,6 +633,32 @@
             ctx.PartyCode = e?.Value?.ToString();
         }
         if (string.IsNullOrEmpty(ctx.PartyCode)) return;
+
+        // Load Currency and Supplier Master Info from ApSuppl
+        var selectedSupplier = suppliers?.FirstOrDefault(s => s.Supplier == ctx.PartyCode);
+        if (selectedSupplier != null)
+        {
+            // Set supplier ID and name for later use in AP/APDP transactions
+            ctx.PartyId = selectedSupplier.ApSupplId;
+            ctx.PartyName = selectedSupplier.NamaSup;
+
+            // Use supplier's default currency (e.g., "USD", "EUR")
+            if (!string.IsNullOrEmpty(selectedSupplier.Kurs))
+            {
+                ctx.Currency = selectedSupplier.Kurs;
+            }
+            else
+            {
+                // Default to IDR if supplier has no currency specified
+                ctx.Currency = "IDR";
+            }
+        }
+        else
+        {
+            // Supplier not found - default to IDR
+            ctx.Currency = "IDR";
+        }
+
         try
         {
             var docs = payableService.GetAllApHutangBySupplier(ctx.PartyCode, DateTime.Today);

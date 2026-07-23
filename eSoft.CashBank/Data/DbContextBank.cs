@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using eSoft.CashBank.Model;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+
 
 
 namespace eSoft.CashBank.Data
@@ -21,17 +23,20 @@ namespace eSoft.CashBank.Data
         public DbSet<CbSrcCode> CbSrcCodes { get; set; }
         public DbSet<CbGrp> CbGrps { get; set; }
 
-        //protected override void OnModelCreating(ModelBuilder builder)
-        //{
-        //    base.OnModelCreating(builder);
-        //    builder.Entity<CbBank>()
-        //        .HasIndex(p => p.KodeBank)
-        //        .IsUnique();
-        //    builder.Entity<CbBank>().Property(p => p.KSaldo).HasColumnType("decimal(18,4)");
-        //    builder.Entity<CbBank>().Property(p => p.KSldAwal).HasColumnType("decimal(18,4)");
-        //    builder.Entity<CbBank>().Property(p => p.Saldo).HasColumnType("decimal(18,4)");
-        //    builder.Entity<CbBank>().Property(p => p.SldAwal).HasColumnType("decimal(18,4)");
-        //}
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            // Index on KodeBank for CbBank lookups
+            builder.Entity<CbBank>()
+                .HasIndex(p => p.KodeBank)
+                .IsUnique();
+
+            // Index on DocNo for CbTransH to optimize document number generation queries
+            builder.Entity<CbTransH>()
+                .HasIndex(p => p.DocNo)
+                .IsUnique();
+        }
     }
 
 }

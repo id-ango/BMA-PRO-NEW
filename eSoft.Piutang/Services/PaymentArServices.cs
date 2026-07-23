@@ -142,7 +142,13 @@ namespace eSoft.Piutang.Services
             transH.ArTransDs.RemoveAll(x => x.Bayar == 0 && x.Discount == 0);
             transaksi.RemoveAll(x => x.Bayar == 0 && x.Discount == 0);
 
-            var customer = (from e in _context.ArCusts where e.Customer == trans.Customer select e).FirstOrDefault();
+            // Verify customer exists before updating
+            var customer = _context.ArCusts.FirstOrDefault(e => e.Customer == trans.Customer);
+            if (customer == null)
+            {
+                throw new InvalidOperationException($"Customer '{trans.Customer}' not found in ArCust master data. Please create customer record first.");
+            }
+
             customer.Piutang -= trans.JumPiutang;
 
             ArPiutng Newtransaksi = new ArPiutng

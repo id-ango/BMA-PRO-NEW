@@ -1177,6 +1177,54 @@ namespace eSoft.CashBank.Services
 
         #region tarikcsv
 
+        /// <summary>
+        /// Determines which payment service to use based on target and transaction type
+        /// </summary>
+        private string DeterminePaymentService(string target, string transactionType)
+        {
+            if (string.IsNullOrEmpty(target))
+                return null;
+
+            // ========== AP/APDP Services ==========
+            if (target.Equals("APDP", StringComparison.OrdinalIgnoreCase))
+            {
+                return "eSoft.Hutang.Services.IPaymentApDpServices";
+            }
+
+            if (target.Equals("AP", StringComparison.OrdinalIgnoreCase))
+            {
+                // Check if explicitly set to DOWNPAYMENT
+                if (transactionType != null && 
+                    transactionType.Equals("DOWNPAYMENT", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "eSoft.Hutang.Services.IPaymentApDpServices";
+                }
+                // Default is regular AP payment
+                return "eSoft.Hutang.Services.IPaymentApServices";
+            }
+
+            // ========== AR/ARDP Services ==========
+            if (target.Equals("ARDP", StringComparison.OrdinalIgnoreCase))
+            {
+                return "eSoft.Piutang.Services.IPaymentArDpServices";
+            }
+
+            if (target.Equals("AR", StringComparison.OrdinalIgnoreCase))
+            {
+                // Check if explicitly set to DOWNPAYMENT
+                if (transactionType != null &&
+                    transactionType.Equals("DOWNPAYMENT", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "eSoft.Piutang.Services.IPaymentArDpServices";
+                }
+                // Default is regular AR payment
+                return "eSoft.Piutang.Services.IPaymentArServices";
+            }
+
+            // ========== CB or unknown ==========
+            return null;  // Direct bank transaction
+        }
+
         public async Task SaveTransactionsAsync(List<BankTransactionView> transactions, DateTime formDate, string kodeBank, string tambah, string kurang)
         {
             // Filter transactions that are selected (IsSelected == true)
@@ -1194,7 +1242,7 @@ namespace eSoft.CashBank.Services
 
                     // Determine AP/AR transactions using per-row Target when present, otherwise fall back to SrcCode
                     var apArTransactions = group.Where(t =>
-                                                            ((t.Target != null) && (t.Target.Equals("AP", StringComparison.OrdinalIgnoreCase) || t.Target.Equals("AR", StringComparison.OrdinalIgnoreCase)))
+                                                            ((t.Target != null) && (t.Target.Equals("AP", StringComparison.OrdinalIgnoreCase) || t.Target.Equals("AR", StringComparison.OrdinalIgnoreCase) || t.Target.Equals("APDP", StringComparison.OrdinalIgnoreCase) || t.Target.Equals("ARDP", StringComparison.OrdinalIgnoreCase)))
                                                             || (string.IsNullOrEmpty(t.Target) && !string.IsNullOrEmpty(t.SrcCode) && (t.SrcCode.Equals("AP", StringComparison.OrdinalIgnoreCase) || t.SrcCode.Equals("AR", StringComparison.OrdinalIgnoreCase)))
                                                         ).ToList();
 
@@ -1215,252 +1263,197 @@ namespace eSoft.CashBank.Services
                                 ? trx.Target
                                 : (trx.SrcCode ?? string.Empty);
 
-                            if (string.Equals(effectiveTarget, "AP", StringComparison.OrdinalIgnoreCase))
+                            // Determine which service to use based on target and transaction type
+                            string serviceName = DeterminePaymentService(
+                                effectiveTarget,
+                                trx.TransactionType ?? "PAYMENT"
+                            );
+
+                            if (string.IsNullOrEmpty(serviceName))
+                                continue;  // Skip if not AP/AR/APDP/ARDP
+
+                            // Determine view type and service interface names
+                            string apViewTypeName = string.Empty;
+                            string apDViewTypeName = string.Empty;
+
+                            if (serviceName.Contains("Hutang"))
                             {
-                                var apServiceType = AppDomain.CurrentDomain.GetAssemblies()
-                                    .SelectMany(a => a.GetTypesSafe())
-                                    .FirstOrDefault(t => t.FullName == "eSoft.Hutang.Services.IPaymentApServices" || t.FullName == "eSoft.Hutang.Services.PaymentApServices");
+                                apViewTypeName = "eSoft.Hutang.View.ApTransHView";
+                                apDViewTypeName = "eSoft.Hutang.View.ApTransDView";
+                            }
+                            else if (serviceName.Contains("Piutang"))
+                            {
+                                apViewTypeName = "eSoft.Piutang.View.ArTransHView";
+                                apDViewTypeName = "eSoft.Piutang.View.ArTransDView";
+                            }
 
-                                var apViewType = AppDomain.CurrentDomain.GetAssemblies()
-                                    .SelectMany(a => a.GetTypesSafe())
-                                    .FirstOrDefault(t => t.FullName == "eSoft.Hutang.View.ApTransHView");
+                            var apServiceType = AppDomain.CurrentDomain.GetAssemblies()
+                                .SelectMany(a => a.GetTypesSafe())
+                                .FirstOrDefault(t => t.FullName == serviceName.Replace("I", "") || t.FullName == serviceName);
 
-                                var apDType = AppDomain.CurrentDomain.GetAssemblies()
-                                    .SelectMany(a => a.GetTypesSafe())
-                                    .FirstOrDefault(t => t.FullName == "eSoft.Hutang.View.ApTransDView");
+                            var apViewType = AppDomain.CurrentDomain.GetAssemblies()
+                                .SelectMany(a => a.GetTypesSafe())
+                                .FirstOrDefault(t => t.FullName == apViewTypeName);
 
-                                if (apServiceType == null || apViewType == null || apDType == null)
-                                    throw new InvalidOperationException("AP payment service or view types not found in loaded assemblies.");
+                            var apDType = AppDomain.CurrentDomain.GetAssemblies()
+                                .SelectMany(a => a.GetTypesSafe())
+                                .FirstOrDefault(t => t.FullName == apDViewTypeName);
 
-                                var apService = _serviceProvider.GetService(apServiceType) ?? _serviceProvider.GetService(apServiceType.GetInterfaces().FirstOrDefault());
-                                if (apService == null)
-                                    throw new InvalidOperationException("AP payment service not registered in DI container.");
+                            if (apServiceType == null || apViewType == null || apDType == null)
+                                throw new InvalidOperationException($"Service or view types not found for {serviceName}");
 
-                                var apInstance = Activator.CreateInstance(apViewType);
-                                var apPaymentDate = paymentDate;
-                                apViewType.GetProperty("Tanggal")?.SetValue(apInstance, apPaymentDate);
-                                var apHeaderDate = (DateTime)(apViewType.GetProperty("Tanggal")?.GetValue(apInstance) ?? apPaymentDate);
-                                apViewType.GetProperty("KdBank")?.SetValue(apInstance, kodeBank);
-                                var supplierCode = !string.IsNullOrWhiteSpace(trx.PartyCode) ? trx.PartyCode : (string.IsNullOrWhiteSpace(trx.NoPrj) ? trx.Description : trx.NoPrj);
-                                apViewType.GetProperty("Supplier")?.SetValue(apInstance, supplierCode);
-                                apViewType.GetProperty("Keterangan")?.SetValue(apInstance, trx.Description);
+                            var apService = _serviceProvider.GetService(apServiceType) ?? _serviceProvider.GetService(apServiceType.GetInterfaces().FirstOrDefault());
+                            if (apService == null)
+                                throw new InvalidOperationException($"Service not registered in DI container: {serviceName}");
 
-                                var listType = typeof(List<>).MakeGenericType(apDType);
-                                var listInstance = Activator.CreateInstance(listType);
-                                var apTransDsProp = apViewType.GetProperty("ApTransDs");
-                                if (apTransDsProp != null)
+                            var apInstance = Activator.CreateInstance(apViewType);
+                            var apPaymentDate = paymentDate;
+                            apViewType.GetProperty("Tanggal")?.SetValue(apInstance, apPaymentDate);
+                            var apHeaderDate = (DateTime)(apViewType.GetProperty("Tanggal")?.GetValue(apInstance) ?? apPaymentDate);
+                            apViewType.GetProperty("KdBank")?.SetValue(apInstance, kodeBank);
+
+                            var partyCode = !string.IsNullOrWhiteSpace(trx.PartyCode) ? trx.PartyCode : (string.IsNullOrWhiteSpace(trx.NoPrj) ? trx.Description : trx.NoPrj);
+
+                            // Set party code and master data IDs/names based on service type
+                            if (serviceName.Contains("Hutang"))
+                            {
+                                apViewType.GetProperty("Supplier")?.SetValue(apInstance, partyCode);
+                                // Set supplier ID and name from master data
+                                if (trx.PartyId > 0)
                                 {
-                                    if (apTransDsProp.CanWrite)
+                                    apViewType.GetProperty("ApSupplId")?.SetValue(apInstance, trx.PartyId);
+                                }
+                                if (!string.IsNullOrEmpty(trx.PartyName))
+                                {
+                                    apViewType.GetProperty("NamaSup")?.SetValue(apInstance, trx.PartyName);
+                                }
+                            }
+                            else if (serviceName.Contains("Piutang"))
+                            {
+                                apViewType.GetProperty("Customer")?.SetValue(apInstance, partyCode);
+                                // AR doesn't use PartyId/PartyName yet, but set if available
+                                if (trx.PartyId > 0)
+                                {
+                                    apViewType.GetProperty("ArCustId")?.SetValue(apInstance, trx.PartyId);
+                                }
+                            }
+
+                            apViewType.GetProperty("Keterangan")?.SetValue(apInstance, trx.Description);
+
+                            // ========== NEW: SET CURRENCY/KURS FOR AP/APDP ==========
+                            if (serviceName.Contains("Hutang"))
+                            {
+                                // Only set currency if we have it
+                                if (!string.IsNullOrEmpty(trx.Currency) && trx.Currency != "IDR")
+                                {
+                                    apViewType.GetProperty("Currency")?.SetValue(apInstance, trx.Currency);
+                                }
+
+                                // Set Kurs (default to 1 if not provided or <=1)
+                                decimal kurs = trx.Kurs > 1m ? trx.Kurs : 1m;
+                                apViewType.GetProperty("Kurs")?.SetValue(apInstance, kurs);
+
+                                // NOTE: Do NOT set Nilai - it's a calculated property (Nilai = Kurs * JumBayar)
+                                // Nilai will be automatically calculated by the system
+                            }
+
+                            var listType = typeof(List<>).MakeGenericType(apDType);
+                            var listInstance = Activator.CreateInstance(listType);
+                            var apTransDsProp = apViewType.GetProperty("ApTransDs") ?? apViewType.GetProperty("ArTransDs");
+                            if (apTransDsProp != null)
+                            {
+                                if (apTransDsProp.CanWrite)
+                                {
+                                    apTransDsProp.SetValue(apInstance, listInstance);
+                                }
+                                else
+                                {
+                                    // read-only collection: get existing and copy items into it
+                                    var existing = apTransDsProp.GetValue(apInstance);
+                                    if (existing != null)
                                     {
-                                        apTransDsProp.SetValue(apInstance, listInstance);
-                                    }
-                                    else
-                                    {
-                                        // read-only collection: get existing and copy items into it
-                                        var existing = apTransDsProp.GetValue(apInstance);
-                                        if (existing != null)
+                                        var addItemMethod = existing.GetType().GetMethod("Add");
+                                        if (addItemMethod != null)
                                         {
-                                            var addItemMethod = existing.GetType().GetMethod("Add");
-                                            if (addItemMethod != null)
+                                            var enumItems = listInstance as System.Collections.IEnumerable;
+                                            if (enumItems != null)
                                             {
-                                                var enumItems = listInstance as System.Collections.IEnumerable;
-                                                if (enumItems != null)
+                                                foreach (var it in enumItems)
                                                 {
-                                                    foreach (var it in enumItems)
-                                                    {
-                                                        addItemMethod.Invoke(existing, new[] { it });
-                                                    }
+                                                    addItemMethod.Invoke(existing, new[] { it });
                                                 }
                                             }
                                         }
                                     }
                                 }
+                            }
 
-                                var selDocsAp = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
-                                if (selDocsAp != null && selDocsAp.Any())
-                                {
-                                    foreach (var sdoc in selDocsAp)
-                                    {
-                                        var apd = Activator.CreateInstance(apDType);
-                                        // payment header date
-                                        apDType.GetProperty("Tanggal")?.SetValue(apd, apHeaderDate);
-                                        // store original invoice date into DueDate (per UX expectation)
-                                        apDType.GetProperty("DueDate")?.SetValue(apd, sdoc.Tanggal);
-                                        apDType.GetProperty("Jumlah")?.SetValue(apd, sdoc.Sisa);
-                                        apDType.GetProperty("Bayar")?.SetValue(apd, sdoc.Bayar);
-                                        apDType.GetProperty("Discount")?.SetValue(apd, sdoc.Discount);
-                                        var prop = apDType.GetProperty("Lpb") ?? apDType.GetProperty("Dokumen");
-                                        prop?.SetValue(apd, sdoc.Dokumen);
-                                        apDType.GetProperty("Keterangan")?.SetValue(apd, trx.Description);
-                                        // set transaction code for AP details from source document if available
-                                        apDType.GetProperty("KodeTran")?.SetValue(apd, string.IsNullOrEmpty(sdoc.KodeTran) ? "24" : sdoc.KodeTran);
-                                        listType.GetMethod("Add")?.Invoke(listInstance, new[] { apd });
-                                    }
-                                }
-                                else
+                            var selDocsAp = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
+                            if (selDocsAp != null && selDocsAp.Any())
+                            {
+                                foreach (var sdoc in selDocsAp)
                                 {
                                     var apd = Activator.CreateInstance(apDType);
+                                    // payment header date
                                     apDType.GetProperty("Tanggal")?.SetValue(apd, apHeaderDate);
-                                    apDType.GetProperty("Jumlah")?.SetValue(apd, trx.Amount);
-                                    apDType.GetProperty("Bayar")?.SetValue(apd, trx.Amount);
+                                    // store original invoice date into DueDate (per UX expectation)
+                                    apDType.GetProperty("DueDate")?.SetValue(apd, sdoc.Tanggal);
+                                    apDType.GetProperty("Jumlah")?.SetValue(apd, sdoc.Sisa);
+                                    apDType.GetProperty("Bayar")?.SetValue(apd, sdoc.Bayar);
+                                    apDType.GetProperty("Discount")?.SetValue(apd, sdoc.Discount);
+                                    // Lpb exists on both AP and AR detail views
+                                    apDType.GetProperty("Lpb")?.SetValue(apd, sdoc.Dokumen);
                                     apDType.GetProperty("Keterangan")?.SetValue(apd, trx.Description);
-                                    apDType.GetProperty("KodeTran")?.SetValue(apd, "24");
-                                    listType.GetMethod("Add")?.Invoke(listInstance, new object[] { apd });
+                                    // set transaction code for AP/AR details from source document if available
+                                    apDType.GetProperty("KodeTran")?.SetValue(apd, string.IsNullOrEmpty(sdoc.KodeTran) ? "24" : sdoc.KodeTran);
+                                    listType.GetMethod("Add")?.Invoke(listInstance, new[] { apd });
                                 }
+                            }
+                            else
+                            {
+                                var apd = Activator.CreateInstance(apDType);
+                                apDType.GetProperty("Tanggal")?.SetValue(apd, apHeaderDate);
+                                apDType.GetProperty("Jumlah")?.SetValue(apd, trx.Amount);
+                                apDType.GetProperty("Bayar")?.SetValue(apd, trx.Amount);
+                                apDType.GetProperty("Keterangan")?.SetValue(apd, trx.Description);
+                                apDType.GetProperty("KodeTran")?.SetValue(apd, "24");
+                                listType.GetMethod("Add")?.Invoke(listInstance, new object[] { apd });
+                            }
 
-                                decimal totalBayarAp = 0m;
-                                decimal totalDiscountAp = 0m;
-                                var selDocsForAp = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
-                                if (selDocsForAp != null && selDocsForAp.Any())
-                                {
-                                    totalBayarAp = selDocsForAp.Sum(s => s.Bayar);
-                                    totalDiscountAp = selDocsForAp.Sum(s => s.Discount);
-                                }
-                                else
-                                {
-                                    totalBayarAp = trx.Amount;
-                                    totalDiscountAp = 0m;
-                                }
+                            decimal totalBayarAp = 0m;
+                            decimal totalDiscountAp = 0m;
+                            var selDocsForAp = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
+                            if (selDocsForAp != null && selDocsForAp.Any())
+                            {
+                                totalBayarAp = selDocsForAp.Sum(s => s.Bayar);
+                                totalDiscountAp = selDocsForAp.Sum(s => s.Discount);
+                            }
+                            else
+                            {
+                                totalBayarAp = trx.Amount;
+                                totalDiscountAp = 0m;
+                            }
 
-                                var propJumBayar = apViewType.GetProperty("JumBayar");
-                                if (propJumBayar != null && propJumBayar.CanWrite)
-                                    propJumBayar.SetValue(apInstance, totalBayarAp);
+                            var propJumBayar = apViewType.GetProperty("JumBayar");
+                            if (propJumBayar != null && propJumBayar.CanWrite)
+                                propJumBayar.SetValue(apInstance, totalBayarAp);
 
-                                var propJumDiskon = apViewType.GetProperty("JumDiskon");
-                                if (propJumDiskon != null && propJumDiskon.CanWrite)
-                                    propJumDiskon.SetValue(apInstance, totalDiscountAp);
+                            var propJumDiskon = apViewType.GetProperty("JumDiskon");
+                            if (propJumDiskon != null && propJumDiskon.CanWrite)
+                                propJumDiskon.SetValue(apInstance, totalDiscountAp);
 
+                            // JumHutang is only for AP (Hutang), not for AR (Piutang)
+                            if (serviceName.Contains("Hutang"))
+                            {
                                 var propJumHutang = apViewType.GetProperty("JumHutang");
                                 if (propJumHutang != null && propJumHutang.CanWrite)
                                     propJumHutang.SetValue(apInstance, totalBayarAp + totalDiscountAp);
-
-                                var addMethod = apService.GetType().GetMethod("AddTransH");
-                                if (addMethod == null) throw new InvalidOperationException("AddTransH method not found on AP service.");
-
-                                addMethod.Invoke(apService, new object[] { apInstance });
                             }
-                            else if (string.Equals(effectiveTarget, "AR", StringComparison.OrdinalIgnoreCase))
-                            {
-                                var arServiceType = AppDomain.CurrentDomain.GetAssemblies()
-                                    .SelectMany(a => a.GetTypesSafe())
-                                    .FirstOrDefault(t => t.FullName == "eSoft.Piutang.Services.IPaymentArServices" || t.FullName == "eSoft.Piutang.Services.PaymentArServices");
 
-                                var arViewType = AppDomain.CurrentDomain.GetAssemblies()
-                                    .SelectMany(a => a.GetTypesSafe())
-                                    .FirstOrDefault(t => t.FullName == "eSoft.Piutang.View.ArTransHView");
+                            var addMethod = apService.GetType().GetMethod("AddTransH");
+                            if (addMethod == null) throw new InvalidOperationException("AddTransH method not found on payment service.");
 
-                                var arDType = AppDomain.CurrentDomain.GetAssemblies()
-                                    .SelectMany(a => a.GetTypesSafe())
-                                    .FirstOrDefault(t => t.FullName == "eSoft.Piutang.View.ArTransDView");
-
-                                if (arServiceType == null || arViewType == null || arDType == null)
-                                    throw new InvalidOperationException("AR payment service or view types not found in loaded assemblies.");
-
-                                var arService = _serviceProvider.GetService(arServiceType) ?? _serviceProvider.GetService(arServiceType.GetInterfaces().FirstOrDefault());
-                                if (arService == null)
-                                    throw new InvalidOperationException("AR payment service not registered in DI container.");
-
-                                var arInstance = Activator.CreateInstance(arViewType);
-                                arViewType.GetProperty("Tanggal")?.SetValue(arInstance, paymentDate);
-                                var arHeaderDate = (DateTime)(arViewType.GetProperty("Tanggal")?.GetValue(arInstance) ?? paymentDate);
-                                arViewType.GetProperty("KdBank")?.SetValue(arInstance, kodeBank);
-                                var customerCode = !string.IsNullOrWhiteSpace(trx.PartyCode) ? trx.PartyCode : (string.IsNullOrWhiteSpace(trx.NoPrj) ? trx.Description : trx.NoPrj);
-                                arViewType.GetProperty("Customer")?.SetValue(arInstance, customerCode);
-                                arViewType.GetProperty("Keterangan")?.SetValue(arInstance, trx.Description);
-
-                                var listType = typeof(List<>).MakeGenericType(arDType);
-                                var listInstance = Activator.CreateInstance(listType);
-                                var arTransDsProp = arViewType.GetProperty("ArTransDs");
-                                if (arTransDsProp != null)
-                                {
-                                    if (arTransDsProp.CanWrite)
-                                    {
-                                        arTransDsProp.SetValue(arInstance, listInstance);
-                                    }
-                                    else
-                                    {
-                                        var existing = arTransDsProp.GetValue(arInstance);
-                                        if (existing != null)
-                                        {
-                                            var addItemMethod = existing.GetType().GetMethod("Add");
-                                            if (addItemMethod != null)
-                                            {
-                                                var enumItems = listInstance as System.Collections.IEnumerable;
-                                                if (enumItems != null)
-                                                {
-                                                    foreach (var it in enumItems)
-                                                    {
-                                                        addItemMethod.Invoke(existing, new[] { it });
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                var selDocsAr = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
-                                if (selDocsAr != null && selDocsAr.Any())
-                                {
-                                    foreach (var sdoc in selDocsAr)
-                                    {
-                                        var ard = Activator.CreateInstance(arDType);
-                                        // payment header date
-                                        arDType.GetProperty("Tanggal")?.SetValue(ard, arHeaderDate);
-                                        // store original invoice date into DueDate (per UX expectation)
-                                        arDType.GetProperty("DueDate")?.SetValue(ard, sdoc.Tanggal);
-                                        arDType.GetProperty("Jumlah")?.SetValue(ard, sdoc.Sisa);
-                                        arDType.GetProperty("Bayar")?.SetValue(ard, sdoc.Bayar);
-                                        arDType.GetProperty("Discount")?.SetValue(ard, sdoc.Discount);
-                                        var prop = arDType.GetProperty("Lpb") ?? arDType.GetProperty("Dokumen");
-                                        prop?.SetValue(ard, sdoc.Dokumen);
-                                        arDType.GetProperty("Keterangan")?.SetValue(ard, trx.Description);
-                                        // set transaction code for AR details from source document if available
-                                        arDType.GetProperty("KodeTran")?.SetValue(ard, string.IsNullOrEmpty(sdoc.KodeTran) ? "14" : sdoc.KodeTran);
-                                        listType.GetMethod("Add")?.Invoke(listInstance, new[] { ard });
-                                    }
-                                }
-                                else
-                                {
-                                    var ard = Activator.CreateInstance(arDType);
-                                    arDType.GetProperty("Tanggal")?.SetValue(ard, arHeaderDate);
-                                    arDType.GetProperty("Jumlah")?.SetValue(ard, trx.Amount);
-                                    arDType.GetProperty("Bayar")?.SetValue(ard, trx.Amount);
-                                    arDType.GetProperty("Keterangan")?.SetValue(ard, trx.Description);
-                                    arDType.GetProperty("KodeTran")?.SetValue(ard, "14");
-                                    listType.GetMethod("Add")?.Invoke(listInstance, new[] { ard });
-                                }
-
-                                decimal totalBayarAr = 0m;
-                                decimal totalDiscountAr = 0m;
-                                var selDocsForAr = trx.OutstandingDocs?.Where(d => d.IsSelected || d.Bayar > 0 || d.Discount > 0).ToList();
-                                if (selDocsForAr != null && selDocsForAr.Any())
-                                {
-                                    totalBayarAr = selDocsForAr.Sum(s => s.Bayar);
-                                    totalDiscountAr = selDocsForAr.Sum(s => s.Discount);
-                                }
-                                else
-                                {
-                                    totalBayarAr = trx.Amount;
-                                    totalDiscountAr = 0m;
-                                }
-
-                                var propArJumBayar = arViewType.GetProperty("JumBayar");
-                                if (propArJumBayar != null && propArJumBayar.CanWrite)
-                                    propArJumBayar.SetValue(arInstance, totalBayarAr);
-
-                                var propArJumDiskon = arViewType.GetProperty("JumDiskon");
-                                if (propArJumDiskon != null && propArJumDiskon.CanWrite)
-                                    propArJumDiskon.SetValue(arInstance, totalDiscountAr);
-
-                                var propArJumPiutang = arViewType.GetProperty("JumPiutang");
-                                if (propArJumPiutang != null && propArJumPiutang.CanWrite)
-                                    propArJumPiutang.SetValue(arInstance, totalBayarAr + totalDiscountAr);
-
-                                var addMethod = arService.GetType().GetMethod("AddTransH");
-                                if (addMethod == null) throw new InvalidOperationException("AddTransH method not found on AR service.");
-
-                                addMethod.Invoke(arService, new[] { arInstance });
-                            }
+                            addMethod.Invoke(apService, new object[] { apInstance });
                         }
                         catch (Exception)
                         {
@@ -1590,32 +1583,61 @@ namespace eSoft.CashBank.Services
             // base format: KodeBank + yyyyMMdd
             var baseNo = kodeBank + tgl.ToString("yyyyMMdd");
 
-            // get existing docnos that start with the base
-            var existing = await _context.CbTransHs
-                .Where(h => h.DocNo.StartsWith(baseNo))
-                .Select(h => h.DocNo)
-                .ToListAsync();
-
-            if (existing == null || existing.Count == 0)
+            try
             {
+                // Optimized: Only fetch documents for the current date to reduce dataset
+                // Then extract sequence numbers in memory
+                var existingDocs = await _context.CbTransHs
+                    .Where(h => h.DocNo.StartsWith(baseNo))
+                    .Select(h => h.DocNo)
+                    .ToListAsync();
+
+                if (existingDocs == null || existingDocs.Count == 0)
+                {
+                    return baseNo + "-00001";
+                }
+
+                // Extract sequence numbers and find max
+                int maxSeq = 0;
+                foreach (var doc in existingDocs)
+                {
+                    var seq = ExtractSequenceFromDocNo(doc);
+                    if (seq > maxSeq)
+                        maxSeq = seq;
+                }
+
+                return baseNo + "-" + (maxSeq + 1).ToString("00000");
+            }
+            catch (OperationCanceledException)
+            {
+                Console.Error.WriteLine("Document sequence generation timeout - using default");
                 return baseNo + "-00001";
             }
-
-            int maxSeq = 0;
-            foreach (var doc in existing)
+            catch (Exception ex)
             {
-                var idx = doc.LastIndexOf('-');
-                if (idx >= 0 && idx + 1 < doc.Length)
-                {
-                    var suffix = doc.Substring(idx + 1);
-                    if (int.TryParse(suffix, out int seq))
-                    {
-                        if (seq > maxSeq) maxSeq = seq;
-                    }
-                }
+                Console.Error.WriteLine($"Error generating document sequence: {ex.Message}");
+                return baseNo + "-00001";
             }
+        }
 
-            return baseNo + "-" + (maxSeq + 1).ToString("00000");
+        /// <summary>
+        /// Extract sequence number from document number string
+        /// Expects format: "BASEXXXXXX-NNNNN" returns NNNNN as int
+        /// </summary>
+        private int ExtractSequenceFromDocNo(string docNo)
+        {
+            if (string.IsNullOrEmpty(docNo))
+                return 0;
+
+            var idx = docNo.LastIndexOf('-');
+            if (idx < 0 || idx + 1 >= docNo.Length)
+                return 0;
+
+            var suffix = docNo.Substring(idx + 1);
+            if (int.TryParse(suffix, out int seq))
+                return seq;
+
+            return 0;
         }
 
         private DateTime ResolveCsvPaymentDate(BankTransactionView trx, DateTime fallbackDate)
