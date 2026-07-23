@@ -164,12 +164,11 @@ namespace eSoft.Hutang.Services
                 Supplier = transH.Supplier,               
                 Keterangan = transH.Keterangan,
                 KodeTran = "23",
-                Jumlah = 0,                               // No invoice amount for DP
+                Jumlah = -1 * transH.Jumlah,               // DP amount as invoice
                 SldSisa = -1 * transH.Jumlah,
-                Bayar = -1 * transH.Jumlah,               // Payment recorded here
                 Discount = 0,
-                UnApplied = -1 * transH.Unapplied,        // Remaining payment to use
-                Sisa = -1 * transH.Unapplied,
+                UnApplied = -1 * transH.Unapplied,         // Remaining to allocate
+                Sisa = -1 * transH.Jumlah,                 // Same as Jumlah for DP
                 Kurs = transH.Kurs,
                 Currency = trans.Currency,
                 Nilai = transH.Nilai,
