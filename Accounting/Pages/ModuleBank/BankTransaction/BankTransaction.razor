@@ -277,7 +277,8 @@
                             </td>
                             <td style="padding-top:10px; text-align:right; white-space:nowrap; font-size:0.9rem;">
                                 @{
-                                    var amtStyle = ctx.Amount < 0 ? "color:#dc3545;" : ctx.Amount > 0 ? "color:#198754;" : "";
+                                    // DB (Debit) = red, CR (Credit) = current color logic
+                                    var amtStyle = ctx.Type == "DB" ? "color:#dc3545; font-weight:600;" : ctx.Amount < 0 ? "color:#dc3545;" : ctx.Amount > 0 ? "color:#198754;" : "";
                                 }
                                 <span style="@amtStyle">@ctx.Amount.ToString("N2")</span>
                             </td>
