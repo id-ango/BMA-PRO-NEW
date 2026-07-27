@@ -1354,7 +1354,8 @@ namespace eSoft.CashBank.Services
                                 apViewType.GetProperty("Kurs")?.SetValue(apInstance, kurs);
 
                                 // NOTE: Do NOT set Nilai - it's a calculated property (Nilai = Kurs * JumBayar)
-                                // Nilai will be automatically calculated by the system
+                                // For APDP: JumBayar will be set from trx.Nilai, so Nilai will auto-calculate
+                                // For AP: JumBayar will be set from allocated amounts
                             }
 
                             var listType = typeof(List<>).MakeGenericType(apDType);
@@ -1413,8 +1414,14 @@ namespace eSoft.CashBank.Services
                             {
                                 var apd = Activator.CreateInstance(apDType);
                                 apDType.GetProperty("Tanggal")?.SetValue(apd, apHeaderDate);
-                                apDType.GetProperty("Jumlah")?.SetValue(apd, trx.Amount);
-                                apDType.GetProperty("Bayar")?.SetValue(apd, trx.Amount);
+
+                                // For APDP: Use Nilai (foreign currency), for AP: Use Amount (IDR)
+                                decimal detailAmount = effectiveTarget.Equals("APDP", StringComparison.OrdinalIgnoreCase) 
+                                    ? (trx.Nilai > 0 ? trx.Nilai : trx.Amount)
+                                    : trx.Amount;
+
+                                apDType.GetProperty("Jumlah")?.SetValue(apd, detailAmount);
+                                apDType.GetProperty("Bayar")?.SetValue(apd, detailAmount);
                                 apDType.GetProperty("Keterangan")?.SetValue(apd, trx.Description);
                                 apDType.GetProperty("KodeTran")?.SetValue(apd, "24");
                                 listType.GetMethod("Add")?.Invoke(listInstance, new object[] { apd });
@@ -1430,7 +1437,15 @@ namespace eSoft.CashBank.Services
                             }
                             else
                             {
-                                totalBayarAp = trx.Amount;
+                                // For APDP: Use Nilai (foreign currency amount), for AP: Use Amount (IDR)
+                                if (effectiveTarget.Equals("APDP", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    totalBayarAp = trx.Nilai > 0 ? trx.Nilai : trx.Amount; // Use user input Nilai for APDP
+                                }
+                                else
+                                {
+                                    totalBayarAp = trx.Amount; // Use Amount (IDR) for AP regular
+                                }
                                 totalDiscountAp = 0m;
                             }
 

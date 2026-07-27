@@ -44,8 +44,8 @@
             <td style="width:20%; background-color:@(transaksi.Cek == "3" ? "yellow" : "")">@transaksi.NamaVendor
              <br />
                 <span class="badge bg-primary">@transaksi.NoPrj</span>
-                <br />
-                @if (string.IsNullOrEmpty(transaksi.Lokasi))
+              @*   <br /> *@
+               @*  @if (string.IsNullOrEmpty(transaksi.Lokasi))
                 {
                     <InputFile OnChange="HandleFileUpload" class="mb-3" />
                     <button class="btn btn-primary custom-button" @onclick="() => SaveFile(transaksi.PoTransHId)">Simpan File</button>
@@ -59,9 +59,9 @@
                         </svg>
                     </a>
                     <button class="btn btn-danger btn-sm" @onclick="() => ShowDeleteConfirmation(transaksi.Lokasi)">Hapus</button>
-                }
-                <br/>
-               
+                } *@
+                @* <br/>
+                *@
             </td>
          
             <td style="width:20%; background-color:@(transaksi.Cek == "3" ? "yellow" : "")">@transaksi.Keterangan</td>

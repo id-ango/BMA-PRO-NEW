@@ -389,7 +389,7 @@
                                         </div>
                                     }
 
-                                    @if (!string.IsNullOrEmpty(ctx.PartyCode))
+                                    @if (!string.IsNullOrEmpty(ctx.PartyCode) && (ctx.Target == "AP" || ctx.Target == "AR"))
                                     {
                                         <div style="margin-top:8px;">
                                             <button class="btn btn-sm btn-outline-primary" @onclick="() => AllocateAmount(ctx)">
@@ -427,7 +427,7 @@
                             </tr>
                         }
 
-                        @if ((ctx.Target == "AR" || ctx.Target == "AP" || ctx.Target == "ARDP" || ctx.Target == "APDP") && ctx.OutstandingDocs != null && ctx.OutstandingDocs.Any())
+                        @if ((ctx.Target == "AR" || ctx.Target == "AP") && ctx.OutstandingDocs != null && ctx.OutstandingDocs.Any())
                         {
                             <tr class="trx-detail-row">
                                 <td colspan="9">
@@ -1031,6 +1031,15 @@
                     var selisih = sourceAmt - totalBayarIDR;
                     return (false, $"Total Bayar ({totalBayarIDR:N2}) kurang dari jumlah transaksi ({sourceAmt:N2}) pada baris '{t.Description}'. Selisih {selisih:N2} belum dialokasikan. Tambah dokumen, sesuaikan Bayar, atau ubah Target ke CB.");
                 }
+            }
+            else if (t.Target != null && (t.Target.Equals("APDP", StringComparison.OrdinalIgnoreCase) || t.Target.Equals("ARDP", StringComparison.OrdinalIgnoreCase)))
+            {
+                // APDP/ARDP: downpayment, only need PartyCode and Amount
+                if (string.IsNullOrWhiteSpace(t.PartyCode))
+                    return (false, $"Baris dengan deskripsi '{t.Description}' membutuhkan Customer/Supplier pilihan.");
+
+                if (Math.Abs(t.Amount) <= 0)
+                    return (false, $"Baris dengan deskripsi '{t.Description}' membutuhkan Amount > 0 untuk downpayment.");
             }
         }
         return (true, string.Empty);
