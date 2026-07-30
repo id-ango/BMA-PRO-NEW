@@ -19,6 +19,7 @@ namespace eSoft.Order.Services
         PoTransH AddTransH(PoTransHView trans);
         Task<bool> DelTransH(int id);
         Task<bool> EditTransH(PoTransHView trans);
+        Task<bool> UpdateKeterangan(int id, string keterangan);
         void SaveOrderAktif(string nolpb);
         void DelOrderAktif(string nolpb);
         Task<bool> CloseOrder(int id);

@@ -515,6 +515,20 @@ namespace eSoft.Order.Services
 
         }
 
+        public async Task<bool> UpdateKeterangan(int id, string keterangan)
+        {
+            var trans = await _context.PoTransHs.FirstOrDefaultAsync(x => x.PoTransHId == id);
+            if (trans == null)
+            {
+                return false;
+            }
+
+            trans.Keterangan = keterangan;
+            _context.PoTransHs.Update(trans);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         #endregion PoTransH Class
 
         public string GetNumber()
