@@ -21,6 +21,7 @@ namespace eSoft.Order.Services
         private readonly DbContextOrder _context;
         private readonly DbContextPiutang _contextAr;
         private readonly DbContextPersediaan _contextIc;
+        
 
         public OrderSalesServices(DbContextOrder context, DbContextPiutang contextPiutang, DbContextPersediaan contextPersediaan)
         {
@@ -84,7 +85,7 @@ namespace eSoft.Order.Services
                               NoPrj = header.NoPrj,
                               ItemCode = detail.ItemCode,
                               NamaItem = detail.NamaItem,
-                              Qty = detail.Qty,
+                              Qty = detail.Qty-detail.QtyBo,
                               Harga = detail.Harga
                           }).ToList() ;
 
@@ -181,10 +182,51 @@ namespace eSoft.Order.Services
         {
 
             _context.PoTransHs.Include(p => p.PoTransDs).Where(x => x.NoLpb == customer).FirstOrDefault().Cek = "3";
-           
+
             _context.SaveChanges();
 
             //  return true;
+        }
+
+        public void SaveOrderAktif(string noLpb, List<PoTransDView> soldItems)
+        {
+            var salesOrder = _context.PoTransHs
+                .Include(x => x.PoTransDs) // pastikan detail ikut di-load
+                .FirstOrDefault(x => x.NoLpb == noLpb);
+
+            if (salesOrder == null)
+                return;
+
+            decimal totalQtySold = 0;
+
+            // Update detail SO
+            foreach (var sold in soldItems)
+            {
+                var soItem = salesOrder.PoTransDs.FirstOrDefault(x => x.ItemCode == sold.ItemCode);
+                if (soItem != null)
+                {
+                    soItem.QtyBo += sold.Qty;   // tambah QtyBo sesuai qty penjualan
+                    totalQtySold += sold.Qty;   // akumulasi total qty
+                }
+            }
+
+            // Update tracking qty
+            salesOrder.QtyTerima += totalQtySold;
+
+            // Smart logic: Jika semua qty sudah dijual → selesai "3", else → aktif "1"
+            if (salesOrder.QtyTerima >= salesOrder.TotalQty && salesOrder.TotalQty > 0)
+            {
+                salesOrder.Cek = "3";  // Selesai
+            }
+            else
+            {
+                salesOrder.Cek = "1";  // Aktif (partial atau belum dijual)
+            }
+
+           
+
+            _context.PoTransHs.Update(salesOrder);
+            _context.SaveChanges();
         }
 
         public void DelOrderAktif(string nolpb)
@@ -194,6 +236,12 @@ namespace eSoft.Order.Services
             _context.SaveChanges();
 
             //  return true;
+        }
+
+        public void RestoreSalesOrderStatus(string noLpb)
+        {
+            // This method is now implemented in SalesCommandService.RestoreSalesOrderStatus
+            // Keeping interface method here for compatibility but not used directly
         }
 
         public PoTransH GetOrderAktif(string nolpb)
@@ -645,6 +693,115 @@ namespace eSoft.Order.Services
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Validate if SO quantity can be edited (decreased).
+        /// Prevents reducing SO qty below already-sold quantities.
+        /// </summary>
+        public (bool canEdit, string message) ValidateEditSalesOrderQty(string noLpb, decimal newQty, decimal currentQty)
+        {
+            if (newQty == currentQty)
+            {
+                // No change in quantity - allow
+                return (true, "");
+            }
+
+            if (newQty > currentQty)
+            {
+                // Increasing quantity is always allowed
+                return (true, "");
+            }
+
+            // Quantity is being decreased - check if sold qty exists
+            var salesOrder = _context.PoTransHs
+                .Where(x => x.NoLpb == noLpb)
+                .FirstOrDefault();
+
+            if (salesOrder == null)
+            {
+                return (false, "Sales Order tidak ditemukan.");
+            }
+
+            // Check if already has sold quantities (QtyTerima > 0)
+            if (salesOrder.QtyTerima > 0)
+            {
+                decimal qtyDecrease = currentQty - newQty;
+                decimal remainingAfterDecrease = newQty - salesOrder.QtyTerima;
+
+                if (remainingAfterDecrease < 0)
+                {
+                    return (false, 
+                        $"Tidak dapat mengurangi qty SO menjadi {newQty}. " +
+                        $"Sudah ada penjualan sebesar {salesOrder.QtyTerima} qty. " +
+                        $"Minimum qty yang diizinkan adalah {salesOrder.QtyTerima}.");
+                }
+            }
+
+            return (true, "");
+        }
+
+        /// <summary>
+        /// Check if a Sales Order can be deleted.
+        /// Prevents deletion if the SO has existing sales transactions.
+        /// </summary>
+        public (bool canDelete, string message) CanDeleteSalesOrder(string noLpb)
+        {
+            if (string.IsNullOrEmpty(noLpb))
+            {
+                return (false, "No PO/PI reference provided.");
+            }
+
+            // Check if SO exists
+            var salesOrder = _context.PoTransHs
+                .Where(x => x.NoLpb == noLpb)
+                .FirstOrDefault();
+
+            if (salesOrder == null)
+            {
+                return (false, "Sales Order tidak ditemukan.");
+            }
+
+            // Check if this SO has any sales transactions referencing it
+            // Sales transactions have NoPrj = SO's NoLpb
+            var hasTransactions = _context.PoTransHs
+                .Where(x => x.NoPrj == noLpb && x.Cek != "1")  // Cek != "1" means it's a transaction/not a new order
+                .Any();
+
+            if (hasTransactions)
+            {
+                var transactionCount = _context.PoTransHs
+                    .Where(x => x.NoPrj == noLpb && x.Cek != "1")
+                    .Count();
+
+                return (false,
+                    $"Tidak dapat menghapus SO karena sudah ada {transactionCount} transaksi penjualan yang mereferensi SO ini. " +
+                    $"Hapus semua transaksi penjualan terlebih dahulu sebelum menghapus SO.");
+            }
+
+            return (true, "");
+        }
+
+        // ✅ NEW: Calculate total qty sold for SO item from transaction history
+        // This sums the qty in all transactions where the transaction references this SO
+        public decimal CalculateTotalSoldQtyForSoItem(string noLpb, string itemCode)
+        {
+            try
+            {
+                // Get all PoTransH that reference this SO (NoPrj = noLpb) and are transactions (Cek != "1")
+                var totalSold = _context.PoTransHs
+                    .Include(x => x.PoTransDs)
+                    .Where(x => x.NoPrj == noLpb && x.Cek != "1")  // Cek != "1" means it's a transaction
+                    .SelectMany(x => x.PoTransDs)
+                    .Where(x => x.ItemCode == itemCode)
+                    .Sum(x => (decimal?)x.Qty) ?? 0;
+
+                return totalSold;
+            }
+            catch
+            {
+                return 0;
+            }
         }
     }
 }

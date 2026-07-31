@@ -180,13 +180,13 @@
 
 @if (IsVisible)
 {
-    <ModalOrderBeliComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd" Location="lokasi"></ModalOrderBeliComponent>
+    <ModalOrderBeliComponent SrcCode="srccode" OnClose="OnVisibleClose" OnDetail="OnDetailTrans" isEdit="IsEdit" DetailRubah="Transd" Location="lokasi" isJual="true"></ModalOrderBeliComponent>
 }
 
 
 @if (DialogOpen)
 {
-    <ModalDialogComponent Title="Alert" Text="Piutang sdh ada Pembayaran" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+    <ModalDialogComponent Title="Alert" Text="@ValidationMessage" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
 }
 
 @if (SearchOpen)
@@ -229,6 +229,8 @@
 
     private PoTransH TransAll = new PoTransH() { PoTransDs = new List<PoTransD>() };
     private PoTransHView Transh = new PoTransHView() { PoTransDs = new List<PoTransDView>() };
+    private decimal originalTotalQty = 0;  // Store original qty for validation
+    private string ValidationMessage = "";  // Error message for validation
     private List<ArCust> supplier;
     private List<IcItem> srccode;
     private List<IcLokasi> lokasi;
@@ -303,6 +305,21 @@
     private async Task HandleValidSubmit()
     {
         Transh.NamaVendor = serviceAR.GetCustomerCode(Transh.Vendor).NamaLengkap;
+
+        // Validate if SO quantity can be decreased
+        var currentTotalQty = Transh.TotalQty;
+        if (currentTotalQty != originalTotalQty)
+        {
+            var (canEdit, message) = service.ValidateEditSalesOrderQty(Transh.NoPrj, currentTotalQty, originalTotalQty);
+            if (!canEdit)
+            {
+                // Show error message
+                ValidationMessage = message;
+                DialogOpen = true;
+                return;
+            }
+        }
+
         var newEdit = await service.EditTransH(Transh);
         if (newEdit)
         {
@@ -313,6 +330,7 @@
         }
         else
         {
+            ValidationMessage = "Gagal mengupdate transaksi penjualan.";
             DialogOpen = true;
         }
 
@@ -413,6 +431,8 @@
                 Lokasi = item.Lokasi
             });
         }
+        // Store original total qty AFTER all PoTransDs are loaded (TotalQty is computed)
+        originalTotalQty = Transh.TotalQty;
     }
     #endregion
 

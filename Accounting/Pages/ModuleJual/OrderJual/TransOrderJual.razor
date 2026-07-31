@@ -145,7 +145,11 @@
                         }
                     }
                 </div>
-                <span class="badge @GetStatusBadgeClass(transaksi.Cek) mt-1">@GetStatusText(transaksi.Cek)</span>
+                <span class="badge @GetStatusBadgeClass(transaksi.Cek, transaksi.QtyTerima) mt-1">
+                    @GetStatusText(transaksi.Cek, transaksi.QtyTerima)
+                </span>
+
+
             </td>
         </RowTemplate>
     </DataGridVerticalComponent>
@@ -160,7 +164,7 @@
 
 @if (NullDialogOpen)
 {
-    <ModalDialogComponent Title="MESSAGE" Text="This Order Already Received" TombolSave="false" OnClose="OnDeleteNullClose"></ModalDialogComponent>
+    <ModalDialogComponent Title="MESSAGE" Text="@(string.IsNullOrEmpty(DeleteErrorMessage) ? "This Order Already Received" : DeleteErrorMessage)" TombolSave="false" OnClose="OnDeleteNullClose"></ModalDialogComponent>
 }
 @if (CloseDialogOpen)
 {
@@ -183,10 +187,12 @@
      private string fileToDelete;
      private Dictionary<int, bool> EditModeState = new();
      private Dictionary<int, string> EditKeteranganValues = new();
+     private string DeleteErrorMessage = "";  // Store validation error message
 
      public bool DeleteDialogOpen { get; set; }
      public bool NullDialogOpen { get; set; }
      public bool CloseDialogOpen { get; set; }
+
 
     protected override void OnInitialized()
     {
@@ -301,6 +307,16 @@
     {
         if (accepted)
         {
+            // Validate if SO can be deleted (no existing transactions)
+            var (canDelete, message) = service.CanDeleteSalesOrder(_bankToDelete.NoLpb);
+            if (!canDelete)
+            {
+                // Show error message
+                DeleteErrorMessage = message;
+                NullDialogOpen = true;
+                return;
+            }
+
             await service.DelTransH(_bankToDelete.PoTransHId);
             _bankToDelete = null;
         }
@@ -322,13 +338,20 @@
 
         DeleteDialogOpen = false;
         NullDialogOpen = false;
+        DeleteErrorMessage = "";  // Clear error message
         LoadGet();
         StateHasChanged();
 
     }
     private void OpenDeleteDialog(PoTransH bank)
     {
-        if (bank.Cek == "3")
+        // cek apakah sudah ada penerimaan (partial)
+        if (bank.QtyTerima > 0)
+        {
+            DeleteErrorMessage = "Order ini sudah ada penerimaan (partial), tidak bisa dihapus.";
+            NullDialogOpen = true;
+        }
+        else if (bank.Cek == "3")
         {
             NullDialogOpen = true;
         }
@@ -337,21 +360,31 @@
             DeleteDialogOpen = true;
         }
 
-
+        
         _bankToDelete = bank;
         StateHasChanged();
     }
 
     private void OpenRubah(PoTransH bank)
     {
-        if (bank.Cek == "3")
+        // Jika sudah ada penerimaan (partial), tidak boleh edit
+        if (bank.QtyTerima > 0)
         {
+            DeleteErrorMessage = "Order ini sudah ada penerimaan (partial), tidak bisa diedit. " +
+                                 "Silakan tutup SO ini atau hapus penjualannya, lalu buat SO baru.";
+            NullDialogOpen = true;
+        }
+        else if (bank.Cek == "3")
+        {
+            // Sudah status Received → tidak bisa edit
             NullDialogOpen = true;
         }
         else
         {
+            // Masih open dan belum ada penerimaan → boleh edit
             navigationmanager.NavigateTo($"/ModuleJual/EditTransOrderJual/{bank.PoTransHId}");
         }
+     
 
     }
 
@@ -436,4 +469,23 @@
     {
 
     }
+
+    private string GetStatusBadgeClass(string cek, decimal qtyTerima)
+    {
+        if (qtyTerima > 0 && cek != "3") return "bg-info";          // Partial
+        if (qtyTerima == 0 && cek != "3") return "bg-secondary";    // Open
+        if (cek == "3" && qtyTerima == 0) return "bg-warning text-dark"; // Received
+        if (cek == "3" && qtyTerima > 0) return "bg-success";       // Completed
+        return "bg-light";
+    }
+
+    private string GetStatusText(string cek, decimal qtyTerima)
+    {
+        if (qtyTerima > 0 && cek != "3") return "Partial";
+        if (qtyTerima == 0 && cek != "3") return "Open";
+        if (cek == "3" && qtyTerima == 0) return "Received";
+        if (cek == "3" && qtyTerima > 0) return "Completed";
+        return "Unknown";
+    }
+
 }

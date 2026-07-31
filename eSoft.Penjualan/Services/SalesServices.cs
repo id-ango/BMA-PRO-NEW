@@ -268,5 +268,11 @@ namespace eSoft.Penjualan.Services
         {
             return _salesQueryService.GetOeTransDByDokumen(dokumen);
         }
+
+        public void SaveOrderAktifSmart(string noLpb)
+        {
+            // Delegate to command service for smart SO status update
+            _salesCommandService.SaveOrderAktifSmart(noLpb);
+        }
     }
 }

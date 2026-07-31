@@ -5,22 +5,22 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ ISSUE 1: Penjualan Parsial SO (Multi-transaction)      │
-│ Status: ❌ Belum supported                              │
+│ Status: ✅ IMPLEMENTED (STEP 2)                         │
 │ Impact: HIGH - Core business requirement                │
 │ Risk: MEDIUM                                             │
 ├─────────────────────────────────────────────────────────┤
 │ ISSUE 2: Delete Transaksi Tidak Restore SO Status      │
-│ Status: ❌ Bug critical                                 │
+│ Status: ⚠️ Needs verification (service method ready)   │
 │ Impact: CRITICAL - Data integrity                       │
 │ Risk: HIGH - Corrupt SO status                          │
 ├─────────────────────────────────────────────────────────┤
 │ ISSUE 3: Edit SO Validation (Qty Decrease)              │
-│ Status: ❌ Belum ada validasi                           │
+│ Status: ✅ IMPLEMENTED (STEP 3)                         │
 │ Impact: MEDIUM - Prevent negative sisa qty              │
 │ Risk: HIGH - Corrupt SO quantity                        │
 ├─────────────────────────────────────────────────────────┤
 │ ISSUE 4: Delete SO Prevention (Has Transaction)        │
-│ Status: ❌ Belum ada check                              │
+│ Status: ✅ IMPLEMENTED (STEP 4)                         │
 │ Impact: MEDIUM - Prevent orphaned FK                    │
 │ Risk: MEDIUM - Orphaned transaction                     │
 └─────────────────────────────────────────────────────────┘

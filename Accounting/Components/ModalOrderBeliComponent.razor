@@ -168,6 +168,8 @@
 
     [Parameter]
     public bool isEdit { get; set; }
+    [Parameter]
+    public bool isJual { get; set; } = false;
 
     public PoTransDView Detail = new PoTransDView();
 
@@ -207,7 +209,7 @@
             var itemcode = (from e in SrcCode where e.ItemCode == Detail.ItemCode select e).FirstOrDefault();
             Detail.NamaItem = itemcode.NamaItem;
             Detail.Satuan = itemcode.Satuan;
-            Detail.Harga = itemcode.HrgUsd;
+            Detail.Harga = isJual ? itemcode.HrgJual : itemcode.HrgUsd;
         }
 
         SearchOpen = false;
@@ -229,7 +231,7 @@
         var itemcode = (from e in SrcCode where e.ItemCode == args.Value.ToString() select e).FirstOrDefault();
         Detail.NamaItem = itemcode.NamaItem;
         Detail.Satuan = itemcode.Satuan;
-        Detail.Harga = itemcode.HrgUsd;
+        Detail.Harga = isJual ? itemcode.HrgJual : itemcode.HrgUsd;
         //if (Detail.Lokasi == null)
         //{
         //    Transd.Lokasi = Transh.Lokasi;

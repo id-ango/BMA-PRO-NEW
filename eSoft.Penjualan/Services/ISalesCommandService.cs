@@ -11,5 +11,6 @@ namespace eSoft.Penjualan.Services
         Task<bool> DelTransH(int id);
         bool EditTransH(OeTransHView trans);
         bool CekPiutang(OeTransH trans);
+        void SaveOrderAktifSmart(string noLpb);
     }
 }

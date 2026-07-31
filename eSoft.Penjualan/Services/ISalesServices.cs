@@ -55,6 +55,7 @@ namespace eSoft.Penjualan.Services
         void SimpanKurir(OeTransH transaksi);
         void SimpanSalesman(OeTransH transaksi);
         List<OeTransD> GetOeTransDByDokumen(string dokumen);
+        void SaveOrderAktifSmart(string noLpb);
     }
 }
 

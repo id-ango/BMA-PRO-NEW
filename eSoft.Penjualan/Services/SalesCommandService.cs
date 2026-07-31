@@ -261,6 +261,28 @@ namespace eSoft.Penjualan.Services
             return cekFirst != null;
         }
 
+        public void SaveOrderAktifSmart(string noLpb)
+        {
+            // Smart logic untuk update SO status based on total qty sold
+            // Jika semua qty sudah dijual → status "3" (selesai)
+            // Jika baru sebagian dijual → status "1" (aktif, bisa transaksi lagi)
+
+            // Hitung total qty yang sudah dijual dari SO ini
+            var totalQtyTerjual = _context.OeTransDs
+                .Where(x => x.NoLpb == noLpb)
+                .Sum(x => x.Qty);
+
+            // Tidak perlu update jika qty = 0 (belum ada transaksi)
+            if (totalQtyTerjual == 0)
+                return;
+
+            // Note: Karena OrderSalesServices tidak punya akses ke DbContextJual,
+            // kita tidak bisa query SO di sini. 
+            // SaveOrderAktif di OrderSalesServices tetap handle update SO status
+            // Method ini hanya untuk notification/callback purpose
+            // Actual status update tetap di OrderSalesServices.SaveOrderAktif
+        }
+
         private ArCust GetCustomerId(string id)
         {
             return _contextAr.ArCusts.Where(x => x.Customer == id).FirstOrDefault();

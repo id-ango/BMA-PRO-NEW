@@ -21,12 +21,19 @@ namespace eSoft.Order.Services
         Task<bool> EditTransH(PoTransHView trans);
         Task<bool> UpdateKeterangan(int id, string keterangan);
         void SaveOrderAktif(string nolpb);
+        void SaveOrderAktif(string noLpb, List<PoTransDView> soldItems);
         void DelOrderAktif(string nolpb);
+        void RestoreSalesOrderStatus(string noLpb);
+        (bool canEdit, string message) ValidateEditSalesOrderQty(string noLpb, decimal newQty, decimal currentQty);
+        (bool canDelete, string message) CanDeleteSalesOrder(string noLpb);
         Task<bool> CloseOrder(int id);
         List<IcStockCardView> GetCurrentOrderJual(List<IcStockCardView> stockCard);
 
         List<IcStockCardView> GetListOrderAktif(string itemCode, string kodeTrans);
         void SavePdf(PoTransH transH);
         SalesOrderStockMatrixView GetSalesOrderStockMatrix();
+
+        // ✅ NEW: Calculate total sold qty for SO item from existing sales
+        decimal CalculateTotalSoldQtyForSoItem(string noLpb, string itemCode);
     }
 }

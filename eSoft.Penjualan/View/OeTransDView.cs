@@ -63,38 +63,38 @@ namespace eSoft.Penjualan.View
         public decimal JumDpp { get; set; }
         [Column(TypeName = "decimal(18,2)")]
             public decimal Jumlah { get; set; }
-        //public decimal Jumlah
-        //{
-        //    get
-        //    {
-        //        if (jumlah != UpdateJumlah && jumlah != 0)
-        //        {
-        //            return jumlah;
-        //        }
-        //        else
-        //        {
-        //            return UpdateJumlah;
-        //        }
+         //public decimal Jumlah
+         //{\r
+         //    get\r
+         //    {\r
+         //        if (jumlah != UpdateJumlah && jumlah != 0)\r
+         //        {\r
+         //            return jumlah;\r
+         //        }\r
+         //        else\r
+         //        {\r
+         //            return UpdateJumlah;\r
+         //        }\r
 
-        //    }
+         //    }\r
 
-        //    set
-        //    {
-        //        jumlah = value;
-        //    }
-        //}
+         //    set\r
+         //    {\r
+         //        jumlah = value;\r
+         //    }\r
+         //}\r
 
-        public decimal UpdateJumlah
-        {
-            get
-            {
-                var price = Qty * Harga;
-                jumlah = price - Discount;
-                return price - Discount;
-            }
-        }
+         public decimal UpdateJumlah
+         {
+             get
+             {
+                 var price = Qty * Harga;
+                 jumlah = price - Discount;
+                 return price - Discount;
+             }
+         }
 
-        public string Customer { get; set; }
+            public string Customer { get; set; }
         public string AcctSet { get; set; }
         public int OeTransHId { get; set; }
         public OeTransHView OeTransH { get; set; }
