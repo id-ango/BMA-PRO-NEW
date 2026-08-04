@@ -287,13 +287,24 @@
                                 <input type="date" @bind="ctx.Tanggal" class="form-control form-control-sm" />
                             </td>
                             <td>
-                                <InputSelect class="form-control form-control-sm" @bind-Value="ctx.SrcCode">
-                                    <option value="">--- Select SrcCode ---</option>
-                                    @foreach (var item in SourceCode)
-                                    {
-                                        <option value="@item.SrcCode">[@item.SrcCode] @item.NamaSrc</option>
-                                    }
-                                </InputSelect>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <div style="display:flex; gap:4px; align-items:center;">
+                                        <input type="text" class="form-control form-control-sm" placeholder="Search source code..." 
+                                               value="@GetSrcCodeFilterText(ctx)" 
+                                               @oninput="@((ChangeEventArgs e) => OnSrcCodeFilterChanged(ctx, e))" style="flex:1;" />
+                                        @if (!string.IsNullOrEmpty(GetSrcCodeFilterText(ctx)))
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => { SetSrcCodeFilterText(ctx, string.Empty); })" style="padding: 0.25rem 0.5rem;">✕</button>
+                                        }
+                                    </div>
+                                    <InputSelect class="form-control form-control-sm" @bind-Value="ctx.SrcCode">
+                                        <option value="">--- Select SrcCode ---</option>
+                                        @foreach (var item in GetFilteredSourceCodes(ctx))
+                                        {
+                                            <option value="@item.SrcCode">[@item.SrcCode] @item.NamaSrc</option>
+                                        }
+                                    </InputSelect>
+                                </div>
                             </td>
                         </tr>
                         @if (ctx.Target == "AR" || ctx.Target == "AP" || ctx.Target == "ARDP" || ctx.Target == "APDP")
@@ -304,38 +315,71 @@
                                         @if (ctx.Target == "AR")
                                         {
                                             <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Customer</label>
-                                            <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
-                                                    @onchange="@(async (ChangeEventArgs e) => await PartySelectionChanged(ctx, e))">
-                                                <option value="">--- Pilih Customer ---</option>
-                                                @foreach (var c in customers)
-                                                {
-                                                    <option value="@c.Customer">[@c.Customer] @c.NamaCust</option>
-                                                }
-                                            </select>
+                                            <div style="display:flex; flex-direction:column; gap:4px; min-width:420px;">
+                                                <div style="display:flex; gap:4px; align-items:center;">
+                                                    <input type="text" class="form-control form-control-sm" placeholder="Search customer by code or name..." 
+                                                           value="@GetCustomerFilterText(ctx)" 
+                                                           @oninput="@((ChangeEventArgs e) => OnCustomerFilterChanged(ctx, e))" style="flex:1;" />
+                                                    @if (!string.IsNullOrEmpty(GetCustomerFilterText(ctx)))
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => { SetCustomerFilterText(ctx, string.Empty); })" style="padding: 0.25rem 0.5rem;">✕</button>
+                                                    }
+                                                </div>
+                                                <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
+                                                        @onchange="@(async (ChangeEventArgs e) => await PartySelectionChanged(ctx, e))">
+                                                    <option value="">--- Pilih Customer ---</option>
+                                                    @foreach (var c in GetFilteredCustomers(ctx))
+                                                    {
+                                                        <option value="@c.Customer">[@c.Customer] @c.NamaCust</option>
+                                                    }
+                                                </select>
+                                            </div>
                                         }
                                         else if (ctx.Target == "ARDP")
                                         {
                                             <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Customer</label>
-                                            <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
-                                                    @onchange="@(async (ChangeEventArgs e) => await PartySelectionChanged(ctx, e))">
-                                                <option value="">--- Pilih Customer ---</option>
-                                                @foreach (var c in customers)
-                                                {
-                                                    <option value="@c.Customer">[@c.Customer] @c.NamaCust</option>
-                                                }
-                                            </select>
+                                            <div style="display:flex; flex-direction:column; gap:4px; min-width:420px;">
+                                                <div style="display:flex; gap:4px; align-items:center;">
+                                                    <input type="text" class="form-control form-control-sm" placeholder="Search customer by code or name..." 
+                                                           value="@GetCustomerFilterText(ctx)" 
+                                                           @oninput="@((ChangeEventArgs e) => OnCustomerFilterChanged(ctx, e))" style="flex:1;" />
+                                                    @if (!string.IsNullOrEmpty(GetCustomerFilterText(ctx)))
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => { SetCustomerFilterText(ctx, string.Empty); })" style="padding: 0.25rem 0.5rem;">✕</button>
+                                                    }
+                                                </div>
+                                                <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
+                                                        @onchange="@(async (ChangeEventArgs e) => await PartySelectionChanged(ctx, e))">
+                                                    <option value="">--- Pilih Customer ---</option>
+                                                    @foreach (var c in GetFilteredCustomers(ctx))
+                                                    {
+                                                        <option value="@c.Customer">[@c.Customer] @c.NamaCust</option>
+                                                    }
+                                                </select>
+                                            </div>
                                         }
                                         else
                                         {
                                             <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Supplier</label>
-                                            <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
-                                                    @onchange="@(async (ChangeEventArgs e) => await PartySelectionChanged(ctx, e))">
-                                                <option value="">--- Pilih Supplier ---</option>
-                                                @foreach (var s in suppliers)
-                                                {
-                                                    <option value="@s.Supplier">[@s.Supplier] @s.NamaSup</option>
-                                                }
-                                            </select>
+                                            <div style="display:flex; flex-direction:column; gap:4px; min-width:420px;">
+                                                <div style="display:flex; gap:4px; align-items:center;">
+                                                    <input type="text" class="form-control form-control-sm" placeholder="Search supplier by code or name..." 
+                                                           value="@GetSupplierFilterText(ctx)" 
+                                                           @oninput="@((ChangeEventArgs e) => OnSupplierFilterChanged(ctx, e))" style="flex:1;" />
+                                                    @if (!string.IsNullOrEmpty(GetSupplierFilterText(ctx)))
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => { SetSupplierFilterText(ctx, string.Empty); })" style="padding: 0.25rem 0.5rem;">✕</button>
+                                                    }
+                                                </div>
+                                                <select class="form-control form-control-sm" style="max-width:420px;" value="@ctx.PartyCode"
+                                                        @onchange="@(async (ChangeEventArgs e) => await PartySelectionChanged(ctx, e))">
+                                                    <option value="">--- Pilih Supplier ---</option>
+                                                    @foreach (var s in GetFilteredSuppliers(ctx))
+                                                    {
+                                                        <option value="@s.Supplier">[@s.Supplier] @s.NamaSup</option>
+                                                    }
+                                                </select>
+                                            </div>
                                         }
 
                                         @* TransactionType selector for AR & AP *@
@@ -348,33 +392,33 @@
                                             </select>
                                         } *@
 
-                                        @* Currency & Kurs for AP & APDP *@
-                                        @if (ctx.Target == "AP" || ctx.Target == "APDP")
+                                        @* Currency & Kurs for APDP only *@
+                                        @if (ctx.Target == "APDP")
                                         {
-                                            @* For AP & APDP: Currency loaded from supplier master (read-only display) *@
+                                            @* For APDP: Currency loaded from supplier master (read-only display) *@
                                             <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0; margin-left:12px;">Currency (from Supplier)</label>
                                             <input type="text" class="form-control form-control-sm" style="max-width:100px;" @bind="ctx.Currency" readonly />
                                             <small style="color:#6c757d; font-size:0.75rem;">Loaded from supplier master data</small>
 
-                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Kurs @if (ctx.Target == "APDP") { <span style="color:red;">*</span> }</label>
+                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;"><span style="color:red;">*</span> Kurs</label>
                                             <input type="number" class="form-control form-control-sm" placeholder="15500.00" style="max-width:150px;" @bind="ctx.Kurs" @bind:event="oninput" step="0.0001" min="0" />
 
                                             @if (ctx.Kurs > 1m && !string.IsNullOrEmpty(ctx.Currency))
                                             {
                                                 <small style="color:#198754; font-weight:600;">1 @ctx.Currency = @(ctx.Kurs.ToString("N2")) IDR</small>
                                             }
-                                            else if (ctx.Target == "APDP")
+                                            else
                                             {
                                                 <small style="color:#dc3545; font-weight:600;">⚠️ Required for APDP</small>
                                             }
                                         }
                                     </div>
 
-                                    @* Foreign Amount Section for AP/APDP *@
-                                    @if (ctx.Target == "AP" || ctx.Target == "APDP")
+                                    @* Foreign Amount Section for APDP only *@
+                                    @if (ctx.Target == "APDP")
                                     {
                                         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; border-top:1px solid #dee2e6; padding-top:8px;">
-                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Amount (@(ctx.Currency ?? "Foreign"))</label>
+                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;"><span style="color:red;">*</span> Amount (@ctx.Currency)</label>
                                             <input type="number" class="form-control form-control-sm" placeholder="300.75" style="max-width:150px;" @bind="ctx.Nilai" @bind:event="oninput" step="0.0001" min="0" />
 
                                             @if (ctx.Nilai > 0 && ctx.Kurs > 1m)
@@ -382,10 +426,15 @@
                                                 var idrAmount = ctx.Nilai * ctx.Kurs;
                                                 <small style="color:#198754; font-weight:600;">= IDR @(idrAmount.ToString("N2"))</small>
                                             }
-                                            else if (string.IsNullOrEmpty(ctx.Currency))
-                                            {
-                                                <small style="color:#6c757d;">(Optional - only if foreign currency)</small>
-                                            }
+                                        </div>
+                                    }
+                                    @* Down Payment Amount Section for ARDP *@
+                                    @if (ctx.Target == "ARDP")
+                                    {
+                                        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; border-top:1px solid #dee2e6; padding-top:8px;">
+                                            <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0;">Down Payment Amount (IDR) <span style="color:red;">*</span></label>
+                                            <input type="number" class="form-control form-control-sm" placeholder="500000" style="max-width:150px;" @bind="ctx.Nilai" @bind:event="oninput" step="0.01" min="0" />
+                                            <small style="color:#6c757d;">(Required)</small>
                                         </div>
                                     }
 
@@ -497,7 +546,7 @@
                                 </tr>
                             }
                         }
-                    }
+                    @* } *@
                 </tbody>
             </table>
         </div>
@@ -527,6 +576,78 @@
             : transactions.Where(t => (t.Description ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
                                    || (t.Type ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
+    // Filter properties for supplier and customer search - per row basis
+    private Dictionary<BankTransactionView, string> supplierFilterTexts = new();
+    private Dictionary<BankTransactionView, string> customerFilterTexts = new();
+
+    private IEnumerable<ApSuppl> GetFilteredSuppliers(BankTransactionView ctx)
+    {
+        if (!supplierFilterTexts.TryGetValue(ctx, out var filterText) || string.IsNullOrWhiteSpace(filterText))
+            return suppliers;
+
+        return suppliers.Where(s => (s.Supplier ?? string.Empty).Contains(filterText, StringComparison.OrdinalIgnoreCase)
+                                  || (s.NamaSup ?? string.Empty).Contains(filterText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IEnumerable<ArCust> GetFilteredCustomers(BankTransactionView ctx)
+    {
+        if (!customerFilterTexts.TryGetValue(ctx, out var filterText) || string.IsNullOrWhiteSpace(filterText))
+            return customers;
+
+        return customers.Where(c => (c.Customer ?? string.Empty).Contains(filterText, StringComparison.OrdinalIgnoreCase)
+                                  || (c.NamaCust ?? string.Empty).Contains(filterText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string GetSupplierFilterText(BankTransactionView ctx) => supplierFilterTexts.TryGetValue(ctx, out var val) ? val : string.Empty;
+    private string GetCustomerFilterText(BankTransactionView ctx) => customerFilterTexts.TryGetValue(ctx, out var val) ? val : string.Empty;
+
+    private void SetSupplierFilterText(BankTransactionView ctx, string text)
+    {
+        supplierFilterTexts[ctx] = text;
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            ctx.PartyCode = string.Empty; // Reset selection when filtering
+        }
+    }
+
+    private void SetCustomerFilterText(BankTransactionView ctx, string text)
+    {
+        customerFilterTexts[ctx] = text;
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            ctx.PartyCode = string.Empty; // Reset selection when filtering
+        }
+    }
+
+    // Filter properties for SourceCode search - per row basis
+    private Dictionary<BankTransactionView, string> srcCodeFilterTexts = new();
+
+    private IEnumerable<CbSrcCode> GetFilteredSourceCodes(BankTransactionView ctx)
+    {
+        if (!srcCodeFilterTexts.TryGetValue(ctx, out var filterText) || string.IsNullOrWhiteSpace(filterText))
+            return SourceCode;
+
+        return SourceCode.Where(s => (s.SrcCode ?? string.Empty).Contains(filterText, StringComparison.OrdinalIgnoreCase)
+                                   || (s.NamaSrc ?? string.Empty).Contains(filterText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string GetSrcCodeFilterText(BankTransactionView ctx) => srcCodeFilterTexts.TryGetValue(ctx, out var val) ? val : string.Empty;
+
+    private void SetSrcCodeFilterText(BankTransactionView ctx, string text)
+    {
+        srcCodeFilterTexts[ctx] = text;
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            ctx.SrcCode = string.Empty; // Reset selection when filtering
+        }
+    }
+
+    private void OnSrcCodeFilterChanged(BankTransactionView ctx, ChangeEventArgs e)
+    {
+        var filterText = e?.Value?.ToString() ?? string.Empty;
+        SetSrcCodeFilterText(ctx, filterText);
+    }
+
     private async Task PartySelectionChanged(BankTransactionView ctx, ChangeEventArgs e)
     {
         if (ctx == null) return;
@@ -535,12 +656,26 @@
         if (ctx.Target == "AP" || ctx.Target == "APDP")
         {
             await OnSupplierChanged(ctx, e);
+            SetSupplierFilterText(ctx, string.Empty);  // Clear filter after selection
         }
         else if (ctx.Target == "AR" || ctx.Target == "ARDP")
         {
             await OnCustomerChanged(ctx, e);
+            SetCustomerFilterText(ctx, string.Empty);  // Clear filter after selection
         }
         StateHasChanged();
+    }
+
+    private void OnSupplierFilterChanged(BankTransactionView ctx, ChangeEventArgs e)
+    {
+        var filterText = e?.Value?.ToString() ?? string.Empty;
+        SetSupplierFilterText(ctx, filterText);
+    }
+
+    private void OnCustomerFilterChanged(BankTransactionView ctx, ChangeEventArgs e)
+    {
+        var filterText = e?.Value?.ToString() ?? string.Empty;
+        SetCustomerFilterText(ctx, filterText);
     }
 
     protected override void OnInitialized()
