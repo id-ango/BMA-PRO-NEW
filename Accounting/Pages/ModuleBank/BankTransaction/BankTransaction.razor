@@ -339,14 +339,14 @@
                                         }
 
                                         @* TransactionType selector for AR & AP *@
-                                        @if (ctx.Target == "AR" || ctx.Target == "AP")
+                                        @* @if (ctx.Target == "AR" || ctx.Target == "AP")
                                         {
                                             <label style="font-size:0.78rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin:0; margin-left:12px;">Tipe</label>
                                             <select class="form-control form-control-sm" style="max-width:180px;" @bind="ctx.TransactionType">
                                                 <option value="PAYMENT">Regular Payment</option>
                                                 <option value="DOWNPAYMENT">Down Payment</option>
                                             </select>
-                                        }
+                                        } *@
 
                                         @* Currency & Kurs for AP & APDP *@
                                         @if (ctx.Target == "AP" || ctx.Target == "APDP")
