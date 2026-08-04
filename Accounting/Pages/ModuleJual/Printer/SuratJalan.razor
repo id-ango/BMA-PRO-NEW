@@ -50,7 +50,7 @@
     <br/>
      <span style="text-align:left;text-decoration:underline;font: bold 16px "Times New Roman", Sans-Serif">Kepada Yth</span> 
      <br />
-    <div >
+    <div  >
        
         <textarea id="address">
             @*@TransAll.NamaCust           
@@ -67,19 +67,23 @@
                 <td>@TransAll.NoLpb</td>
             </tr>*@
             <tr>
-
+                <td class="meta-head">No. SJ</td>
+                <td style="white-space: nowrap;">@NoSuratJalan</td>
+            </tr>
+            <tr>
                 <td class="meta-head">Date</td>
-                <td>Surabaya, @TransAll.Tanggal.ToShortDateString()</td>
+                <td>@TransAll.Tanggal.ToShortDateString()</td>
             </tr>
             <tr>
                 <td class="meta-head">Telpon</td>
                 <td>@Telpon</td>
             </tr>
-            
+
         </table>
 
     </div>
-
+    <div style="margin-bottom: 20px;"></div>
+    <br/>
     <table id="items">
 
         <tr>
@@ -176,6 +180,7 @@
     public string Alamat { get; set; }
     public string KepadaYth { get; set; }
     public string Telpon { get; set; }
+    public string NoSuratJalan { get; set; }
 
     public string PreviousUri{ get; set; } = string.Empty;
     public string encodedPreviousUri { get; set; }
@@ -237,6 +242,8 @@
         {
             Title = "SURAT RETUR";
         }
+        // Format nomor Surat Jalan dari nomor invoice dengan prefix "SJ"
+        NoSuratJalan = $"SJ-{TransAll.NoLpb}";
     }
 
     private void OpenPrint(int xKdBank)
