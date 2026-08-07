@@ -56,6 +56,29 @@ namespace eSoft.Persediaan.Services
                            .ToList();
         }
 
+        /// <summary>
+        /// Get IcItem dengan filter status yang lebih fleksibel
+        /// </summary>
+        /// <param name="filter">"all" = semua, "active" = hanya aktif, "inactive" = hanya non-aktif</param>
+        /// <returns>List of IcItem sesuai filter</returns>
+        public List<IcItem> GetIcItemByStatus(string filter = "all")
+        {
+            return filter switch
+            {
+                "active" => _context.IcItems
+                                    .Where(x => !x.Disabled)
+                                    .OrderBy(x => x.NamaItem)
+                                    .ToList(),
+                "inactive" => _context.IcItems
+                                      .Where(x => x.Disabled)
+                                      .OrderBy(x => x.NamaItem)
+                                      .ToList(),
+                _ => _context.IcItems  // "all"
+                             .OrderBy(x => x.NamaItem)
+                             .ToList()
+            };
+        }
+
 
         public List<IcAltItem> GetIcAltItem()
         {

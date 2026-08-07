@@ -16,6 +16,7 @@ namespace eSoft.Persediaan.Services
     {
         bool CekKdItem(string item);
         List<IcItem> GetIcItem(bool disabled = false);
+        List<IcItem> GetIcItemByStatus(string filter = "all");
         Task UpdateProject(IcItem project);
         List<IcAltItem> GetIcAltItem();
         IcItem GetIcItemId(int itemKode);
