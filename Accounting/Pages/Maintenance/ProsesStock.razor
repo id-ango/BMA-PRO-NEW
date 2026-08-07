@@ -44,7 +44,7 @@
         <div class="form-group">
             <label>
                 Kode Item Awal
-                <InputSelect class="form-control" @bind-Value="bank.ItemCode" style="width:75%; display:inline" @oninput="OnChangeItem">
+                <InputSelect class="form-control" @bind-Value="bank.ItemCode" style="width:75%; display:inline" @oninput="OnChangeItem" disabled="@isProcessingRubah">
                     <option value="">&nbsp;&nbsp;---Select Item Code---&nbsp;&nbsp;</option>
                     @foreach (var item in SrcCode)
                     {
@@ -52,21 +52,29 @@
                     }
 
                 </InputSelect>
-                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>
+                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)" disabled="@isProcessingRubah">Cari</button>
             </label>
         </div>
         <div class="form-group">
             <label>
                 Diganti dengan Kode
-                <InputText class="form-control" @bind-Value="bank.NamaLengkap" >                   
+                <InputText class="form-control" @bind-Value="bank.NamaLengkap" disabled="@isProcessingRubah">                   
                 </InputText>
-              
+
             </label>
         </div>
         <br />
 
         <div class="float-md-right">
-            <button class="btn-success" type="submit">Proses Rubah Item</button>
+            <button class="btn-success" type="submit" disabled="@isProcessingRubah" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Proses Rubah Item</span>
+                @if (isProcessingRubah)
+                {
+                    <span style="margin-left: 8px;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                }
+            </button>
 
         </div>
 
@@ -107,8 +115,10 @@
     public List<IcItem> SrcCode { get; set; }
     public bool SearchOpen { get; set; }
     private int dblclick = 1;
+    private string previousItemCode = ""; // Track item yang terakhir diproses
     private bool isProcessing = false;
-private bool isProcessPiutang = false;
+    private bool isProcessPiutang = false;
+    private bool isProcessingRubah = false; // Loading state untuk proses rubah item
 
     protected override void OnInitialized()
     {
@@ -201,20 +211,48 @@ private bool isProcessPiutang = false;
 
     }
 
-    private void HandleValidSubmit()
+    private async void HandleValidSubmit()
     {
-         if (dblclick != 1) return;
+        // Jika item yang diproses sama seperti sebelumnya dan dblclick belum 1, cegah
+        if (bank.ItemCode == previousItemCode && dblclick != 1)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Item ini sudah diproses. Silakan pilih item lain.");
+            return;
+        }
 
-           dblclick++;
+        // Jika item berbeda, reset dblclick
+        if (bank.ItemCode != previousItemCode)
+        {
+            dblclick = 1;
+        }
 
-        service.ProsesRubahKodeItem(bank.ItemCode, bank.NamaLengkap);
-        // if (newEdit != null)
-        // {
-        //     var id = newEdit.OeTransHId.ToString().Trim();
-            
-        // }
+        if (dblclick != 1) return;
 
+        dblclick++;
+        isProcessingRubah = true;
 
+        try
+        {
+            service.ProsesRubahKodeItem(bank.ItemCode, bank.NamaLengkap);
+            await JSRuntime.InvokeVoidAsync("alert", "Proses Rubah Item Berhasil");
+
+            // Simpan item code yang baru diproses
+            previousItemCode = bank.ItemCode;
+
+            // Clear form untuk input item baru
+            bank = new IcItem();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Error: " + ex.Message);
+            dblclick = 1; // Reset jika terjadi error
+        }
+        finally
+        {
+            isProcessingRubah = false;
+            StateHasChanged();
+        }
     }
 
 }
