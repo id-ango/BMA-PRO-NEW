@@ -49,5 +49,6 @@ namespace eSoft.Financial.Services
         List<FcAccount> printTrialBalance( string company, int Bulan, int Tahun);
         IEnumerable<FcTransH> printJurnal(int tahun, string kodeCompany, DateTime TglAwal, DateTime TglAkhir);
         IEnumerable<FcTransD> JurnalDetail(int headerID);
+        List<FcTransHView> printJurnalHutang(DateTime TglAwal, DateTime TglAkhir, string supplier = null);
     }
 }

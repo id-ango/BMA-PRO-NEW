@@ -9474,6 +9474,556 @@ namespace eSoft.Financial.Services
 
         #region printJurnal
 
+        /// <summary>
+        /// Generate ledger-style GL posting for Hutang (AP) transactions directly from date range,
+        /// without running the full financial process (prosesFinancial1) and without persisting data.
+        /// Mirrors the exact Hutang posting logic (AP-IN/AP-DP/AP-PY) used in prosesFinancial1.
+        /// </summary>
+        public List<FcTransHView> printJurnalHutang(DateTime TglAwal, DateTime TglAkhir, string supplier = null)
+        {
+            List<FcTransHView> FCTransH = new();
+
+            var TransHHutangQuery = _contextAP.ApTransHs.Where(x => x.Tanggal.Date >= TglAwal.Date && x.Tanggal.Date <= TglAkhir.Date);
+
+            if (!string.IsNullOrWhiteSpace(supplier))
+                TransHHutangQuery = TransHHutangQuery.Where(x => x.Supplier == supplier);
+
+            var TransHHutang = TransHHutangQuery.OrderBy(x => x.Tanggal).ThenBy(x => x.Bukti).ToList();
+
+            foreach (var item in TransHHutang)
+            {
+                decimal xDebet = 0;
+                decimal xKredit = 0;
+
+                List<FcTransDView> FCTransDHutang = new();
+
+                var APAkunset = (from vendors in _contextAP.ApSuppls
+                                 join accts in _contextAP.ApAccts on vendors.AcctSet equals accts.AcctSet
+                                 where vendors.Supplier == item.Supplier
+                                 select new ApAcct()
+                                 {
+                                     Acct1 = accts.Acct1,
+                                     Acct2 = accts.Acct2,
+                                     Acct3 = accts.Acct3,
+                                     Acct4 = accts.Acct4,
+                                     Acct5 = accts.Acct5,
+                                     Acct6 = accts.Acct6,
+                                     AcctSet = accts.AcctSet,
+                                     Description = accts.Description
+                                 }).FirstOrDefault();
+
+                if (APAkunset == null)
+                    continue;
+
+                var ComClearing = _contextFC.FcComs.FirstOrDefault();
+
+                #region AP-IN
+                if (item.Kode == "21")
+                {
+                    var TransDsAPIN = _contextAP.ApTransDs.Where(x => x.ApTransHId == item.ApTransHId).ToList();
+
+                    foreach (var detail in TransDsAPIN)
+                    {
+                        var DistAkunset = (from distribution in _contextAP.ApDists
+                                           where distribution.DistCode == detail.DistCode
+                                           select new ApDist()
+                                           {
+                                               Dist1 = distribution.Dist1,
+                                               Description = distribution.Description
+                                           }).FirstOrDefault();
+
+                        if (detail.Jumlah != 0 && DistAkunset != null)
+                        {
+                            var findItem = FCTransDHutang.Find(x => x.GlAcct == DistAkunset.Dist1);
+
+                            if (findItem != null)
+                            {
+                                if (item.Jumlah > 0)
+                                {
+                                    findItem.Kredit += 0;
+                                    findItem.Debet += detail.Jumlah;
+                                }
+                                else if (item.Jumlah < 0)
+                                {
+                                    findItem.Debet = 0;
+                                    findItem.Kredit += -1 * detail.Jumlah;
+                                }
+                            }
+                            else
+                            {
+                                var GlTransD = new FcTransDView();
+
+                                GlTransD.GlAcct = DistAkunset.Dist1;
+                                GlTransD.Keterangan = detail.Keterangan + ", " + item.Bukti;
+                                GlTransD.GlDept = GetNameAccount(DistAkunset.Dist1);
+
+                                if (item.Jumlah > 0)
+                                {
+                                    GlTransD.Kredit += 0;
+                                    GlTransD.Debet += detail.Jumlah;
+                                }
+                                else if (item.Jumlah < 0)
+                                {
+                                    GlTransD.Kredit += -1 * detail.Jumlah;
+                                    GlTransD.Debet += 0;
+                                }
+
+                                if (item.Jumlah != 0)
+                                    FCTransDHutang.Add(GlTransD);
+                            }
+                        }
+                    }
+                }
+                #endregion
+
+                #region AP-DP
+                if (item.Kode == "23")
+                {
+                    if (item.Jumlah != 0)
+                    {
+                        var findItem = FCTransDHutang.Find(x => x.GlAcct == APAkunset.Acct4);
+
+                        if (findItem != null)
+                        {
+                            if (item.Jumlah > 0)
+                            {
+                                findItem.Debet += (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                findItem.Kredit += 0;
+                            }
+                            else if (item.Jumlah < 0)
+                            {
+                                findItem.Kredit = -1 * (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                findItem.Debet += 0;
+                            }
+                        }
+                        else
+                        {
+                            var GlTransD = new FcTransDView();
+
+                            GlTransD.GlAcct = APAkunset.Acct4;
+                            GlTransD.Keterangan = item.Keterangan + ", " + item.Bukti;
+                            GlTransD.GlDept = GetNameAccount(APAkunset.Acct4);
+
+                            if (item.Jumlah > 0)
+                            {
+                                GlTransD.Debet += (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                GlTransD.Kredit += 0;
+                            }
+                            else if (item.Jumlah < 0)
+                            {
+                                GlTransD.Debet += -1 * (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                GlTransD.Kredit += 0;
+                            }
+
+                            if (item.Jumlah != 0)
+                                FCTransDHutang.Add(GlTransD);
+                        }
+                    }
+                }
+                #endregion
+
+                #region AP-PY
+                if (item.Kode == "24")
+                {
+                    xDebet = 0;
+                    xKredit = 0;
+
+                    var TransDsAPPY = _contextAP.ApTransDs.Where(x => x.ApTransHId == item.ApTransHId).ToList();
+
+                    foreach (var detail in TransDsAPPY)
+                    {
+                        var hutangDetail = _contextAP.ApHutangs.Where(x => x.Dokumen == detail.Lpb).FirstOrDefault();
+                        decimal detailKurs = hutangDetail != null ? hutangDetail.Kurs : 0;
+
+                        if (item.Kurs != 0)
+                            detailKurs = item.Kurs;
+
+                        if (detail.KodeTran == "21" || detail.KodeTran == "82" || detail.KodeTran == "83")
+                        {
+                            var findItem = FCTransDHutang.Find(x => x.GlAcct == APAkunset.Acct1);
+
+                            if (findItem != null)
+                            {
+                                if (detail.Bayar + detail.Discount > 0)
+                                {
+                                    findItem.Debet += (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                    findItem.Kredit += 0;
+
+                                    xDebet += (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                }
+                                else if (detail.Bayar + detail.Discount < 0)
+                                {
+                                    findItem.Kredit += -1 * (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                    findItem.Debet += 0;
+
+                                    xKredit += -1 * (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                }
+                            }
+                            else
+                            {
+                                var GlTransD = new FcTransDView();
+
+                                GlTransD.GlAcct = APAkunset.Acct1;
+                                GlTransD.Keterangan = detail.Keterangan + ", " + item.Bukti;
+                                GlTransD.GlDept = GetNameAccount(APAkunset.Acct1);
+
+                                if (detail.Bayar + detail.Discount > 0)
+                                {
+                                    GlTransD.Debet += (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                    GlTransD.Kredit += 0;
+
+                                    xDebet += (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                }
+                                else if (detail.Bayar + detail.Discount < 0)
+                                {
+                                    GlTransD.Debet += 0;
+                                    GlTransD.Kredit += -1 * (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+
+                                    xKredit += -1 * (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                }
+
+                                if (detail.Bayar + detail.Discount != 0)
+                                    FCTransDHutang.Add(GlTransD);
+                            }
+
+                            var findItem2 = FCTransDHutang.Find(x => x.GlAcct == APAkunset.Acct5);
+
+                            if (findItem2 != null)
+                            {
+                                if (detail.Discount > 0)
+                                {
+                                    findItem2.Debet += 0;
+                                    findItem2.Kredit += (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+
+                                    xKredit += (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+                                }
+                                else if (detail.Discount < 0)
+                                {
+                                    findItem2.Kredit += 0;
+                                    findItem2.Debet += -1 * (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+
+                                    xDebet += -1 * (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+                                }
+                            }
+                            else
+                            {
+                                var GlTransD = new FcTransDView();
+
+                                GlTransD.GlAcct = APAkunset.Acct5;
+                                GlTransD.Keterangan = detail.Keterangan + ", " + item.Bukti;
+                                GlTransD.GlDept = GetNameAccount(APAkunset.Acct5);
+
+                                if (detail.Discount > 0)
+                                {
+                                    GlTransD.Debet += 0;
+                                    GlTransD.Kredit += (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+
+                                    xKredit += (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+                                }
+                                else if (detail.Discount < 0)
+                                {
+                                    GlTransD.Kredit += 0;
+                                    GlTransD.Debet += -1 * (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+
+                                    xDebet += -1 * (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+                                }
+
+                                if (detail.Discount != 0)
+                                    FCTransDHutang.Add(GlTransD);
+                            }
+                        }
+
+                        if (detail.KodeTran == "23")
+                        {
+                            var findItem = FCTransDHutang.Find(x => x.GlAcct == APAkunset.Acct4);
+
+                            if (findItem != null)
+                            {
+                                if (detail.Bayar + detail.Discount > 0)
+                                {
+                                    findItem.Debet += (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                    findItem.Kredit += 0;
+
+                                    xDebet += (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                }
+                                else if (detail.Bayar + detail.Discount < 0)
+                                {
+                                    findItem.Kredit += -1 * (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                    findItem.Debet += 0;
+
+                                    xKredit += -1 * (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                }
+                            }
+                            else
+                            {
+                                var GlTransD = new FcTransDView();
+
+                                GlTransD.GlAcct = APAkunset.Acct4;
+                                GlTransD.Keterangan = detail.Keterangan + ", " + item.Bukti;
+                                GlTransD.GlDept = GetNameAccount(APAkunset.Acct4);
+
+                                if (detail.Bayar + detail.Discount > 0)
+                                {
+                                    GlTransD.Debet += (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                    GlTransD.Kredit += 0;
+
+                                    xDebet += (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                }
+                                else if (detail.Bayar + detail.Discount < 0)
+                                {
+                                    GlTransD.Debet += 0;
+                                    GlTransD.Kredit += -1 * (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+
+                                    xKredit += -1 * (detailKurs != 0 ? (detail.Bayar + detail.Discount) * detailKurs : detail.Bayar + detail.Discount);
+                                }
+
+                                if (detail.Bayar + detail.Discount != 0)
+                                    FCTransDHutang.Add(GlTransD);
+                            }
+
+                            var findItem2 = FCTransDHutang.Find(x => x.GlAcct == APAkunset.Acct5);
+
+                            if (findItem2 != null)
+                            {
+                                if (detail.Discount > 0)
+                                {
+                                    findItem2.Debet += 0;
+                                    findItem2.Kredit += (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+
+                                    xKredit += (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+                                }
+                                else if (detail.Discount < 0)
+                                {
+                                    findItem2.Kredit += 0;
+                                    findItem2.Debet += -1 * (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+
+                                    xDebet += -1 * (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+                                }
+                            }
+                            else
+                            {
+                                var GlTransD = new FcTransDView();
+
+                                GlTransD.GlAcct = APAkunset.Acct5;
+                                GlTransD.Keterangan = detail.Keterangan + ", " + item.Bukti;
+                                GlTransD.GlDept = GetNameAccount(APAkunset.Acct5);
+
+                                if (detail.Discount > 0)
+                                {
+                                    GlTransD.Debet += 0;
+                                    GlTransD.Kredit += (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+
+                                    xKredit += (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+                                }
+                                else if (detail.Discount < 0)
+                                {
+                                    GlTransD.Kredit += 0;
+                                    GlTransD.Debet += -1 * (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+
+                                    xDebet += -1 * (detailKurs != 0 ? (detail.Discount) * detailKurs : detail.Discount);
+                                }
+
+                                if (detail.Discount != 0)
+                                    FCTransDHutang.Add(GlTransD);
+                            }
+                        }
+                    }
+                }
+                #endregion
+
+                #region Header
+                if (true)
+                {
+                    var findItemTtlJumlah = ComClearing != null ? FCTransDHutang.Find(x => x.GlAcct == ComClearing.GlAcct3) : null;
+
+                    if (item.Kode == "21")
+                        findItemTtlJumlah = FCTransDHutang.Find(x => x.GlAcct == APAkunset.Acct1);
+
+                    if (findItemTtlJumlah != null)
+                    {
+                        if (item.Kode == "21")
+                        {
+                            if (item.Jumlah > 0)
+                            {
+                                findItemTtlJumlah.Kredit += item.Jumlah;
+                                findItemTtlJumlah.Debet += 0;
+                            }
+                            else if (item.Jumlah < 0)
+                            {
+                                findItemTtlJumlah.Kredit += 0;
+                                findItemTtlJumlah.Debet += -1 * item.Jumlah;
+                            }
+                        }
+
+                        if (item.Kode == "23")
+                        {
+                            if (item.Jumlah > 0)
+                            {
+                                findItemTtlJumlah.Kredit += (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                findItemTtlJumlah.Debet += 0;
+                            }
+                            else if (item.Jumlah < 0)
+                            {
+                                findItemTtlJumlah.Debet = -1 * (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                findItemTtlJumlah.Kredit += 0;
+                            }
+                        }
+
+                        if (item.Kode == "24")
+                        {
+                            if (item.Jumlah > 0)
+                            {
+                                findItemTtlJumlah.Kredit += (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                findItemTtlJumlah.Debet += 0;
+
+                                xKredit += (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                            }
+                            else if (item.Jumlah < 0)
+                            {
+                                findItemTtlJumlah.Debet += -1 * (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                findItemTtlJumlah.Kredit += 0;
+
+                                xDebet += -1 * (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var GlTransD = new FcTransDView();
+
+                        GlTransD.GlAcct = ComClearing != null ? ComClearing.GlAcct3 : "";
+                        GlTransD.Keterangan = (string.IsNullOrEmpty(item.Keterangan) ? " " : item.Keterangan) + ", " + item.Bukti;
+                        GlTransD.GlDept = ComClearing != null && !string.IsNullOrEmpty(ComClearing.GlAcct3) ? GetNameAccount(ComClearing.GlAcct3) : "";
+
+                        if (item.Kode == "21")
+                        {
+                            GlTransD.GlAcct = APAkunset.Acct1;
+                            GlTransD.Keterangan = (string.IsNullOrEmpty(item.Keterangan) ? " " : item.Keterangan) + ", " + item.Bukti;
+                            GlTransD.GlDept = GetNameAccount(APAkunset.Acct1);
+                        }
+
+                        if (item.Kode == "21")
+                        {
+                            if (item.Jumlah > 0)
+                            {
+                                GlTransD.Kredit += item.Jumlah;
+                                GlTransD.Debet += 0;
+                            }
+                            else if (item.Jumlah < 0)
+                            {
+                                GlTransD.Kredit += 0;
+                                GlTransD.Debet += -1 * item.Jumlah;
+                            }
+                        }
+
+                        if (item.Kode == "23")
+                        {
+                            if (item.Jumlah > 0)
+                            {
+                                GlTransD.Kredit += (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                GlTransD.Debet += 0;
+                            }
+                            else if (item.Jumlah < 0)
+                            {
+                                GlTransD.Debet += -1 * (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                GlTransD.Kredit += 0;
+                            }
+                        }
+
+                        if (item.Kode == "24")
+                        {
+                            if (item.Jumlah > 0)
+                            {
+                                GlTransD.Kredit += (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                GlTransD.Debet += 0;
+
+                                xKredit += (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                            }
+                            else if (item.Jumlah < 0)
+                            {
+                                GlTransD.Debet += -1 * (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                                GlTransD.Kredit += 0;
+
+                                xDebet += -1 * (item.Kurs != 0 ? item.Nilai : item.Jumlah);
+                            }
+                        }
+
+                        if (item.Jumlah != 0)
+                            FCTransDHutang.Add(GlTransD);
+                    }
+                }
+                #endregion
+
+                #region SelisihKurs
+                if (xDebet - xKredit != 0)
+                {
+                    var findItemKurs = FCTransDHutang.Find(x => x.GlAcct == APAkunset.Acct6);
+
+                    if (findItemKurs != null)
+                    {
+                        if (xDebet - xKredit > 0)
+                        {
+                            findItemKurs.Kredit += (xDebet - xKredit);
+                            findItemKurs.Debet += 0;
+                        }
+                        else if (xDebet - xKredit < 0)
+                        {
+                            findItemKurs.Debet = -1 * (xDebet - xKredit);
+                            findItemKurs.Kredit += 0;
+                        }
+                    }
+                    else
+                    {
+                        var GlTransD = new FcTransDView();
+
+                        GlTransD.GlAcct = APAkunset.Acct6;
+                        GlTransD.Keterangan = item.Keterangan + ", " + item.Bukti;
+                        GlTransD.GlDept = GetNameAccount(APAkunset.Acct6);
+
+                        if (xDebet - xKredit > 0)
+                        {
+                            GlTransD.Kredit += (xDebet - xKredit);
+                            GlTransD.Debet += 0;
+                        }
+                        else if (xDebet - xKredit < 0)
+                        {
+                            GlTransD.Kredit += 0;
+                            GlTransD.Debet += -1 * (xDebet - xKredit);
+                        }
+
+                        if (xDebet - xKredit != 0)
+                            FCTransDHutang.Add(GlTransD);
+                    }
+                }
+                #endregion
+
+                FcTransHView GltransH = new()
+                {
+                    DocNo = item.Bukti,
+                    KodeGl = item.Kode == "21" ? "AP-IN" : (item.Kode == "23" ? "AP-DP" : "AP-PY"),
+                    Tanggal = item.Tanggal,
+                    GlMemo = (string.IsNullOrEmpty(item.Keterangan) ? " " : item.Keterangan),
+                    FcTransDs = new List<FcTransDView>()
+                };
+
+                foreach (var detail in FCTransDHutang)
+                {
+                    GltransH.FcTransDs.Add(new FcTransDView()
+                    {
+                        GlAcct = detail.GlAcct,
+                        Keterangan = detail.Keterangan,
+                        GlDept = detail.GlDept,
+                        Debet = detail.Debet,
+                        Kredit = detail.Kredit
+                    });
+                }
+
+                FCTransH.Add(GltransH);
+            }
+
+            return FCTransH;
+        }
+
         public IEnumerable<FcTransH> printJurnal(int tahun, string kodeCompany, DateTime TglAwal, DateTime TglAkhir)
         {
             try

@@ -1,0 +1,190 @@
+@page "/ModuleHutang/LaporanHutangAcctDist"
+
+@using eSoft.Financial.Model
+@using eSoft.Financial.View
+@using eSoft.Financial.Services
+@using Accounting.Services
+@using System.ComponentModel.DataAnnotations
+@using System.IO
+
+@inject IFinancialServices serviceFC
+@inject IExcelServices serviceXL
+@inject IJSRuntime JS
+
+<div class="top-row px-4" style="z-index:5">
+    <h3>Laporan Hutang</h3>
+    <small class="text-muted">Detail jurnal GL Hutang berdasarkan periode tanggal</small>
+</div>
+
+<div class="container-fluid">
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header bg-secondary text-white">
+            <strong>FILTER LAPORAN HUTANG</strong>
+        </div>
+        <div class="card-body">
+    <EditForm Model="@filter">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Dari Tanggal :</label>
+                <InputDate class="form-control" @bind-Value="Tanggal1" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sd Tanggal :</label>
+                <InputDate class="form-control" @bind-Value="Tanggal2" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Supplier (Optional) :</label>
+                <InputText class="form-control" @bind-Value="filter.Supplier" placeholder="Kosongkan untuk semua supplier" />
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-success me-2" type="button" @onclick="OpenProses1">
+                    <span class="oi oi-magnifying-glass"></span> Jurnal
+                </button>
+                <button class="btn btn-warning" type="button" @onclick="DownloadFileFromStream" disabled="@(transaksiFC.Count == 0)">
+                    <span class="oi oi-data-transfer-download"></span> Excel
+                </button>
+            </div>
+        </div>
+    </EditForm>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <strong>DETAIL JURNAL HUTANG</strong>
+            <small class="text-muted ms-2">@transaksiFC.Count transaksi</small>
+        </div>
+        <DataGridVerticalComponent Items="transaksiFC" Context="cbHutang" GetFilterableText="@(item => $"{item.GlMemo} {item.DocNo} {item.KodeGl}")" TotalJumlah="@nJumlah">
+        <TableHeader>
+            <th scope="col" style="width:15%">Doc #</th>
+            <th scope="col" style="width:12%">Tanggal</th>
+            <th scope="col" style="width:10%">Kode GL</th>
+            <th scope="col" style="width:40%">Keterangan</th>
+            <th scope="col" style="width:10%; text-align:right">Debet</th>
+            <th scope="col" style="width:10%; text-align:right">Kredit</th>
+            <th scope="col" style="width:8%; text-align:center">Detail</th>
+        </TableHeader>
+        <RowTemplate>
+            <td style="width:15%">@cbHutang.DocNo</td>
+            <td style="width:12%">@cbHutang.Tanggal.ToShortDateString()</td>
+            <td style="width:10%"><span class="badge bg-success">@cbHutang.KodeGl</span></td>
+            <td style="width:40%">@cbHutang.GlMemo</td>
+            <td style="text-align:right; width:10%">@cbHutang.Debet.ToString("N")</td>
+            <td style="text-align:right; width:10%">@cbHutang.Kredit.ToString("N")</td>
+            <td style="width:8%; text-align:center;">
+                <button @onclick="() => ShowDetail(cbHutang.DocNo)" class="btn btn-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16">
+                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c.36 0 .713.025 1.05.075m2.096 1.832c.44.659.895 1.433 1.266 2.244-.978 1.291-2.297 2.372-3.773 2.972m2.003-5.715A13.6 13.6 0 0 1 15.89 8a13.6 13.6 0 0 1-1.464 2.593C14.14 9.585 14.45 9.288 14.756 8.948zm1.116 5.09c-1.013 1.486-2.432 2.744-4.02 3.589-1.588-.845-3.007-2.103-4.02-3.589.742-.933 1.633-1.776 2.649-2.394z" />
+                    </svg>
+                </button>
+            </td>
+        </RowTemplate>
+        </DataGridVerticalComponent>
+    </div>
+</div>
+
+@if (dispDetail)
+{
+    <ModalSearchComponent OnClose="OnSearchClose" Items="transaksiFD" Context="transaksi2">
+        <TableHeader>
+            <th scope="col">GlAkun</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Debet</th>
+            <th scope="col">Kredit</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>
+                @transaksi2.GlAcct
+            </td>
+            <td>
+                @transaksi2.Keterangan
+                <br />
+                <span class="badge bg-success">@transaksi2.GlDept</span>
+            </td>
+            <td style="text-align:right">@transaksi2.Debet.ToString("N")</td>
+            <td style="text-align:right">@transaksi2.Kredit.ToString("N")</td>
+        </RowTemplate>
+    </ModalSearchComponent>
+}
+
+@code {
+    private List<FcTransHView> transaksiFC = new();
+    private List<FcTransDView> transaksiFD = new();
+    private bool dispDetail = false;
+    public decimal nJumlah { get; set; }
+
+    public DateTime Tanggal1 { get; set; }
+    public DateTime Tanggal2 { get; set; }
+
+    private FilterModel filter = new FilterModel();
+
+    public class FilterModel
+    {
+        public string Supplier { get; set; }
+    }
+
+    protected override void OnInitialized()
+    {
+        Tanggal1 = DateTime.Today.AddMonths(-1);
+        Tanggal2 = DateTime.Today;
+        base.OnInitialized();
+    }
+
+    private void OpenProses1()
+    {
+        transaksiFC = serviceFC.printJurnalHutang(Tanggal1, Tanggal2, filter.Supplier).ToList();
+        nJumlah = transaksiFC.Sum(x => x.Saldo);
+    }
+
+    private void ShowDetail(string docNo)
+    {
+        var header = transaksiFC.Find(x => x.DocNo == docNo);
+        transaksiFD = header != null ? header.FcTransDs : new List<FcTransDView>();
+        dispDetail = true;
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+        dispDetail = false;
+        StateHasChanged();
+    }
+
+    private Stream GetFileStream()
+    {
+        var transDetail = new List<FcTransDxls>();
+
+        foreach (var header in transaksiFC.Where(x => x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date))
+        {
+            foreach (var detail in header.FcTransDs ?? new List<FcTransDView>())
+            {
+                transDetail.Add(new FcTransDxls
+                {
+                    DocNo = header.DocNo,
+                    Tanggal = header.Tanggal,
+                    KodeGl = header.KodeGl,
+                    GlAcct = detail.GlAcct,
+                    GlDept = detail.GlDept,
+                    Keterangan = detail.Keterangan,
+                    Debet = detail.Debet,
+                    Kredit = detail.Kredit,
+                    Jumlah = detail.Debet - detail.Kredit
+                });
+            }
+        }
+
+        return new MemoryStream(serviceXL.CreateLedgerExport(transDetail));
+    }
+
+    private async Task DownloadFileFromStream()
+    {
+        using var fileStream = GetFileStream();
+        var fileName = $"LaporanHutang-{DateTime.Now:yyyy-MM-dd}.xlsx";
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+}

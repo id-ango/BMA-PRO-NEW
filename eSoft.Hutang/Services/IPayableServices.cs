@@ -16,6 +16,7 @@ namespace eSoft.Hutang.Services
         List<ApSuppl> GetSupplier();
         ApSuppl GetSupplierId(int id);
         ApSuppl GetSupplierKode(string kode);
+        Task<List<ApSuppl>> GetApSupplierListAsync();
         bool AddSupplier(SupplierView suppliers);
         Task<bool> EditSupplier(SupplierView suppliers);
         Task<bool> DelSupplier(int suppliers);
@@ -45,14 +46,23 @@ namespace eSoft.Hutang.Services
         List<ApHutang> Detail1(string xKdHeader);
         List<ApAgingView> GetAgingSchedule();
         Task ProsesHutang();
-                List<ApHutang> GetAllApHutangBySupplier(string supplier, DateTime sampaiTanggal);
-                Task<bool> UpdateApHutangWithPaymentAsync(string dokumen, decimal bayar, decimal discount);
-                Task<ApTransH> CreateApPaymentTransactionAsync(
-                    DateTime tanggal,
-                    string kdBank,
-                    string supplier,
-                    string keterangan,
-                    List<(string dokumen, decimal bayar, decimal discount)> allocations);
+        List<ApHutang> GetAllApHutangBySupplier(string supplier, DateTime sampaiTanggal);
+        Task<bool> UpdateApHutangWithPaymentAsync(string dokumen, decimal bayar, decimal discount);
+        Task<ApTransH> CreateApPaymentTransactionAsync(
+            DateTime tanggal,
+            string kdBank,
+            string supplier,
+            string keterangan,
+            List<(string dokumen, decimal bayar, decimal discount)> allocations);
 
-            }
-        }
+        // Laporan Hutang dengan Account Set dan Distribution
+        Task<List<ApLaporanAcctDistView>> GetLaporanHutangByDateRangeAsync(DateTime dateFrom, DateTime dateTo);
+        Task<List<ApLaporanAcctDistView>> GetLaporanHutangBySupplierAndDateRangeAsync(string supplier, DateTime dateFrom, DateTime dateTo);
+        Task<List<ApLaporanAcctSetSummaryView>> GetLaporanAcctSetSummaryAsync(DateTime dateFrom, DateTime dateTo);
+        Task<List<ApLaporanAcctSetSummaryView>> GetLaporanAcctSetSummaryAsync(DateTime dateFrom, DateTime dateTo, string supplier);
+        Task<List<ApLaporanDistSummaryView>> GetLaporanDistSummaryAsync(DateTime dateFrom, DateTime dateTo);
+        Task<List<ApLaporanDistSummaryView>> GetLaporanDistSummaryAsync(DateTime dateFrom, DateTime dateTo, string supplier);
+        Task<List<ApLaporanGlReconcileView>> GetLaporanGlReconcileAsync(DateTime dateFrom, DateTime dateTo);
+        Task<List<ApLaporanGlReconcileView>> GetLaporanGlReconcileAsync(DateTime dateFrom, DateTime dateTo, string supplier);
+    }
+}

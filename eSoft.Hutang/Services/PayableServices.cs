@@ -36,6 +36,11 @@ namespace eSoft.Hutang.Services
             return _context.ApSuppls.OrderBy(x => x.NamaSup).ToList();
         }
 
+        public async Task<List<ApSuppl>> GetApSupplierListAsync()
+        {
+            return await _context.ApSuppls.OrderBy(x => x.NamaSup).ToListAsync();
+        }
+
         public ApSuppl GetSupplierId(int id)
         {
             return _context.ApSuppls.Where(x => x.ApSupplId == id).FirstOrDefault();
@@ -1003,6 +1008,471 @@ namespace eSoft.Hutang.Services
             var supplier = _context.ApSuppls.FirstOrDefault(s => s.Supplier == supplierCode);
             return supplier?.NamaSup ?? supplierCode;
         }
+
+        #region Laporan Hutang dengan Account Set dan Distribution
+
+        /// <summary>
+        /// Get detail laporan hutang by date range dengan Account Set dan Distribution
+        /// </summary>
+        public async Task<List<ApLaporanAcctDistView>> GetLaporanHutangByDateRangeAsync(DateTime dateFrom, DateTime dateTo)
+        {
+            try
+            {
+                var result = await (from transD in _context.ApTransDs
+                                    join transH in _context.ApTransHs on transD.ApTransHId equals transH.ApTransHId
+                                    join supp in _context.ApSuppls on transH.Supplier equals supp.Supplier into suppGroup
+                                    from supp in suppGroup.DefaultIfEmpty()
+                                    join acct in _context.ApAccts on supp.AcctSet equals acct.AcctSet into acctGroup
+                                    from acct in acctGroup.DefaultIfEmpty()
+                                    join dist in _context.ApDists on transD.DistCode equals dist.DistCode into distGroup
+                                    from dist in distGroup.DefaultIfEmpty()
+                                    where transH.Tanggal >= dateFrom && transH.Tanggal <= dateTo
+                                    select new ApLaporanAcctDistView
+                                    {
+                                        Id = transD.ApTransDId,
+                                        Tanggal = transH.Tanggal,
+                                        Bukti = transH.Bukti ?? "",
+                                        NoFaktur = transH.NoFaktur ?? "",
+                                        DueDate = transH.JthTempo,
+                                        Supplier = transH.Supplier ?? "",
+                                        NamaSup = transH.NamaSup ?? "",
+                                        AcctSet = supp != null ? (supp.AcctSet ?? "") : "",
+                                        AcctSetDesc = supp != null ? (supp.AcctSet ?? "") : "",
+                                        DistCode = transD.DistCode ?? "",
+                                        DistDesc = dist != null ? (dist.Description ?? "") : "",
+                                        Kode = transH.Kode ?? "",
+                                        KodeTran = transD.KodeTran ?? "",
+                                        Jumlah = transD.Jumlah,
+                                        PPn = transH.PPn,
+                                        PPh = transH.PPh,
+                                        Discount = transD.Discount,
+                                        Bayar = transD.Bayar,
+                                        Sisa = transD.Sisa,
+                                        Kurs = transH.Kurs.ToString(),
+                                        KursValue = transH.Kurs,
+                                        Currency = transH.Currency ?? "IDR",
+                                        GlAcct1 = acct != null ? (acct.Acct1 ?? "") : "",
+                                        GlAcct2 = acct != null ? (acct.Acct2 ?? "") : "",
+                                        GlAcct3 = acct != null ? (acct.Acct3 ?? "") : "",
+                                        GlAcct4 = acct != null ? (acct.Acct4 ?? "") : "",
+                                        GlAcct5 = acct != null ? (acct.Acct5 ?? "") : "",
+                                        GlAcct6 = acct != null ? (acct.Acct6 ?? "") : "",
+
+                                        // GL Account Amount allocation (Yellow columns)
+                                        // AP-DP (23): Posts to Acct4
+                                        GlAcct1Amt = transH.Kode == "23" ? transD.Jumlah : 0,
+                                        GlAcct2Amt = 0,
+                                        GlAcct3Amt = 0,
+                                        GlAcct4Amt = transH.Kode == "23" ? transD.Jumlah : 0,
+                                        GlAcct5Amt = 0,
+                                        GlAcct6Amt = 0,
+
+                                        // GL Distribution Amount (Red column)
+                                        // AP-IN (21): Posts to Distribution.Dist1
+                                        GlDistributionAmt = transH.Kode == "21" ? transD.Jumlah : 0,
+
+                                        // GL Posting Logic (for reference)
+                                        PostingGlAccount = transH.Kode == "21" 
+                                            ? (dist != null ? (dist.Dist1 ?? "") : "")
+                                            : (transH.Kode == "23" 
+                                                ? (acct != null ? (acct.Acct4 ?? "") : "")
+                                                : ""),
+                                        PostingGlAmount = transH.Kode == "21" || transH.Kode == "23" ? transD.Jumlah : 0,
+                                        PostingGlType = transH.Kode == "21" || transH.Kode == "23"
+                                            ? (transD.Jumlah > 0 ? "DEBIT" : (transD.Jumlah < 0 ? "CREDIT" : ""))
+                                            : "",
+                                        Keterangan = transD.Keterangan ?? "",
+                                        Lpb = transD.Lpb ?? "",
+                                        Cek = transH.Cek ?? "",
+                                        ApTransDId = transD.ApTransDId,
+                                        ApTransHId = transH.ApTransHId
+                                    })
+                                    .OrderBy(x => x.Tanggal)
+                                    .ThenBy(x => x.Bukti)
+                                    .ToListAsync();
+
+                return result ?? new List<ApLaporanAcctDistView>();
+            }
+            catch (Exception ex)
+            {
+                // Log exception if needed
+                System.Diagnostics.Debug.WriteLine($"Error in GetLaporanHutangByDateRangeAsync: {ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get detail laporan hutang filtered by supplier dan date range
+        /// </summary>
+        public async Task<List<ApLaporanAcctDistView>> GetLaporanHutangBySupplierAndDateRangeAsync(string supplier, DateTime dateFrom, DateTime dateTo)
+        {
+            try
+            {
+                var result = await (from transD in _context.ApTransDs
+                                    join transH in _context.ApTransHs on transD.ApTransHId equals transH.ApTransHId
+                                    join supp in _context.ApSuppls on transH.Supplier equals supp.Supplier into suppGroup
+                                    from supp in suppGroup.DefaultIfEmpty()
+                                    join acct in _context.ApAccts on supp.AcctSet equals acct.AcctSet into acctGroup
+                                    from acct in acctGroup.DefaultIfEmpty()
+                                    join dist in _context.ApDists on transD.DistCode equals dist.DistCode into distGroup
+                                    from dist in distGroup.DefaultIfEmpty()
+                                    where transH.Tanggal >= dateFrom && transH.Tanggal <= dateTo
+                                        && transH.Supplier == supplier
+                                    select new ApLaporanAcctDistView
+                                    {
+                                        Id = transD.ApTransDId,
+                                        Tanggal = transH.Tanggal,
+                                        Bukti = transH.Bukti ?? "",
+                                        NoFaktur = transH.NoFaktur ?? "",
+                                        DueDate = transH.JthTempo,
+                                        Supplier = transH.Supplier ?? "",
+                                        NamaSup = transH.NamaSup ?? "",
+                                        AcctSet = supp != null ? (supp.AcctSet ?? "") : "",
+                                        AcctSetDesc = supp != null ? (supp.AcctSet ?? "") : "",
+                                        DistCode = transD.DistCode ?? "",
+                                        DistDesc = dist != null ? (dist.Description ?? "") : "",
+                                        Kode = transH.Kode ?? "",
+                                        KodeTran = transD.KodeTran ?? "",
+                                        Jumlah = transD.Jumlah,
+                                        PPn = transH.PPn,
+                                        PPh = transH.PPh,
+                                        Discount = transD.Discount,
+                                        Bayar = transD.Bayar,
+                                        Sisa = transD.Sisa,
+                                        Kurs = transH.Kurs.ToString(),
+                                        KursValue = transH.Kurs,
+                                        Currency = transH.Currency ?? "IDR",
+                                        GlAcct1 = acct != null ? (acct.Acct1 ?? "") : "",
+                                        GlAcct2 = acct != null ? (acct.Acct2 ?? "") : "",
+                                        GlAcct3 = acct != null ? (acct.Acct3 ?? "") : "",
+                                        GlAcct4 = acct != null ? (acct.Acct4 ?? "") : "",
+                                        GlAcct5 = acct != null ? (acct.Acct5 ?? "") : "",
+                                        GlAcct6 = acct != null ? (acct.Acct6 ?? "") : "",
+
+                                        // GL Account Amount allocation (Yellow columns)
+                                        // AP-DP (23): Posts to Acct4
+                                        GlAcct1Amt = transH.Kode == "23" ? transD.Jumlah : 0,
+                                        GlAcct2Amt = 0,
+                                        GlAcct3Amt = 0,
+                                        GlAcct4Amt = transH.Kode == "23" ? transD.Jumlah : 0,
+                                        GlAcct5Amt = 0,
+                                        GlAcct6Amt = 0,
+
+                                        // GL Distribution Amount (Red column)
+                                        // AP-IN (21): Posts to Distribution.Dist1
+                                        GlDistributionAmt = transH.Kode == "21" ? transD.Jumlah : 0,
+
+                                        // GL Posting Logic (for reference)
+                                        PostingGlAccount = transH.Kode == "21" 
+                                            ? (dist != null ? (dist.Dist1 ?? "") : "")
+                                            : (transH.Kode == "23" 
+                                                ? (acct != null ? (acct.Acct4 ?? "") : "")
+                                                : ""),
+                                        PostingGlAmount = transH.Kode == "21" || transH.Kode == "23" ? transD.Jumlah : 0,
+                                        PostingGlType = transH.Kode == "21" || transH.Kode == "23"
+                                            ? (transD.Jumlah > 0 ? "DEBIT" : (transD.Jumlah < 0 ? "CREDIT" : ""))
+                                            : "",
+                                        Keterangan = transD.Keterangan ?? "",
+                                        Lpb = transD.Lpb ?? "",
+                                        Cek = transH.Cek ?? "",
+                                        ApTransDId = transD.ApTransDId,
+                                        ApTransHId = transH.ApTransHId
+                                    })
+                                    .OrderBy(x => x.Tanggal)
+                                    .ThenBy(x => x.Bukti)
+                                    .ToListAsync();
+
+                return result ?? new List<ApLaporanAcctDistView>();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in GetLaporanHutangBySupplierAndDateRangeAsync: {ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get summary laporan hutang aggregated by Account Set
+        /// </summary>
+        public async Task<List<ApLaporanAcctSetSummaryView>> GetLaporanAcctSetSummaryAsync(DateTime dateFrom, DateTime dateTo)
+        {
+            try
+            {
+                var result = await (from transD in _context.ApTransDs
+                                    join transH in _context.ApTransHs on transD.ApTransHId equals transH.ApTransHId
+                                    join acct in _context.ApAccts on transH.AcctSet equals acct.AcctSet into acctGroup
+                                    from acct in acctGroup.DefaultIfEmpty()
+                                    where transH.Tanggal >= dateFrom && transH.Tanggal <= dateTo
+                                    group new { transD, transH, acct } by new 
+                                    { 
+                                        AcctSetKey = transH.AcctSet ?? "",
+                                        DescKey = acct != null ? (acct.Description ?? "") : "",
+                                        Acct1Key = acct != null ? (acct.Acct1 ?? "") : "",
+                                        Acct2Key = acct != null ? (acct.Acct2 ?? "") : ""
+                                    } into g
+                                    select new ApLaporanAcctSetSummaryView
+                                    {
+                                        Id = g.Key.AcctSetKey.GetHashCode(),
+                                        AcctSet = g.Key.AcctSetKey,
+                                        AcctSetDesc = g.Key.DescKey,
+                                        GlAcct1 = g.Key.Acct1Key,
+                                        GlAcct2 = g.Key.Acct2Key,
+                                        TotalJumlah = g.Sum(x => x.transD.Jumlah),
+                                        TotalPPn = g.Sum(x => x.transH.PPn),
+                                        TotalPPh = g.Sum(x => x.transH.PPh),
+                                        TotalDiscount = g.Sum(x => x.transD.Discount),
+                                        TotalBayar = g.Sum(x => x.transD.Bayar),
+                                        TotalSisa = g.Sum(x => x.transD.Sisa),
+                                        TransactionCount = g.Count()
+                                    })
+                                    .OrderBy(x => x.AcctSet)
+                                    .ToListAsync();
+
+                return result ?? new List<ApLaporanAcctSetSummaryView>();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in GetLaporanAcctSetSummaryAsync: {ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get summary laporan hutang aggregated by Distribution Code
+        /// </summary>
+        public async Task<List<ApLaporanDistSummaryView>> GetLaporanDistSummaryAsync(DateTime dateFrom, DateTime dateTo)
+        {
+            try
+            {
+                var result = await (from transD in _context.ApTransDs
+                                    join transH in _context.ApTransHs on transD.ApTransHId equals transH.ApTransHId
+                                    join dist in _context.ApDists on transD.DistCode equals dist.DistCode into distGroup
+                                    from dist in distGroup.DefaultIfEmpty()
+                                    where transH.Tanggal >= dateFrom && transH.Tanggal <= dateTo
+                                    group new { transD, transH, dist } by new 
+                                    { 
+                                        DistCodeKey = transD.DistCode ?? "",
+                                        DescKey = dist != null ? (dist.Description ?? "") : ""
+                                    } into g
+                                    select new ApLaporanDistSummaryView
+                                    {
+                                        Id = g.Key.DistCodeKey.GetHashCode(),
+                                        DistCode = g.Key.DistCodeKey,
+                                        DistDesc = g.Key.DescKey,
+                                        TotalJumlah = g.Sum(x => x.transD.Jumlah),
+                                        TotalPPn = g.Sum(x => x.transH.PPn),
+                                        TotalPPh = g.Sum(x => x.transH.PPh),
+                                        TotalDiscount = g.Sum(x => x.transD.Discount),
+                                        TotalBayar = g.Sum(x => x.transD.Bayar),
+                                        TotalSisa = g.Sum(x => x.transD.Sisa),
+                                        TransactionCount = g.Count()
+                                    })
+                                    .OrderBy(x => x.DistCode)
+                                    .ToListAsync();
+
+                return result ?? new List<ApLaporanDistSummaryView>();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in GetLaporanDistSummaryAsync: {ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get data untuk GL reconciliation
+        /// </summary>
+        public async Task<List<ApLaporanGlReconcileView>> GetLaporanGlReconcileAsync(DateTime dateFrom, DateTime dateTo)
+        {
+            try
+            {
+                var result = await (from transD in _context.ApTransDs
+                                    join transH in _context.ApTransHs on transD.ApTransHId equals transH.ApTransHId
+                                    join acct in _context.ApAccts on transH.AcctSet equals acct.AcctSet into acctGroup
+                                    from acct in acctGroup.DefaultIfEmpty()
+                                    join dist in _context.ApDists on transD.DistCode equals dist.DistCode into distGroup
+                                    from dist in distGroup.DefaultIfEmpty()
+                                    where transH.Tanggal >= dateFrom && transH.Tanggal <= dateTo
+                                    group new { transD, transH, acct, dist } by new 
+                                    { 
+                                        AcctSetKey = transH.AcctSet ?? "",
+                                        AcctDescKey = acct != null ? (acct.Description ?? "") : "",
+                                        Acct1Key = acct != null ? (acct.Acct1 ?? "") : "",
+                                        DistCodeKey = transD.DistCode ?? "",
+                                        DistDescKey = dist != null ? (dist.Description ?? "") : "",
+                                        CurrencyKey = transH.Currency ?? "IDR"
+                                    } into g
+                                    select new ApLaporanGlReconcileView
+                                    {
+                                        Id = (g.Key.AcctSetKey.GetHashCode()) ^ (g.Key.DistCodeKey.GetHashCode()),
+                                        AcctSet = g.Key.AcctSetKey,
+                                        AcctSetDesc = g.Key.AcctDescKey,
+                                        GlAccount = g.Key.Acct1Key,
+                                        DistCode = g.Key.DistCodeKey,
+                                        DistDesc = g.Key.DistDescKey,
+                                        DebitAmount = g.Where(x => x.transH.Kode == "PI").Sum(x => x.transD.Jumlah),
+                                        CreditAmount = g.Where(x => x.transH.Kode != "PI").Sum(x => x.transD.Jumlah),
+                                        TransactionCount = g.Count(),
+                                        Currency = g.Key.CurrencyKey,
+                                        DateFrom = dateFrom,
+                                        DateTo = dateTo
+                                    })
+                                    .OrderBy(x => x.AcctSet)
+                                    .ThenBy(x => x.DistCode)
+                                    .ToListAsync();
+
+                return result ?? new List<ApLaporanGlReconcileView>();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in GetLaporanGlReconcileAsync: {ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get summary laporan hutang aggregated by Account Set with supplier filter
+        /// </summary>
+        public async Task<List<ApLaporanAcctSetSummaryView>> GetLaporanAcctSetSummaryAsync(DateTime dateFrom, DateTime dateTo, string supplier)
+        {
+            try
+            {
+                var result = await (from transD in _context.ApTransDs
+                                    join transH in _context.ApTransHs on transD.ApTransHId equals transH.ApTransHId
+                                    join acct in _context.ApAccts on transH.AcctSet equals acct.AcctSet into acctGroup
+                                    from acct in acctGroup.DefaultIfEmpty()
+                                    where transH.Tanggal >= dateFrom && transH.Tanggal <= dateTo
+                                        && transH.Supplier == supplier
+                                    group new { transD, transH, acct } by new 
+                                    { 
+                                        AcctSetKey = transH.AcctSet ?? "",
+                                        DescKey = acct != null ? (acct.Description ?? "") : "",
+                                        Acct1Key = acct != null ? (acct.Acct1 ?? "") : "",
+                                        Acct2Key = acct != null ? (acct.Acct2 ?? "") : ""
+                                    } into g
+                                    select new ApLaporanAcctSetSummaryView
+                                    {
+                                        Id = g.Key.AcctSetKey.GetHashCode(),
+                                        AcctSet = g.Key.AcctSetKey,
+                                        AcctSetDesc = g.Key.DescKey,
+                                        GlAcct1 = g.Key.Acct1Key,
+                                        GlAcct2 = g.Key.Acct2Key,
+                                        TotalJumlah = g.Sum(x => x.transD.Jumlah),
+                                        TotalPPn = g.Sum(x => x.transH.PPn),
+                                        TotalPPh = g.Sum(x => x.transH.PPh),
+                                        TotalDiscount = g.Sum(x => x.transD.Discount),
+                                        TotalBayar = g.Sum(x => x.transD.Bayar),
+                                        TotalSisa = g.Sum(x => x.transD.Sisa),
+                                        TransactionCount = g.Count()
+                                    })
+                                    .OrderBy(x => x.AcctSet)
+                                    .ToListAsync();
+
+                return result ?? new List<ApLaporanAcctSetSummaryView>();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in GetLaporanAcctSetSummaryAsync (with supplier): {ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get summary laporan hutang aggregated by Distribution Code with supplier filter
+        /// </summary>
+        public async Task<List<ApLaporanDistSummaryView>> GetLaporanDistSummaryAsync(DateTime dateFrom, DateTime dateTo, string supplier)
+        {
+            try
+            {
+                var result = await (from transD in _context.ApTransDs
+                                    join transH in _context.ApTransHs on transD.ApTransHId equals transH.ApTransHId
+                                    join dist in _context.ApDists on transD.DistCode equals dist.DistCode into distGroup
+                                    from dist in distGroup.DefaultIfEmpty()
+                                    where transH.Tanggal >= dateFrom && transH.Tanggal <= dateTo
+                                        && transH.Supplier == supplier
+                                    group new { transD, transH, dist } by new 
+                                    { 
+                                        DistCodeKey = transD.DistCode ?? "",
+                                        DescKey = dist != null ? (dist.Description ?? "") : ""
+                                    } into g
+                                    select new ApLaporanDistSummaryView
+                                    {
+                                        Id = g.Key.DistCodeKey.GetHashCode(),
+                                        DistCode = g.Key.DistCodeKey,
+                                        DistDesc = g.Key.DescKey,
+                                        TotalJumlah = g.Sum(x => x.transD.Jumlah),
+                                        TotalPPn = g.Sum(x => x.transH.PPn),
+                                        TotalPPh = g.Sum(x => x.transH.PPh),
+                                        TotalDiscount = g.Sum(x => x.transD.Discount),
+                                        TotalBayar = g.Sum(x => x.transD.Bayar),
+                                        TotalSisa = g.Sum(x => x.transD.Sisa),
+                                        TransactionCount = g.Count()
+                                    })
+                                    .OrderBy(x => x.DistCode)
+                                    .ToListAsync();
+
+                return result ?? new List<ApLaporanDistSummaryView>();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in GetLaporanDistSummaryAsync (with supplier): {ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get GL reconciliation data with supplier filter
+        /// </summary>
+        public async Task<List<ApLaporanGlReconcileView>> GetLaporanGlReconcileAsync(DateTime dateFrom, DateTime dateTo, string supplier)
+        {
+            try
+            {
+                var result = await (from transD in _context.ApTransDs
+                                    join transH in _context.ApTransHs on transD.ApTransHId equals transH.ApTransHId
+                                    join acct in _context.ApAccts on transH.AcctSet equals acct.AcctSet into acctGroup
+                                    from acct in acctGroup.DefaultIfEmpty()
+                                    join dist in _context.ApDists on transD.DistCode equals dist.DistCode into distGroup
+                                    from dist in distGroup.DefaultIfEmpty()
+                                    where transH.Tanggal >= dateFrom && transH.Tanggal <= dateTo
+                                        && transH.Supplier == supplier
+                                    group new { transD, transH, acct, dist } by new 
+                                    { 
+                                        AcctSetKey = transH.AcctSet ?? "",
+                                        AcctDescKey = acct != null ? (acct.Description ?? "") : "",
+                                        Acct1Key = acct != null ? (acct.Acct1 ?? "") : "",
+                                        DistCodeKey = transD.DistCode ?? "",
+                                        DistDescKey = dist != null ? (dist.Description ?? "") : "",
+                                        CurrencyKey = transH.Currency ?? "IDR"
+                                    } into g
+                                    select new ApLaporanGlReconcileView
+                                    {
+                                        Id = (g.Key.AcctSetKey.GetHashCode()) ^ (g.Key.DistCodeKey.GetHashCode()),
+                                        AcctSet = g.Key.AcctSetKey,
+                                        AcctSetDesc = g.Key.AcctDescKey,
+                                        GlAccount = g.Key.Acct1Key,
+                                        DistCode = g.Key.DistCodeKey,
+                                        DistDesc = g.Key.DistDescKey,
+                                        DebitAmount = g.Where(x => x.transH.Kode == "PI").Sum(x => x.transD.Jumlah),
+                                        CreditAmount = g.Where(x => x.transH.Kode != "PI").Sum(x => x.transD.Jumlah),
+                                        TransactionCount = g.Count(),
+                                        Currency = g.Key.CurrencyKey,
+                                        DateFrom = dateFrom,
+                                        DateTo = dateTo
+                                    })
+                                    .OrderBy(x => x.AcctSet)
+                                    .ThenBy(x => x.DistCode)
+                                    .ToListAsync();
+
+                return result ?? new List<ApLaporanGlReconcileView>();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in GetLaporanGlReconcileAsync (with supplier): {ex}");
+                throw;
+            }
+        }
+
+        #endregion
 
     }
 }
