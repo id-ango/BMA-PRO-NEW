@@ -167,6 +167,8 @@ namespace eSoft.Order.View
     {
         public string NoLpb { get; set; }
         public string NoPrj { get; set; }
+        public DateTime Tanggal { get; set; }
+        public string Keterangan { get; set; }
         public int ImpactCount { get; set; }
         public int TotalReadyAfterPO { get; set; }
         public decimal ImpactPercentage { get; set; }

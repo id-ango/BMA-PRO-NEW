@@ -1094,14 +1094,14 @@ namespace Accounting.Services
 
             // ========== SECTION 2: PO IMPACT RANKING ==========
             var impactRow = currentRow;
-            ws.Cell(impactRow, 1).Value = "RANKING PO BERDASARKAN SO BARU READY";
-            ws.Range(impactRow, 1, impactRow, 7).Merge();
+            ws.Cell(impactRow, 1).Value = "PROGRES PEMENUHAN SO BERDASARKAN KEDATANGAN PO";
+            ws.Range(impactRow, 1, impactRow, 8).Merge();
             ws.Cell(impactRow, 1).Style.Font.Bold = true;
             ws.Cell(impactRow, 1).Style.Fill.BackgroundColor = blueFill;
             currentRow++;
 
             // Header ranking
-            string[] rankingHeaders = { "Ranking", "No PO", "No PI", "SO Baru Ready", "% dari SO Pending", "Total Ready Setelah PO", "Keterangan" };
+            string[] rankingHeaders = { "Urutan", "No PO", "No PI", "Tanggal PO", "SO Baru Ready", "Total Ready Setelah PO", "Sisa SO Pending", "Keterangan PO" };
             for (int i = 0; i < rankingHeaders.Length; i++)
             {
                 var c = ws.Cell(currentRow, i + 1);
@@ -1130,27 +1130,24 @@ namespace Accounting.Services
                 ws.Cell(currentRow, 3).Value = ranking.NoPrj ?? "-";
                 ws.Cell(currentRow, 3).Style.Fill.BackgroundColor = rowBg;
 
-                ws.Cell(currentRow, 4).Value = ranking.ImpactCount;
+                ws.Cell(currentRow, 4).Value = ranking.Tanggal.ToString("dd/MM/yyyy");
                 ws.Cell(currentRow, 4).Style.Fill.BackgroundColor = rowBg;
-                ws.Cell(currentRow, 4).Style.Font.Bold = true;
-                ws.Cell(currentRow, 4).Style.Font.FontColor = XLColor.FromHtml("#198754");
 
-                ws.Cell(currentRow, 5).Value = ranking.ImpactPercentage / 100;
+                ws.Cell(currentRow, 5).Value = ranking.ImpactCount;
                 ws.Cell(currentRow, 5).Style.Fill.BackgroundColor = rowBg;
-                ws.Cell(currentRow, 5).Style.NumberFormat.Format = "0.0%";
                 ws.Cell(currentRow, 5).Style.Font.Bold = true;
+                ws.Cell(currentRow, 5).Style.Font.FontColor = XLColor.FromHtml("#198754");
 
                 ws.Cell(currentRow, 6).Value = ranking.TotalReadyAfterPO;
                 ws.Cell(currentRow, 6).Style.Fill.BackgroundColor = rowBg;
                 ws.Cell(currentRow, 6).Style.Font.Bold = true;
 
-                var pesan = "";
-                if (ranking.Rank == 1) pesan = "⭐ PALING PENTING";
-                else if (ranking.Rank <= 3) pesan = "🔥 Prioritas tinggi";
-                else if (ranking.Rank <= 5) pesan = "Medium priority";
-
-                ws.Cell(currentRow, 7).Value = pesan;
+                ws.Cell(currentRow, 7).Value = Math.Max(prediction.Summary.TotalSalesOrders - ranking.TotalReadyAfterPO, 0);
                 ws.Cell(currentRow, 7).Style.Fill.BackgroundColor = rowBg;
+                ws.Cell(currentRow, 7).Style.Font.Bold = true;
+
+                ws.Cell(currentRow, 8).Value = ranking.Keterangan ?? "-";
+                ws.Cell(currentRow, 8).Style.Fill.BackgroundColor = rowBg;
 
                 currentRow++;
             }
@@ -1714,6 +1711,8 @@ namespace Accounting.Services
                         {
                             NoLpb = po.NoLpb,
                             NoPrj = po.NoPrj,
+                            Tanggal = po.Tanggal,
+                            Keterangan = po.Keterangan,
                             ImpactCount = impactCount,
                             TotalReadyAfterPO = readySOCount + impactCount,
                             ImpactPercentage = pendingSOCount > 0 ? (decimal)impactCount / pendingSOCount * 100 : 0,
@@ -1723,8 +1722,11 @@ namespace Accounting.Services
                 }
             }
 
-            // Sort by impact
-            impactRankings = impactRankings.OrderByDescending(r => r.ImpactCount).ToList();
+            // Tampilkan sebagai progres urutan kedatangan PO, bukan ranking impact.
+            impactRankings = impactRankings
+                .OrderBy(r => r.Tanggal)
+                .ThenBy(r => r.NoLpb)
+                .ToList();
             for (int i = 0; i < impactRankings.Count; i++)
                 impactRankings[i].Rank = i + 1;
 
