@@ -1160,11 +1160,17 @@ namespace Accounting.Services
 
             // ========== SECTION 3: CRITICAL ITEMS ==========
             var criticalRow = currentRow;
-            ws.Cell(criticalRow, 1).Value = "ITEM PENGHAMBAT SO DAN STATUS PO";
+            ws.Cell(criticalRow, 1).Value = "ITEM PENGHAMBAT SO DAN STATUS PO (TOP 10)";
             ws.Range(criticalRow, 1, criticalRow, 10).Merge();
             ws.Cell(criticalRow, 1).Style.Font.Bold = true;
             ws.Cell(criticalRow, 1).Style.Fill.BackgroundColor = pendingSectionFill;
             ws.Cell(criticalRow, 1).Style.Font.FontColor = XLColor.White;
+            currentRow++;
+
+            ws.Cell(currentRow, 1).Value = $"Menampilkan 10 item teratas dari total {prediction.Summary.CriticalItems.Count} item penghambat SO. Daftar ini diurutkan berdasarkan jumlah SO menunggu dan qty kebutuhan; item lain yang bermasalah tidak ditampilkan pada bagian ini.";
+            ws.Range(currentRow, 1, currentRow, 10).Merge();
+            ws.Cell(currentRow, 1).Style.Alignment.WrapText = true;
+            ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.DarkGray;
             currentRow++;
 
             string[] criticalHeaders = { "Item Code", "Nama Item", "SO Menunggu", "Qty Diminta", "Stock Saat Ini", "PO Direncanakan", "Jumlah PO", "Kekurangan", "Status", "Keterangan" };
