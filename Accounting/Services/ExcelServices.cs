@@ -713,7 +713,7 @@ namespace Accounting.Services
             // ── Sheet 2: Summary per Item ────────────────────────────────────────
             var wsSummary = workbook.Worksheets.Add("Summary Kebutuhan Item");
 
-            string[] summaryHeaders = { "No", "Kode Item", "Nama Item", "Satuan", "Stock Tersedia", "Total Dipesan (SO)", "PO Aktif", "Sisa/Proyeksi", "Status", "Saran Pesan", "Keterangan No PI" };
+            string[] summaryHeaders = { "No", "Kode Item", "Nama Item", "Satuan", "Stock Tersedia", "Total Dipesan (SO)", "PO Aktif", "Sisa/Proyeksi", "Status", "Saran Pesan", "Keterangan No PI", "Sisa Bisa Dijual" };
             for (int i = 0; i < summaryHeaders.Length; i++)
             {
                 var c = wsSummary.Cell(1, i + 1);
@@ -741,6 +741,7 @@ namespace Accounting.Services
                     .Where(x => !string.IsNullOrWhiteSpace(x))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(x => x));
+                var sisaBisaDijual = Math.Max(sisa, 0);
                 var status = totalDipesan <= item.QtyStock
                     ? "Cukup dari stock"
                     : totalPo >= Math.Max(totalDipesan - item.QtyStock, 0)
@@ -758,7 +759,11 @@ namespace Accounting.Services
                 wsSummary.Cell(sRow, 7).Value = totalPo;
                 wsSummary.Cell(sRow, 8).Value = sisa;
                 wsSummary.Cell(sRow, 9).Value = status;
-                wsSummary.Cell(sRow, 10).Value = kekurangan > 0 ? $"Perlu pesan min. {kekurangan:N0} {item.Satuan}" : "Cukup";
+                wsSummary.Cell(sRow, 10).Value = kekurangan > 0
+                    ? $"Perlu pesan min. {kekurangan:N0} {item.Satuan}"
+                    : sisaBisaDijual > 0
+                        ? $"Cukup; ada stock yang bisa dijual tanpa SO: {sisaBisaDijual:N0} {item.Satuan}"
+                        : "Cukup";
                 wsSummary.Cell(sRow, 11).Value = string.IsNullOrWhiteSpace(noPi) ? "-" : noPi;
 
                 // warna baris
