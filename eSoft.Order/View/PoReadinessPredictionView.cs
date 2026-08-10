@@ -186,5 +186,9 @@ namespace eSoft.Order.View
         public decimal TotalQtyWaiting { get; set; }
         public decimal CurrentStock { get; set; }
         public decimal TotalPOPlanned { get; set; }
+        public int CountPOActive { get; set; }
+        public decimal ProjectedBalance { get; set; }
+        public string Status { get; set; }
+        public string Keterangan { get; set; }
     }
 }

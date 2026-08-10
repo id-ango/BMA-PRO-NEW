@@ -1160,14 +1160,14 @@ namespace Accounting.Services
 
             // ========== SECTION 3: CRITICAL ITEMS ==========
             var criticalRow = currentRow;
-            ws.Cell(criticalRow, 1).Value = "ITEM YANG PALING CRITICAL (Banyak SO Menunggu)";
-            ws.Range(criticalRow, 1, criticalRow, 6).Merge();
+            ws.Cell(criticalRow, 1).Value = "ITEM PENGHAMBAT SO DAN STATUS PO";
+            ws.Range(criticalRow, 1, criticalRow, 10).Merge();
             ws.Cell(criticalRow, 1).Style.Font.Bold = true;
             ws.Cell(criticalRow, 1).Style.Fill.BackgroundColor = pendingSectionFill;
             ws.Cell(criticalRow, 1).Style.Font.FontColor = XLColor.White;
             currentRow++;
 
-            string[] criticalHeaders = { "Item Code", "Nama Item", "Qty Diminta", "Stock Saat Ini", "PO Direncanakan", "Kekurangan" };
+            string[] criticalHeaders = { "Item Code", "Nama Item", "SO Menunggu", "Qty Diminta", "Stock Saat Ini", "PO Direncanakan", "Jumlah PO", "Kekurangan", "Status", "Keterangan" };
             for (int i = 0; i < criticalHeaders.Length; i++)
             {
                 var c = ws.Cell(currentRow, i + 1);
@@ -1183,15 +1183,20 @@ namespace Accounting.Services
             {
                 ws.Cell(currentRow, 1).Value = critical.ItemCode;
                 ws.Cell(currentRow, 2).Value = critical.NamaItem;
-                ws.Cell(currentRow, 3).Value = critical.TotalQtyWaiting;
+                ws.Cell(currentRow, 3).Value = critical.CountSOWaiting;
                 ws.Cell(currentRow, 3).Style.Font.Bold = true;
-                ws.Cell(currentRow, 4).Value = critical.CurrentStock;
-                ws.Cell(currentRow, 5).Value = critical.TotalPOPlanned;
-                ws.Cell(currentRow, 5).Style.Font.FontColor = XLColor.FromHtml("#0d6efd");
-                var kekurangan = critical.TotalQtyWaiting - critical.CurrentStock;
-                ws.Cell(currentRow, 6).Value = Math.Max(kekurangan - critical.TotalPOPlanned, 0);
-                ws.Cell(currentRow, 6).Style.Font.FontColor = XLColor.FromHtml("#dc3545");
-                ws.Cell(currentRow, 6).Style.Font.Bold = true;
+                ws.Cell(currentRow, 4).Value = critical.TotalQtyWaiting;
+                ws.Cell(currentRow, 5).Value = critical.CurrentStock;
+                ws.Cell(currentRow, 6).Value = critical.TotalPOPlanned;
+                ws.Cell(currentRow, 6).Style.Font.FontColor = XLColor.FromHtml("#0d6efd");
+                ws.Cell(currentRow, 7).Value = critical.CountPOActive;
+                ws.Cell(currentRow, 8).Value = Math.Max(-critical.ProjectedBalance, 0);
+                ws.Cell(currentRow, 8).Style.Font.FontColor = XLColor.FromHtml("#dc3545");
+                ws.Cell(currentRow, 8).Style.Font.Bold = true;
+                ws.Cell(currentRow, 9).Value = critical.Status;
+                ws.Cell(currentRow, 9).Style.Font.Bold = true;
+                ws.Cell(currentRow, 10).Value = critical.Keterangan;
+                ws.Cell(currentRow, 10).Style.Alignment.WrapText = true;
 
                 currentRow++;
             }
@@ -1358,9 +1363,11 @@ namespace Accounting.Services
             ws.Column(6).Width = 25;
             ws.Column(7).Width = 15;
             ws.Column(8).Width = 20;
+            ws.Column(9).Width = 24;
+            ws.Column(10).Width = 42;
 
             // Add border to all cells
-            var allCells = ws.Range(1, 1, currentRow, 8);
+            var allCells = ws.Range(1, 1, currentRow, 10);
             allCells.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             allCells.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
@@ -1752,6 +1759,22 @@ namespace Accounting.Services
 
                 if (soWaiting.Any())
                 {
+                    var totalPoPlanned = purchaseDetails
+                        .Where(d => string.Equals(d.ItemCode, item.ItemCode, StringComparison.OrdinalIgnoreCase))
+                        .Sum(d => d.Qty);
+                    var countPoActive = purchaseOrders.Count(po =>
+                        purchaseDetails.Any(d =>
+                            string.Equals(d.NoLpb, po.NoLpb, StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(d.ItemCode, item.ItemCode, StringComparison.OrdinalIgnoreCase)));
+                    var projectedBalance = item.QtyStock + totalPoPlanned - soWaiting.Sum(c => c.QtyOrder);
+                    var status = projectedBalance >= 0
+                        ? item.QtyStock >= soWaiting.Sum(c => c.QtyOrder)
+                            ? "Cukup dari stock"
+                            : "Terpenuhi setelah PO"
+                        : totalPoPlanned > 0
+                            ? "Masih kurang setelah PO"
+                            : "Belum ada PO";
+
                     criticalItems.Add(new CriticalItemAnalysis
                     {
                         ItemCode = item.ItemCode,
@@ -1760,9 +1783,15 @@ namespace Accounting.Services
                             r.Cells.Any(c => c.ItemCode == item.ItemCode && c.IsOrdered && !c.HasStock)),
                         TotalQtyWaiting = soWaiting.Sum(c => c.QtyOrder),
                         CurrentStock = item.QtyStock,
-                        TotalPOPlanned = purchaseDetails
-                            .Where(d => string.Equals(d.ItemCode, item.ItemCode, StringComparison.OrdinalIgnoreCase))
-                            .Sum(d => d.Qty)
+                        TotalPOPlanned = totalPoPlanned,
+                        CountPOActive = countPoActive,
+                        ProjectedBalance = projectedBalance,
+                        Status = status,
+                        Keterangan = countPoActive > 1
+                            ? $"Dibutuhkan oleh {soWaiting.Count} SO; PO tersebar di {countPoActive} dokumen."
+                            : countPoActive == 1
+                                ? "Dibutuhkan oleh SO; tersedia 1 PO aktif."
+                                : "Dibutuhkan oleh SO; belum ada PO aktif."
                     });
                 }
             }
