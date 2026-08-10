@@ -46,6 +46,11 @@ namespace eSoft.Order.View
         public string NamaSupplier { get; set; }
 
         /// <summary>
+        /// Keterangan PO
+        /// </summary>
+        public string Keterangan { get; set; }
+
+        /// <summary>
         /// Detail item dalam PO ini
         /// </summary>
         public List<PoPredictionItem> Items { get; set; } = new();
@@ -163,6 +168,7 @@ namespace eSoft.Order.View
         public string NoLpb { get; set; }
         public string NoPrj { get; set; }
         public int ImpactCount { get; set; }
+        public int TotalReadyAfterPO { get; set; }
         public decimal ImpactPercentage { get; set; }
         public int Rank { get; set; }
     }

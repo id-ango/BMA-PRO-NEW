@@ -1047,6 +1047,8 @@ namespace Accounting.Services
             var yellowFill = XLColor.FromHtml("#fff3cd");
             var blueFill = XLColor.FromHtml("#cfe2ff");
             var lightGrayFill = XLColor.FromHtml("#f8f9fa");
+            var pendingSectionFill = XLColor.FromHtml("#b02a37");
+            var pendingHeaderFill = XLColor.FromHtml("#f1aeb5");
 
             int currentRow = 1;
 
@@ -1092,14 +1094,14 @@ namespace Accounting.Services
 
             // ========== SECTION 2: PO IMPACT RANKING ==========
             var impactRow = currentRow;
-            ws.Cell(impactRow, 1).Value = "RANKING PO BERDASARKAN IMPACT";
-            ws.Range(impactRow, 1, impactRow, 6).Merge();
+            ws.Cell(impactRow, 1).Value = "RANKING PO BERDASARKAN SO BARU READY";
+            ws.Range(impactRow, 1, impactRow, 7).Merge();
             ws.Cell(impactRow, 1).Style.Font.Bold = true;
             ws.Cell(impactRow, 1).Style.Fill.BackgroundColor = blueFill;
             currentRow++;
 
             // Header ranking
-            string[] rankingHeaders = { "Ranking", "No PO", "No PI", "SO akan Ready", "% dari Total SO", "Keterangan" };
+            string[] rankingHeaders = { "Ranking", "No PO", "No PI", "SO Baru Ready", "% dari SO Pending", "Total Ready Setelah PO", "Keterangan" };
             for (int i = 0; i < rankingHeaders.Length; i++)
             {
                 var c = ws.Cell(currentRow, i + 1);
@@ -1138,13 +1140,17 @@ namespace Accounting.Services
                 ws.Cell(currentRow, 5).Style.NumberFormat.Format = "0.0%";
                 ws.Cell(currentRow, 5).Style.Font.Bold = true;
 
+                ws.Cell(currentRow, 6).Value = ranking.TotalReadyAfterPO;
+                ws.Cell(currentRow, 6).Style.Fill.BackgroundColor = rowBg;
+                ws.Cell(currentRow, 6).Style.Font.Bold = true;
+
                 var pesan = "";
                 if (ranking.Rank == 1) pesan = "⭐ PALING PENTING";
                 else if (ranking.Rank <= 3) pesan = "🔥 Prioritas tinggi";
                 else if (ranking.Rank <= 5) pesan = "Medium priority";
 
-                ws.Cell(currentRow, 6).Value = pesan;
-                ws.Cell(currentRow, 6).Style.Fill.BackgroundColor = rowBg;
+                ws.Cell(currentRow, 7).Value = pesan;
+                ws.Cell(currentRow, 7).Style.Fill.BackgroundColor = rowBg;
 
                 currentRow++;
             }
@@ -1155,7 +1161,8 @@ namespace Accounting.Services
             ws.Cell(criticalRow, 1).Value = "ITEM YANG PALING CRITICAL (Banyak SO Menunggu)";
             ws.Range(criticalRow, 1, criticalRow, 6).Merge();
             ws.Cell(criticalRow, 1).Style.Font.Bold = true;
-            ws.Cell(criticalRow, 1).Style.Fill.BackgroundColor = redFill;
+            ws.Cell(criticalRow, 1).Style.Fill.BackgroundColor = pendingSectionFill;
+            ws.Cell(criticalRow, 1).Style.Font.FontColor = XLColor.White;
             currentRow++;
 
             string[] criticalHeaders = { "Item Code", "Nama Item", "Qty Diminta", "Stock Saat Ini", "PO Direncanakan", "Kekurangan" };
@@ -1202,19 +1209,23 @@ namespace Accounting.Services
                 ws.Cell(currentRow, 1).Value = $"PO: {scenario.NoLpb}";
                 ws.Cell(currentRow, 1).Style.Font.Bold = true;
                 ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = blueFill;
-                ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.White;
+                ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.FromHtml("#212529");
 
                 ws.Cell(currentRow, 2).Value = $"PI: {scenario.NoPrj ?? "-"}";
                 ws.Cell(currentRow, 2).Style.Fill.BackgroundColor = blueFill;
-                ws.Cell(currentRow, 2).Style.Font.FontColor = XLColor.White;
+                ws.Cell(currentRow, 2).Style.Font.FontColor = XLColor.FromHtml("#212529");
 
                 ws.Cell(currentRow, 3).Value = $"Tanggal: {scenario.Tanggal:dd/MM/yyyy}";
                 ws.Cell(currentRow, 3).Style.Fill.BackgroundColor = blueFill;
-                ws.Cell(currentRow, 3).Style.Font.FontColor = XLColor.White;
+                ws.Cell(currentRow, 3).Style.Font.FontColor = XLColor.FromHtml("#212529");
 
                 ws.Cell(currentRow, 4).Value = $"Supplier: {scenario.NamaSupplier}";
                 ws.Cell(currentRow, 4).Style.Fill.BackgroundColor = blueFill;
-                ws.Cell(currentRow, 4).Style.Font.FontColor = XLColor.White;
+                ws.Cell(currentRow, 4).Style.Font.FontColor = XLColor.FromHtml("#212529");
+
+                ws.Cell(currentRow, 5).Value = $"Keterangan PO: {scenario.Keterangan ?? "-"}";
+                ws.Cell(currentRow, 5).Style.Fill.BackgroundColor = blueFill;
+                ws.Cell(currentRow, 5).Style.Font.FontColor = XLColor.FromHtml("#212529");
 
                 currentRow++;
 
@@ -1253,6 +1264,7 @@ namespace Accounting.Services
                         c.Value = readyHeaders[i];
                         c.Style.Font.Bold = true;
                         c.Style.Fill.BackgroundColor = greenFill;
+                        c.Style.Font.FontColor = XLColor.FromHtml("#212529");
                         c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     }
                     currentRow++;
@@ -1269,6 +1281,7 @@ namespace Accounting.Services
                             : new List<string> { "-" });
                         ws.Cell(currentRow, 6).Style.Alignment.WrapText = true;
                         ws.Range(currentRow, 1, currentRow, 6).Style.Fill.BackgroundColor = lightGrayFill;
+                        ws.Range(currentRow, 1, currentRow, 6).Style.Font.FontColor = XLColor.FromHtml("#212529");
                         currentRow++;
                     }
                 }
@@ -1288,7 +1301,7 @@ namespace Accounting.Services
                     ws.Cell(currentRow, 1).Value = $"◐ SO MASIH PENDING ({pendingSOCount})";
                     ws.Cell(currentRow, 1).Style.Font.Bold = true;
                     ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.White;
-                    ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = redFill;
+                    ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = pendingSectionFill;
                     ws.Range(currentRow, 1, currentRow, 8).Merge();
                     currentRow++;
 
@@ -1299,8 +1312,8 @@ namespace Accounting.Services
                         var c = ws.Cell(currentRow, i + 1);
                         c.Value = pendingHeaders[i];
                         c.Style.Font.Bold = true;
-                        c.Style.Fill.BackgroundColor = redFill;
-                        c.Style.Font.FontColor = XLColor.White;
+                        c.Style.Fill.BackgroundColor = pendingHeaderFill;
+                        c.Style.Font.FontColor = XLColor.FromHtml("#212529");
                         c.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     }
                     currentRow++;
@@ -1322,6 +1335,9 @@ namespace Accounting.Services
                         ws.Cell(currentRow, 6).Style.Alignment.WrapText = true;
                         ws.Cell(currentRow, 6).Style.Font.FontColor = XLColor.FromHtml("#dc3545");
                         ws.Range(currentRow, 1, currentRow, 6).Style.Fill.BackgroundColor = lightGrayFill;
+                        ws.Range(currentRow, 1, currentRow, 6).Style.Font.FontColor = XLColor.FromHtml("#212529");
+                        ws.Cell(currentRow, 5).Style.Font.FontColor = XLColor.FromHtml("#198754");
+                        ws.Cell(currentRow, 6).Style.Font.FontColor = XLColor.FromHtml("#dc3545");
                         currentRow++;
                     }
                     currentRow++;
@@ -1363,6 +1379,8 @@ namespace Accounting.Services
             var redFill = XLColor.FromHtml("#f8d7da");
             var yellowFill = XLColor.FromHtml("#fff3cd");
             var lightGrayFill = XLColor.FromHtml("#f8f9fa");
+            var pendingSectionFill = XLColor.FromHtml("#b02a37");
+            var pendingHeaderFill = XLColor.FromHtml("#f1aeb5");
 
             int currentRow = 1;
             int currentCol = 1;
@@ -1672,6 +1690,7 @@ namespace Accounting.Services
 
             var readySOCount = matrix.Rows.Count(r => r.IsComplete);
             var totalSOCount = matrix.Rows.Count;
+            var pendingSOCount = totalSOCount - readySOCount;
 
             prediction.Summary.TotalSalesOrders = totalSOCount;
             prediction.Summary.ReadyWithoutPO = readySOCount;
@@ -1696,7 +1715,8 @@ namespace Accounting.Services
                             NoLpb = po.NoLpb,
                             NoPrj = po.NoPrj,
                             ImpactCount = impactCount,
-                            ImpactPercentage = totalSOCount > 0 ? (decimal)impactCount / totalSOCount * 100 : 0,
+                            TotalReadyAfterPO = readySOCount + impactCount,
+                            ImpactPercentage = pendingSOCount > 0 ? (decimal)impactCount / pendingSOCount * 100 : 0,
                             Rank = rank++
                         });
                     }
@@ -1766,7 +1786,8 @@ namespace Accounting.Services
                 NoLpb = po.NoLpb,
                 Tanggal = po.Tanggal,
                 NoPrj = po.NoPrj,
-                NamaSupplier = !string.IsNullOrWhiteSpace(po.NamaVendor) ? po.NamaVendor : "Not Specified"
+                NamaSupplier = !string.IsNullOrWhiteSpace(po.NamaVendor) ? po.NamaVendor : "Not Specified",
+                Keterangan = po.Keterangan
             };
 
             // Build PO items
@@ -1869,15 +1890,18 @@ namespace Accounting.Services
                     foreach (var cell in so.Cells.Where(c => c.IsOrdered))
                     {
                         var allocatedQty = thisSOAllocation.TryGetValue(cell.ItemCode, out var a) ? a : 0;
+                        var itemHeader = matrix.ItemHeaders.FirstOrDefault(h =>
+                            string.Equals(h.ItemCode, cell.ItemCode, StringComparison.OrdinalIgnoreCase));
+                        var itemLabel = $"{itemHeader?.NamaItem ?? cell.ItemCode} ({cell.ItemCode})";
 
                         if (allocatedQty >= cell.QtyOrder)
                         {
-                            willBeCompletedItems.Add(cell.ItemCode);
+                            willBeCompletedItems.Add(itemLabel);
                         }
                         else
                         {
                             canBeReady = false;
-                            stillMissingItems.Add(cell.ItemCode);
+                            stillMissingItems.Add(itemLabel);
                         }
                     }
 
