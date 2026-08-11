@@ -202,9 +202,9 @@
                 <td>
                     <InputNumber class="form-control form-control-sm"
                                  @bind-Value="transaksi.Qty"
+                                 @bind-Value:after="() => OnQtyChanged(transaksi)"
                                  min="0"
-                                 step="0.01"
-                                 @onchange="@((ChangeEventArgs e) => OnQtyChanged(transaksi))" />
+                                 step="0.01" />
                 </td>
                 <td>
                     @{
@@ -517,10 +517,8 @@
     // ✅ BARU: Method untuk handle qty change dan recalculate Jumlah
     private void OnQtyChanged(OeTransDView item)
     {
-        // Hitung ulang jumlah manual
         item.Jumlah = (item.Qty * item.Harga) - item.Discount;
 
-        // Setelah detail berubah, header otomatis ikut berubah karena TtlJumlah = Sum(Jumlah)
         StateHasChanged();
     }
 
