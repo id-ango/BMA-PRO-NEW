@@ -310,7 +310,7 @@
         var currentTotalQty = Transh.TotalQty;
         if (currentTotalQty != originalTotalQty)
         {
-            var (canEdit, message) = service.ValidateEditSalesOrderQty(Transh.NoPrj, currentTotalQty, originalTotalQty);
+            var (canEdit, message) = service.ValidateEditSalesOrderQty(Transh.NoLpb, currentTotalQty, originalTotalQty);
             if (!canEdit)
             {
                 // Show error message
