@@ -671,23 +671,26 @@ namespace eSoft.Order.Services
                 {
                     var detail = order.PoTransDs.FirstOrDefault(d => d.ItemCode == itemHeader.ItemCode);
                     var qtyOrder = detail?.Qty ?? 0;
+                    var qtyBo = detail?.QtyBo ?? 0;
+                    var qtySisa = Math.Max(qtyOrder - qtyBo, 0);
                     var sisaSebelum = stockSisa[itemHeader.ItemCode];
 
                     row.Cells.Add(new SalesOrderMatrixCell
                     {
                         ItemCode = itemHeader.ItemCode,
                         QtyOrder = qtyOrder,
+                        QtyBo = qtyBo,
                         QtyStockSisa = sisaSebelum
                     });
 
                     // Kurangi sisa stock untuk SO berikutnya (tidak boleh negatif agar akurat)
-                    if (qtyOrder > 0)
-                        stockSisa[itemHeader.ItemCode] = sisaSebelum - qtyOrder;
+                    if (qtySisa > 0)
+                        stockSisa[itemHeader.ItemCode] = sisaSebelum - qtySisa;
                 }
 
-                // SO dianggap siap jika semua item yang dipesan stocknya masih cukup
+                // SO dianggap siap jika semua qty sisa sudah terkirim atau stock masih cukup untuk qty sisa
                 var orderedCells = row.Cells.Where(c => c.IsOrdered).ToList();
-                row.IsComplete = orderedCells.Any() && orderedCells.All(c => c.HasStock);
+                row.IsComplete = orderedCells.Any() && orderedCells.All(c => c.IsTerkirim || c.HasStock);
 
                 result.Rows.Add(row);
             }

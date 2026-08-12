@@ -110,6 +110,8 @@ namespace eSoft.Order.View
         public string ItemCode { get; set; }
         public string NamaItem { get; set; }
         public decimal QtyOrder { get; set; }
+        public decimal QtyTerkirim { get; set; }
+        public decimal QtySisa => Math.Max(QtyOrder - QtyTerkirim, 0);
         public decimal QtyAvailable { get; set; }
         public string Satuan { get; set; }
 
@@ -122,6 +124,11 @@ namespace eSoft.Order.View
         /// True jika item sudah lengkap
         /// </summary>
         public bool IsComplete => QtyKurang <= 0;
+
+        /// <summary>
+        /// True jika seluruh qty order sudah terkirim
+        /// </summary>
+        public bool IsTerkirim => QtySisa <= 0;
     }
 
     /// <summary>

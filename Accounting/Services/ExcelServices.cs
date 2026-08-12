@@ -639,14 +639,16 @@ namespace Accounting.Services
             int row = 2;
             foreach (var soRow in matrix.Rows)
             {
-                var rowBg = soRow.IsComplete ? yellowFill : XLColor.White;
+                var isTerkirim = soRow.Cells.Any(c => c.IsOrdered) && soRow.Cells.Where(c => c.IsOrdered).All(c => c.IsTerkirim);
+                var rowBg = isTerkirim ? greenFill : soRow.IsComplete ? yellowFill : XLColor.White;
+                var rowStatus = isTerkirim ? "Terkirim" : soRow.IsComplete ? "Lengkap" : "Kurang";
 
                 wsMatrix.Cell(row, 1).Value = soRow.NoLpb;
                 wsMatrix.Cell(row, 2).Value = soRow.NamaCustomer;
                 wsMatrix.Cell(row, 3).Value = soRow.Tanggal.ToString("dd/MM/yyyy");
                 wsMatrix.Cell(row, 4).Value = soRow.NoPrj;
                 wsMatrix.Cell(row, 5).Value = soRow.Keterangan;
-                wsMatrix.Cell(row, 6).Value = soRow.IsComplete ? "Siap Proses" : "Menunggu";
+                wsMatrix.Cell(row, 6).Value = rowStatus;
 
                 for (int c2 = 1; c2 <= 6; c2++)
                     wsMatrix.Cell(row, c2).Style.Fill.BackgroundColor = rowBg;
@@ -661,15 +663,21 @@ namespace Accounting.Services
                         xlCell.Style.Fill.BackgroundColor = grayFill;
                         xlCell.Style.Font.FontColor = XLColor.Gray;
                     }
+                    else if (cell.IsTerkirim)
+                    {
+                        xlCell.Value = $"Order: {cell.QtyOrder:N0}\nTerkirim: {cell.QtyBo:N0}\nSisa: {cell.QtySisa:N0}";
+                        xlCell.Style.Fill.BackgroundColor = greenFill;
+                        xlCell.Style.Font.FontColor = XLColor.FromHtml("#198754");
+                    }
                     else if (cell.HasStock)
                     {
-                        xlCell.Value = $"Order: {cell.QtyOrder:N0}\nSisa: {cell.QtyStockSisa:N0} → {cell.QtyStockSetelah:N0}";
+                        xlCell.Value = $"Order: {cell.QtyOrder:N0}\nTerkirim: {cell.QtyBo:N0}\nSisa: {cell.QtySisa:N0}\nStock: {cell.QtyStockSisa:N0} → {cell.QtyStockSetelah:N0}";
                         xlCell.Style.Fill.BackgroundColor = greenFill;
                         xlCell.Style.Font.FontColor = XLColor.FromHtml("#198754");
                     }
                     else
                     {
-                        xlCell.Value = $"Order: {cell.QtyOrder:N0}\nSisa: {cell.QtyStockSisa:N0} ⚠ Kurang: {(cell.QtyOrder - cell.QtyStockSisa):N0}";
+                        xlCell.Value = $"Order: {cell.QtyOrder:N0}\nTerkirim: {cell.QtyBo:N0}\nSisa: {cell.QtySisa:N0}\nStock: {cell.QtyStockSisa:N0} ⚠ Kurang: {(cell.QtySisa - cell.QtyStockSisa):N0}";
                         xlCell.Style.Fill.BackgroundColor = redFill;
                         xlCell.Style.Font.FontColor = XLColor.FromHtml("#dc3545");
                     }
@@ -691,11 +699,11 @@ namespace Accounting.Services
             {
                 var totalOrder = matrix.Rows.SelectMany(r => r.Cells)
                     .Where(c3 => c3.ItemCode == item.ItemCode)
-                    .Sum(c3 => c3.QtyOrder);
+                    .Sum(c3 => c3.QtySisa);
                 var totalPo = activePurchaseQtyByItem.TryGetValue(item.ItemCode, out var qtyPo) ? qtyPo : 0m;
                 var sisaAkhir = item.QtyStock + totalPo - totalOrder;
                 var xlCell = wsMatrix.Cell(row, footerCol);
-                xlCell.Value = $"Order: {totalOrder:N0}\nPO: {totalPo:N0}\nSisa: {sisaAkhir:N0}";
+                xlCell.Value = $"Sisa SO: {totalOrder:N0}\nPO: {totalPo:N0}\nSisa: {sisaAkhir:N0}";
                 xlCell.Style.Font.Bold = true;
                 xlCell.Style.Alignment.WrapText = true;
                 xlCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -730,7 +738,7 @@ namespace Accounting.Services
             {
                 var totalDipesan = matrix.Rows.SelectMany(r => r.Cells)
                     .Where(c4 => c4.ItemCode == item.ItemCode)
-                    .Sum(c4 => c4.QtyOrder);
+                    .Sum(c4 => c4.QtySisa);
                 var totalPo = activePurchaseQtyByItem.TryGetValue(item.ItemCode, out var qtyPo2) ? qtyPo2 : 0m;
                 var sisa = item.QtyStock + totalPo - totalDipesan;
                 var kekurangan = sisa < 0 ? Math.Abs(sisa) : 0;
@@ -1478,7 +1486,7 @@ namespace Accounting.Services
                 // Item Dipesan - format dengan line break dan qty
                 var itemDipesanCell = ws.Cell(currentRow, currentCol);
                 var itemsFormatted = string.Join("\n", row.ItemStatusSekarang
-                    .Select(i => $"{i.NamaItem} ({i.ItemCode})\n{(int)i.QtyOrder} {i.Satuan ?? ""}"));
+                    .Select(i => $"{i.NamaItem} ({i.ItemCode})\nOrder: {i.QtyOrder:N0} | Terkirim: {i.QtyTerkirim:N0} | Sisa: {i.QtySisa:N0} {i.Satuan ?? ""}"));
                 itemDipesanCell.Value = itemsFormatted;
                 itemDipesanCell.Style.Alignment.WrapText = true;
                 itemDipesanCell.Style.Fill.BackgroundColor = rowColor;
@@ -1486,19 +1494,28 @@ namespace Accounting.Services
 
                 // Status Qty Sekarang
                 var statusSekarangCell = ws.Cell(currentRow, currentCol);
-                var missingItemsText = string.Join("\n", row.ItemStatusSekarang
-                    .Where(i => !i.IsComplete)
-                    .Select(i => $"✗ {i.NamaItem} ({i.ItemCode}) kurang {(int)i.QtyKurang}"));
-
-                if (string.IsNullOrWhiteSpace(missingItemsText))
+                var statusItemsText = string.Join("\n", row.ItemStatusSekarang.Select(i =>
                 {
-                    statusSekarangCell.Value = "✓ Lengkap";
+                    if (i.IsTerkirim)
+                        return $"✓ Terkirim: {i.NamaItem} ({i.ItemCode})";
+
+                    if (i.IsComplete)
+                        return $"✓ Lengkap: {i.NamaItem} ({i.ItemCode}) sisa {i.QtySisa:N0}";
+
+                    return $"✗ Kurang: {i.NamaItem} ({i.ItemCode}) kurang {i.QtyKurang:N0}";
+                }));
+
+                if (row.ItemStatusSekarang.All(i => i.IsTerkirim))
+                {
+                    statusSekarangCell.Value = statusItemsText;
                     statusSekarangCell.Style.Font.FontColor = XLColor.FromHtml("#198754");
                 }
                 else
                 {
-                    statusSekarangCell.Value = missingItemsText;
-                    statusSekarangCell.Style.Font.FontColor = XLColor.FromHtml("#dc3545");
+                    statusSekarangCell.Value = statusItemsText;
+                    statusSekarangCell.Style.Font.FontColor = row.ItemStatusSekarang.Any(i => !i.IsComplete)
+                        ? XLColor.FromHtml("#dc3545")
+                        : XLColor.FromHtml("#0d6efd");
                 }
                 statusSekarangCell.Style.Alignment.WrapText = true;
                 statusSekarangCell.Style.Fill.BackgroundColor = rowColor;
@@ -1525,7 +1542,7 @@ namespace Accounting.Services
                 int completedAtPiIndex = -1; // -1 = never found
 
                 // Check if SO is already complete in current status
-                var isAlreadyComplete = string.IsNullOrWhiteSpace(missingItemsText);
+                var isAlreadyComplete = row.ItemStatusSekarang.All(i => i.IsTerkirim);
 
                 if (!isAlreadyComplete)
                 {
@@ -1772,9 +1789,9 @@ namespace Accounting.Services
                         purchaseDetails.Any(d =>
                             string.Equals(d.NoLpb, po.NoLpb, StringComparison.OrdinalIgnoreCase) &&
                             string.Equals(d.ItemCode, item.ItemCode, StringComparison.OrdinalIgnoreCase)));
-                    var projectedBalance = item.QtyStock + totalPoPlanned - soWaiting.Sum(c => c.QtyOrder);
+                    var projectedBalance = item.QtyStock + totalPoPlanned - soWaiting.Sum(c => c.QtySisa);
                     var status = projectedBalance >= 0
-                        ? item.QtyStock >= soWaiting.Sum(c => c.QtyOrder)
+                        ? item.QtyStock >= soWaiting.Sum(c => c.QtySisa)
                             ? "Cukup dari stock"
                             : "Terpenuhi setelah PO"
                         : totalPoPlanned > 0
@@ -1787,7 +1804,7 @@ namespace Accounting.Services
                         NamaItem = item.NamaItem,
                         CountSOWaiting = matrix.Rows.Count(r => !r.IsComplete && 
                             r.Cells.Any(c => c.ItemCode == item.ItemCode && c.IsOrdered && !c.HasStock)),
-                        TotalQtyWaiting = soWaiting.Sum(c => c.QtyOrder),
+                        TotalQtyWaiting = soWaiting.Sum(c => c.QtySisa),
                         CurrentStock = item.QtyStock,
                         TotalPOPlanned = totalPoPlanned,
                         CountPOActive = countPoActive,
@@ -1896,7 +1913,7 @@ namespace Accounting.Services
 
                 foreach (var cell in so.Cells.Where(c => c.IsOrdered))
                 {
-                    var needed = cell.QtyOrder;
+                    var needed = cell.QtySisa;
                     var available = remainingStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
                     var allocated = Math.Min(needed, available);
 
@@ -1936,7 +1953,7 @@ namespace Accounting.Services
                             string.Equals(h.ItemCode, cell.ItemCode, StringComparison.OrdinalIgnoreCase));
                         var itemLabel = $"{itemHeader?.NamaItem ?? cell.ItemCode} ({cell.ItemCode})";
 
-                        if (allocatedQty >= cell.QtyOrder)
+                        if (allocatedQty >= cell.QtySisa)
                         {
                             willBeCompletedItems.Add(itemLabel);
                         }
@@ -2015,7 +2032,7 @@ namespace Accounting.Services
                 // For each item in this SO, allocate from remaining stock
                 foreach (var cell in soRow.Cells.Where(c => c.IsOrdered))
                 {
-                    var needed = cell.QtyOrder;
+                    var needed = cell.QtySisa;
                     var available = currentRemainingStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
                     var allocated = Math.Min(needed, available);
 
@@ -2054,7 +2071,7 @@ namespace Accounting.Services
                 foreach (var cell in soRow.Cells.Where(c => c.IsOrdered))
                 {
                     var allocated = allocations.TryGetValue(cell.ItemCode, out var qty) ? qty : 0;
-                    var kurang = Math.Max(cell.QtyOrder - allocated, 0);
+                    var kurang = Math.Max(cell.QtySisa - allocated, 0);
                     var itemHeader = matrix.ItemHeaders.FirstOrDefault(h => h.ItemCode == cell.ItemCode);
 
                     soProgression.ItemStatusSekarang.Add(new ItemStatus
@@ -2063,6 +2080,7 @@ namespace Accounting.Services
                         NamaItem = itemHeader?.NamaItem ?? "",
                         Satuan = itemHeader?.Satuan ?? "",
                         QtyOrder = cell.QtyOrder,
+                        QtyTerkirim = cell.QtyBo,
                         QtyAvailable = allocated,
                         QtyKurang = kurang
                     });
@@ -2076,7 +2094,9 @@ namespace Accounting.Services
                 }
 
                 // Count missing items for summary
-                if (missingItems.Count == 0)
+                if (soProgression.ItemStatusSekarang.All(i => i.IsTerkirim))
+                    soProgression.StatusSekarang = "Terkirim";
+                else if (missingItems.Count == 0)
                     soProgression.StatusSekarang = "Lengkap";
                 else if (missingItems.Count == soProgression.ItemStatusSekarang.Count)
                     soProgression.StatusSekarang = "Banyak Kurang";
@@ -2126,7 +2146,7 @@ namespace Accounting.Services
                         var priorSO = soRows[i];
                         foreach (var cell in priorSO.Cells.Where(c => c.IsOrdered))
                         {
-                            var needed = cell.QtyOrder;
+                    var needed = cell.QtySisa;
                             var available = piRemainingStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
                             var allocated = Math.Min(needed, available);
 
@@ -2140,7 +2160,7 @@ namespace Accounting.Services
                     // Now allocate for this SO
                     foreach (var cell in soRow.Cells.Where(c => c.IsOrdered))
                     {
-                        var needed = cell.QtyOrder;
+                        var needed = cell.QtySisa;
                         var available = piRemainingStock.TryGetValue(cell.ItemCode, out var stock) ? stock : 0;
                         var allocated = Math.Min(needed, available);
                         piAllocated[cell.ItemCode] = allocated;
@@ -2160,8 +2180,8 @@ namespace Accounting.Services
                     {
                         var allocatedQty = piAllocated.TryGetValue(cell.ItemCode, out var qty) ? qty : 0;
                         var currentAllocated = soAllocationMap[soIndex].TryGetValue(cell.ItemCode, out var curQty) ? curQty : 0;
-                        var wasMissing = currentAllocated < cell.QtyOrder;
-                        var isNowMissing = allocatedQty < cell.QtyOrder;
+                        var wasMissing = currentAllocated < cell.QtySisa;
+                        var isNowMissing = allocatedQty < cell.QtySisa;
 
                         if (isNowMissing)
                         {

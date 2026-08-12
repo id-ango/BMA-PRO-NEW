@@ -33,11 +33,15 @@ namespace eSoft.Order.View
     {
         public string ItemCode { get; set; }
         public decimal QtyOrder { get; set; }
+        public decimal QtyBo { get; set; }
         /// <summary>Sisa stock sebelum SO ini mengambil (rolling FIFO)</summary>
         public decimal QtyStockSisa { get; set; }
-        /// <summary>Sisa stock setelah SO ini terpenuhi (bisa negatif)</summary>
-        public decimal QtyStockSetelah => QtyStockSisa - QtyOrder;
-        public bool HasStock => QtyStockSisa >= QtyOrder && QtyOrder > 0;
+        /// <summary>Sisa Qty SO yang masih harus dipenuhi</summary>
+        public decimal QtySisa => Math.Max(QtyOrder - QtyBo, 0);
+        /// <summary>Sisa stock setelah Qty sisa SO ini terpenuhi (bisa negatif)</summary>
+        public decimal QtyStockSetelah => QtyStockSisa - QtySisa;
+        public bool HasStock => QtySisa > 0 && QtyStockSisa >= QtySisa;
+        public bool IsTerkirim => QtySisa <= 0;
         public bool IsOrdered => QtyOrder > 0;
     }
 }

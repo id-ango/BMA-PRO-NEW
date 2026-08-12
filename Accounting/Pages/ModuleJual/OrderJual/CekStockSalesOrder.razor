@@ -132,25 +132,32 @@ else
                 <tbody>
                     @foreach (var row in FilteredRows)
                     {
-                        <tr style="background-color: @(row.IsComplete ? "#fff3cd" : "")">
-                            <td class="so-sticky-col-1" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:120px;">
+                        var rowBg = GetRowBackground(row);
+                        var rowStatus = GetRowStatus(row);
+                        <tr style="background-color:@rowBg">
+                            <td class="so-sticky-col-1" style="background:@rowBg; min-width:120px;">
                                 <strong>@row.NoLpb</strong>
                             </td>
-                            <td class="so-sticky-col-2" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:140px;">
+                            <td class="so-sticky-col-2" style="background:@rowBg; min-width:140px;">
                                 @row.NamaCustomer
                             </td>
-                            <td class="so-sticky-col-3" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:90px;">@row.Tanggal.ToString("dd/MM/yy")</td>
-                            <td class="so-sticky-col-4" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:80px;">@row.NoPrj</td>
-                            <td class="so-sticky-col-5" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:150px;">@row.Keterangan</td>
-                            <td class="so-sticky-col-6 text-center" style="background:@(row.IsComplete ? "#fff3cd" : "white"); min-width:80px;">
-                                @if (row.IsComplete)
+                            <td class="so-sticky-col-3" style="background:@rowBg; min-width:90px;">@row.Tanggal.ToString("dd/MM/yy")</td>
+                            <td class="so-sticky-col-4" style="background:@rowBg; min-width:80px;">@row.NoPrj</td>
+                            <td class="so-sticky-col-5" style="background:@rowBg; min-width:150px;">@row.Keterangan</td>
+                            <td class="so-sticky-col-6 text-center" style="background:@rowBg; min-width:80px;">
+                                @if (rowStatus == "Terkirim")
                                 {
-                                    <span class="badge bg-warning text-dark">Siap Proses</span>
+                                    <span class="badge bg-success">Terkirim</span>
+                                }
+                                else if (rowStatus == "Lengkap")
+                                {
+                                    <span class="badge bg-warning text-dark">Lengkap</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">Menunggu</span>
+                                    <span class="badge bg-danger">Kurang</span>
                                 }
+                                @* <div class="mt-1" style="font-size:0.75rem;">@rowStatus</div> *@
                             </td>
                             @foreach (var cell in GetVisibleCells(row))
                             {
@@ -158,18 +165,25 @@ else
                                 {
                                     <td style="text-align:center; background-color:#f8f9fa; color:#adb5bd;">-</td>
                                 }
+                                else if (cell.IsTerkirim)
+                                {
+                                    <td style="text-align:center; background-color:#d1e7dd;" title="Order: @cell.QtyOrder | Terkirim: @cell.QtyBo | Sisa: @cell.QtySisa">
+                                        <span class="badge bg-success">Terkirim: @cell.QtyBo.ToString("N0")</span>
+                                        <div style="font-size:0.7rem; color:#198754;">Sisa: @cell.QtySisa.ToString("N0")</div>
+                                    </td>
+                                }
                                 else if (cell.HasStock)
                                 {
-                                    <td style="text-align:center; background-color:#d1e7dd;" title="Order: @cell.QtyOrder | Sisa Stock Sebelum: @cell.QtyStockSisa | Sisa Setelah: @cell.QtyStockSetelah">
-                                        <span class="badge bg-success">Order: @cell.QtyOrder.ToString("N0")</span>
-                                        <div style="font-size:0.7rem; color:#198754;">Sisa: @cell.QtyStockSisa.ToString("N0") &rarr; @cell.QtyStockSetelah.ToString("N0")</div>
+                                    <td style="text-align:center; background-color:#cfe2ff;" title="Order: @cell.QtyOrder | Terkirim: @cell.QtyBo | Sisa: @cell.QtySisa | Stock Sebelum: @cell.QtyStockSisa | Stock Sesudah: @cell.QtyStockSetelah">
+                                        <span class="badge bg-primary">Lengkap: @cell.QtySisa.ToString("N0")</span>
+                                        <div style="font-size:0.7rem; color:#0d6efd;">Terkirim: @cell.QtyBo.ToString("N0") &nbsp;|&nbsp; Sisa Stock: @cell.QtyStockSisa.ToString("N0") &rarr; @cell.QtyStockSetelah.ToString("N0")</div>
                                     </td>
                                 }
                                 else
                                 {
-                                    <td style="text-align:center; background-color:#f8d7da;" title="Order: @cell.QtyOrder | Sisa Stock Sebelum: @cell.QtyStockSisa | Kurang: @(cell.QtyOrder - cell.QtyStockSisa)">
-                                        <span class="badge bg-danger">Order: @cell.QtyOrder.ToString("N0")</span>
-                                        <div style="font-size:0.7rem; color:#dc3545;">Sisa: @cell.QtyStockSisa.ToString("N0") &nbsp;&#9888;&nbsp;Kurang: @((cell.QtyOrder - cell.QtyStockSisa).ToString("N0"))</div>
+                                    <td style="text-align:center; background-color:#f8d7da;" title="Order: @cell.QtyOrder | Terkirim: @cell.QtyBo | Sisa: @cell.QtySisa | Stock Sebelum: @cell.QtyStockSisa | Kurang: @(cell.QtySisa - cell.QtyStockSisa)">
+                                        <span class="badge bg-danger">Kurang: @cell.QtySisa.ToString("N0")</span>
+                                        <div style="font-size:0.7rem; color:#dc3545;">Terkirim: @cell.QtyBo.ToString("N0") &nbsp;|&nbsp; Stock: @cell.QtyStockSisa.ToString("N0") &nbsp;&#9888;&nbsp;Kurang: @((cell.QtySisa - cell.QtyStockSisa).ToString("N0"))</div>
                                     </td>
                                 }
                             }
@@ -279,7 +293,7 @@ else
                                 <th style="width:22%;">Nama Item</th>
                                 <th style="width:6%; text-align:center;">Satuan</th>
                                 <th style="width:10%; text-align:center;">Stock</th>
-                                <th style="width:10%; text-align:center;">Total SO</th>
+                                <th style="width:10%; text-align:center;">Qty Sisa SO</th>
                                 <th style="width:10%; text-align:center;">Total PO</th>
                                 <th style="width:10%; text-align:center;">Proyeksi</th>
                                 <th style="width:16%; text-align:center;">Status</th>
@@ -296,7 +310,7 @@ else
                                 var kebutuhanTambahanPo = Math.Max(totalSo - item.QtyStock, 0);
                                 var poKurang = Math.Max(kebutuhanTambahanPo - totalPo, 0);
                                 var noPiList = GetRelatedNoPi(item.ItemCode);
-                                var rowBg = totalSo <= item.QtyStock ? "#d1e7dd" : totalPo >= kebutuhanTambahanPo ? "#cfe2ff" : "#f8d7da";
+                                var rowBg = totalSo == 0 ? "#d1e7dd" : totalSo <= item.QtyStock ? "#cfe2ff" : totalPo >= kebutuhanTambahanPo ? "#cfe2ff" : "#f8d7da";
 
                                 <tr style="background-color:@rowBg;">
                                     <td>@noUrut</td>
@@ -310,10 +324,15 @@ else
                                         @proyeksi.ToString("N0")
                                     </td>
                                     <td style="text-align:center;">
-                                        @if (totalSo <= item.QtyStock)
+                                        @if (totalSo == 0)
                                         {
-                                            <span class="badge bg-success">&#10003; Cukup dari stock</span>
-                                            <div class="mt-1" style="font-size:0.75rem; color:#198754;">Tidak perlu PO tambahan</div>
+                                            <span class="badge bg-success">&#10003; Terkirim</span>
+                                            <div class="mt-1" style="font-size:0.75rem; color:#198754;">Qty sisa sudah 0</div>
+                                        }
+                                        else if (totalSo <= item.QtyStock)
+                                        {
+                                            <span class="badge bg-primary">&#10003; Lengkap</span>
+                                            <div class="mt-1" style="font-size:0.75rem; color:#0d6efd;">Qty sisa tertutup stock</div>
                                         }
                                         else if (totalPo >= kebutuhanTambahanPo)
                                         {
@@ -463,7 +482,7 @@ else
         return FilteredRows
             .SelectMany(r => r.Cells)
             .Where(c => string.Equals(c.ItemCode, itemCode, StringComparison.OrdinalIgnoreCase) && c.IsOrdered)
-            .Sum(c => c.QtyOrder);
+            .Sum(c => c.QtySisa);
     }
 
     private decimal GetPlannedPurchaseQty(string itemCode)
@@ -500,6 +519,30 @@ else
     {
         var visibleCodes = VisibleHeaders.Select(x => x.ItemCode).ToHashSet();
         return row.Cells.Where(c => visibleCodes.Contains(c.ItemCode));
+    }
+
+    private bool IsFullyTerkirim(SalesOrderMatrixRow row)
+    {
+        var orderedCells = row.Cells.Where(c => c.IsOrdered).ToList();
+        return orderedCells.Any() && orderedCells.All(c => c.IsTerkirim);
+    }
+
+    private string GetRowStatus(SalesOrderMatrixRow row)
+    {
+        if (IsFullyTerkirim(row))
+            return "Terkirim";
+
+        return row.IsComplete ? "Lengkap" : "Kurang";
+    }
+
+    private string GetRowBackground(SalesOrderMatrixRow row)
+    {
+        return GetRowStatus(row) switch
+        {
+            "Terkirim" => "#d1e7dd",
+            "Lengkap" => "#fff3cd",
+            _ => "#f8d7da"
+        };
     }
 
     private async Task DownloadExcel()
