@@ -395,6 +395,12 @@ namespace eSoft.Order.Services
                 return;
             }
 
+            var fulfillment = GetSalesOrderFulfillment(noLpb);
+            if (!fulfillment.hasSalesOrder || fulfillment.isComplete)
+            {
+                return;
+            }
+
             foreach (var soItem in salesOrder.PoTransDs)
             {
                 var totalSold = CalculateTotalSoldQtyForSoItem(noLpb, soItem.ItemCode);
@@ -526,6 +532,7 @@ namespace eSoft.Order.Services
                         Lokasi = item.Lokasi,
                         Harga = item.Harga,
                         Qty = item.Qty,
+                                    QtyBo = item.QtyBo,
                         Persen = item.Persen,
                         Discount = item.Discount,
                         Jumlah = item.Jumlah,
@@ -674,6 +681,7 @@ namespace eSoft.Order.Services
                                     Lokasi = item.Lokasi,
                                     Harga = item.Harga,
                                     Qty = item.Qty,
+                                    QtyBo = item.QtyBo,
                                     Persen = item.Persen,
                                     Discount = item.Discount,
                                     Jumlah = item.Jumlah,
@@ -701,6 +709,11 @@ namespace eSoft.Order.Services
 
 
                         _context.PoTransHs.Add(transH);
+
+                        transH.QtyTerima = transH.PoTransDs.Sum(d => d.QtyBo);
+                        transH.Cek = transH.PoTransDs.Any(d => d.QtyBo > 0 && d.QtyBo < d.Qty)
+                            ? "1"
+                            : ExistingTrans.Cek;
 
 
                         //  await _contextIc.SaveChangesAsync();
