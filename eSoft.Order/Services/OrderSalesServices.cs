@@ -244,6 +244,172 @@ namespace eSoft.Order.Services
             // Keeping interface method here for compatibility but not used directly
         }
 
+        public (bool hasSalesOrder, bool isComplete, bool isPartial, decimal totalQty, decimal totalTerima, decimal remainingQty) GetSalesOrderFulfillment(string noLpb)
+        {
+            if (string.IsNullOrWhiteSpace(noLpb))
+            {
+                return (false, false, false, 0, 0, 0);
+            }
+
+            var salesOrder = _context.PoTransHs
+                .Include(p => p.PoTransDs)
+                .FirstOrDefault(x => x.NoLpb == noLpb);
+
+            if (salesOrder == null || salesOrder.PoTransDs == null || salesOrder.PoTransDs.Count == 0)
+            {
+                return (false, false, false, 0, 0, 0);
+            }
+
+            var totalQty = salesOrder.TotalQty;
+            var totalTerima = salesOrder.QtyTerima;
+            var remainingQty = salesOrder.PoTransDs.Sum(d => Math.Max(d.Qty - d.QtyBo, 0));
+            var isComplete = string.Equals(salesOrder.Cek, "3", StringComparison.OrdinalIgnoreCase)
+                             && remainingQty <= 0;
+            var isPartial = !isComplete && totalTerima > 0;
+
+            return (true, isComplete, isPartial, totalQty, totalTerima, remainingQty);
+        }
+
+        public void RestoreSalesOrderAfterSalesDelete(string noLpb, IEnumerable<PoTransDView> soldItems)
+        {
+            if (string.IsNullOrWhiteSpace(noLpb) || soldItems == null)
+            {
+                return;
+            }
+
+            var fulfillment = GetSalesOrderFulfillment(noLpb);
+            if (!fulfillment.hasSalesOrder || fulfillment.isComplete)
+            {
+                return;
+            }
+
+            var salesOrder = _context.PoTransHs
+                .Include(p => p.PoTransDs)
+                .FirstOrDefault(x => x.NoLpb == noLpb);
+
+            if (salesOrder == null || salesOrder.PoTransDs == null)
+            {
+                return;
+            }
+
+            var soldGroups = soldItems
+                .Where(x => !string.IsNullOrWhiteSpace(x.ItemCode))
+                .GroupBy(x => x.ItemCode, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new { ItemCode = g.Key, Qty = g.Sum(x => x.Qty) })
+                .ToList();
+
+            foreach (var sold in soldGroups)
+            {
+                var soItem = salesOrder.PoTransDs.FirstOrDefault(x => string.Equals(x.ItemCode, sold.ItemCode, StringComparison.OrdinalIgnoreCase));
+                if (soItem == null)
+                {
+                    continue;
+                }
+
+                soItem.QtyBo = Math.Max(soItem.QtyBo - sold.Qty, 0);
+            }
+
+            salesOrder.QtyTerima = salesOrder.PoTransDs.Sum(d => d.QtyBo);
+            salesOrder.Cek = salesOrder.PoTransDs.Any(d => d.QtyBo > 0 && d.QtyBo < d.Qty) ? "1" : (salesOrder.QtyTerima >= salesOrder.TotalQty && salesOrder.TotalQty > 0 ? "3" : "1");
+
+            _context.PoTransHs.Update(salesOrder);
+            _context.SaveChanges();
+        }
+
+        public void ReconcileSalesOrderAfterSalesEdit(string noLpb, IEnumerable<PoTransDView> oldItems, IEnumerable<PoTransDView> newItems)
+        {
+            if (string.IsNullOrWhiteSpace(noLpb) || oldItems == null || newItems == null)
+            {
+                return;
+            }
+
+            var fulfillment = GetSalesOrderFulfillment(noLpb);
+            if (!fulfillment.hasSalesOrder || fulfillment.isComplete)
+            {
+                return;
+            }
+
+            var salesOrder = _context.PoTransHs
+                .Include(p => p.PoTransDs)
+                .FirstOrDefault(x => x.NoLpb == noLpb);
+
+            if (salesOrder == null || salesOrder.PoTransDs == null)
+            {
+                return;
+            }
+
+            var oldMap = oldItems
+                .Where(x => !string.IsNullOrWhiteSpace(x.ItemCode))
+                .GroupBy(x => x.ItemCode, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Qty), StringComparer.OrdinalIgnoreCase);
+
+            var newMap = newItems
+                .Where(x => !string.IsNullOrWhiteSpace(x.ItemCode))
+                .GroupBy(x => x.ItemCode, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Qty), StringComparer.OrdinalIgnoreCase);
+
+            var allItemCodes = oldMap.Keys
+                .Concat(newMap.Keys)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var itemCode in allItemCodes)
+            {
+                var oldQty = oldMap.TryGetValue(itemCode, out var oq) ? oq : 0;
+                var newQty = newMap.TryGetValue(itemCode, out var nq) ? nq : 0;
+                var delta = newQty - oldQty;
+
+                var soItem = salesOrder.PoTransDs.FirstOrDefault(x => string.Equals(x.ItemCode, itemCode, StringComparison.OrdinalIgnoreCase));
+                if (soItem == null)
+                {
+                    continue;
+                }
+
+                soItem.QtyBo = Math.Max(soItem.QtyBo + delta, 0);
+                if (soItem.QtyBo > soItem.Qty)
+                {
+                    soItem.QtyBo = soItem.Qty;
+                }
+            }
+
+            salesOrder.QtyTerima = salesOrder.PoTransDs.Sum(d => d.QtyBo);
+            salesOrder.Cek = salesOrder.QtyTerima >= salesOrder.TotalQty && salesOrder.TotalQty > 0 ? "3" : "1";
+
+            _context.PoTransHs.Update(salesOrder);
+            _context.SaveChanges();
+        }
+
+        public void RebuildSalesOrderFulfillment(string noLpb)
+        {
+            if (string.IsNullOrWhiteSpace(noLpb))
+            {
+                return;
+            }
+
+            var salesOrder = _context.PoTransHs
+                .Include(p => p.PoTransDs)
+                .FirstOrDefault(x => x.NoLpb == noLpb);
+
+            if (salesOrder == null || salesOrder.PoTransDs == null)
+            {
+                return;
+            }
+
+            foreach (var soItem in salesOrder.PoTransDs)
+            {
+                var totalSold = CalculateTotalSoldQtyForSoItem(noLpb, soItem.ItemCode);
+                soItem.QtyBo = Math.Min(totalSold, soItem.Qty);
+            }
+
+            salesOrder.QtyTerima = salesOrder.PoTransDs.Sum(d => d.QtyBo);
+            salesOrder.Cek = salesOrder.PoTransDs.Any(d => d.QtyBo > 0 && d.QtyBo < d.Qty)
+                ? "1"
+                : (salesOrder.TotalQty > 0 && salesOrder.PoTransDs.All(d => d.QtyBo >= d.Qty) ? "3" : "1");
+
+            _context.PoTransHs.Update(salesOrder);
+            _context.SaveChanges();
+        }
+
         public PoTransH GetOrderAktif(string nolpb)
         {
 
@@ -791,10 +957,10 @@ namespace eSoft.Order.Services
         {
             try
             {
-                // Get all PoTransH that reference this SO (NoPrj = noLpb) and are transactions (Cek != "1")
+                // Get all sales transactions (Kode = 94) that reference this SO (NoPrj = noLpb)
                 var totalSold = _context.PoTransHs
                     .Include(x => x.PoTransDs)
-                    .Where(x => x.NoPrj == noLpb && x.Cek != "1")  // Cek != "1" means it's a transaction
+                    .Where(x => x.NoPrj == noLpb && x.Kode == "94")
                     .SelectMany(x => x.PoTransDs)
                     .Where(x => x.ItemCode == itemCode)
                     .Sum(x => (decimal?)x.Qty) ?? 0;

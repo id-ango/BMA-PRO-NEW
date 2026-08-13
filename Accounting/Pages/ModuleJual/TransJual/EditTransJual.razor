@@ -5,6 +5,8 @@
 @using eSoft.Persediaan.Model
 @using eSoft.Persediaan.View
 @using eSoft.Persediaan.Services
+@using eSoft.Order.Services
+@using eSoft.Order.View
 @using eSoft.Penjualan.Model
 @using eSoft.Penjualan.View
 @using eSoft.Penjualan.Services
@@ -12,6 +14,7 @@
 @inject ISalesServices  service
 @inject IReceivableServices   serviceAR
 @inject IInventoryServices serviceIC
+@inject IOrderSalesServices serviceOrder
 
 @inject NavigationManager navigationmanager
 
@@ -148,7 +151,7 @@
 
         <br />
         <div class="float-md-right">
-            <button class="btn-success" type="submit">Simpan</button>
+            <button class="btn-success" type="submit" disabled="@LinkedSoComplete">Simpan</button>
             <button class="btn-danger" type="button" @onclick="@(() => navigationmanager.NavigateTo("/ModuleJual/TransJual", false))">Batal</button>
         </div>
         <br />
@@ -209,7 +212,7 @@
 
 @if (DialogOpen)
 {
-<ModalDialogComponent Title="Alert" Text="Piutang sdh ada Pembayaran" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+<ModalDialogComponent Title="Alert" Text="@textAlert" TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
 }
 
 @if (SearchOpen)
@@ -278,6 +281,9 @@
 
     public string Testing { get; set; }
     private bool DialogOpen { get; set; }
+    private string textAlert { get; set; } = "Piutang sdh ada Pembayaran";
+    private bool LinkedSoComplete { get; set; }
+    private bool LinkedSoExists { get; set; }
     public bool IsVisible { get; set; }
     public bool IsKurs { get; set; }
     public bool IsEdit { get; set; }
@@ -343,11 +349,24 @@
     {
         if (dblclick != 1) return;
 
+        if (LinkedSoExists && LinkedSoComplete)
+        {
+            textAlert = "SO sudah complete, transaksi penjualan ini tidak bisa diedit.";
+            DialogOpen = true;
+            StateHasChanged();
+            return;
+        }
+
         dblclick++;
 
         var newEdit = service.EditTransH(Transh);
         if (newEdit)
         {
+            if (LinkedSoExists)
+            {
+                serviceOrder.RebuildSalesOrderFulfillment(TransAll.NoPrj);
+            }
+
             // var id = newEdit.IrTransHId.ToString().Trim();
             var id = Transh.OeTransHId.ToString().Trim();
             //     navigationmanager.NavigateTo($"/PrintBuktiBayar/{id}");
@@ -428,6 +447,9 @@
     void LoadTrans()
     {
         TransAll = service.GetOeTrans(Id);
+        var soFulfillment = serviceOrder.GetSalesOrderFulfillment(TransAll?.NoPrj);
+        LinkedSoExists = soFulfillment.hasSalesOrder;
+        LinkedSoComplete = soFulfillment.isComplete;
         Transh.OeTransHId = Id;
         Transh.NoLpb = TransAll.NoLpb;
         Transh.NoPrj = TransAll.NoPrj;

@@ -367,21 +367,15 @@
 
     private void OpenRubah(PoTransH bank)
     {
-        // Jika sudah ada penerimaan (partial), tidak boleh edit
-        if (bank.QtyTerima > 0)
+        // SO partial masih boleh diedit; hanya SO yang sudah complete/received yang diblokir
+        if (bank.Cek == "3")
         {
-            DeleteErrorMessage = "Order ini sudah ada penerimaan (partial), tidak bisa diedit. " +
-                                 "Silakan tutup SO ini atau hapus penjualannya, lalu buat SO baru.";
-            NullDialogOpen = true;
-        }
-        else if (bank.Cek == "3")
-        {
-            // Sudah status Received → tidak bisa edit
+            DeleteErrorMessage = "Order ini sudah complete/received, tidak bisa diedit.";
             NullDialogOpen = true;
         }
         else
         {
-            // Masih open dan belum ada penerimaan → boleh edit
+            // Open atau partial → boleh edit
             navigationmanager.NavigateTo($"/ModuleJual/EditTransOrderJual/{bank.PoTransHId}");
         }
      

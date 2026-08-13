@@ -3,6 +3,7 @@
 @using eSoft.Penjualan.Services
 @using eSoft.Piutang.Services
 @using eSoft.Order.Services
+@using eSoft.Order.View
 
 @inject ISalesServices service
 @inject IReceivableServices serviceAR
@@ -228,9 +229,19 @@
         {
             try
             {
-                await service.DelTransH(_bankToDelete.OeTransHId);
+                var deleted = await service.DelTransH(_bankToDelete.OeTransHId);
+
+                if (!deleted)
+                {
+                    textAlert = "Transaksi tidak dapat dihapus karena sudah ada pembayaran atau sedang terkunci.";
+                    NullDialogOpen = true;
+                    return;
+                }
+
                 if (!string.IsNullOrEmpty(_bankToDelete.NoPrj))
-                    serviceOrder.DelOrderAktif(_bankToDelete.NoPrj);
+                {
+                    serviceOrder.RebuildSalesOrderFulfillment(_bankToDelete.NoPrj);
+                }
                 _bankToDelete = null;
             }
 

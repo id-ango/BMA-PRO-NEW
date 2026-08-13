@@ -24,6 +24,10 @@ namespace eSoft.Order.Services
         void SaveOrderAktif(string noLpb, List<PoTransDView> soldItems);
         void DelOrderAktif(string nolpb);
         void RestoreSalesOrderStatus(string noLpb);
+        (bool hasSalesOrder, bool isComplete, bool isPartial, decimal totalQty, decimal totalTerima, decimal remainingQty) GetSalesOrderFulfillment(string noLpb);
+        void RestoreSalesOrderAfterSalesDelete(string noLpb, IEnumerable<PoTransDView> soldItems);
+        void ReconcileSalesOrderAfterSalesEdit(string noLpb, IEnumerable<PoTransDView> oldItems, IEnumerable<PoTransDView> newItems);
+        void RebuildSalesOrderFulfillment(string noLpb);
         (bool canEdit, string message) ValidateEditSalesOrderQty(string noLpb, decimal newQty, decimal currentQty);
         (bool canDelete, string message) CanDeleteSalesOrder(string noLpb);
         Task<bool> CloseOrder(int id);
