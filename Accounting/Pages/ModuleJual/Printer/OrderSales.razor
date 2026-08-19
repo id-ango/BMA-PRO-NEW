@@ -231,6 +231,14 @@
                                 <td width="40%" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">Sub Total</td>
                                 <td width="60%" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.TtlJumlah.ToString("N")</td>
                             </tr>
+                            @if (TransAll.Discount != 0)
+                            {
+                                <tr>
+
+                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">Discount</td>
+                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.Discount.ToString("N")</td>
+                                </tr>
+                            }
                             @if (TransAll.Ppn != 0)
                             {
                                 <tr>

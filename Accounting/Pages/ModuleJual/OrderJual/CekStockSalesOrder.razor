@@ -1,4 +1,5 @@
 @page "/ModuleJual/CekStockSalesOrder"
+@attribute [Authorize(Roles = "Admin, Finance")]
 @using eSoft.Order.Services
 @using eSoft.Order.Model
 @using eSoft.Order.View

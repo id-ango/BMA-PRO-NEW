@@ -1,4 +1,5 @@
-﻿@page "/ModuleJual/AddTransOrderJualNon"
+﻿@page "/ModuleJual/AddTransOrderJual"
+@attribute [Authorize(Roles = "Admin, Finance, Warehouse")]
 
 @using eSoft.Piutang.Model
 @using eSoft.Piutang.View
@@ -13,10 +14,10 @@
 @using eSoft.Order.View
 @using eSoft.Order.Services
 
-@inject ISalesServices  service
-@inject IReceivableServices   serviceAR
+@inject ISalesServices service
+@inject IReceivableServices serviceAR
 @inject IInventoryServices serviceIC
-@inject IOrderSalesServices  serviceOrder
+@inject IOrderSalesServices serviceOrder
 
 @inject NavigationManager navigationmanager
 
@@ -26,6 +27,13 @@
     <h3>Add Transaksi Order Jual</h3>
 </div>
 
+@if (ShowValidationError)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>❌ Error:</strong> @ValidationMessage
+        <button type="button" class="btn-close" @onclick="@(() => ShowValidationError = false)"></button>
+    </div>
+}
 
 <div class="container">
     <EditForm Model="@Transh" OnValidSubmit="@HandleValidSubmit">
@@ -70,7 +78,8 @@
             </label>
         </div>
         <br />
-       @* <div class="form-group">
+
+        @* <div class="form-group">
             <label>
                 Kurs :
                 <InputNumber class="form-control" @bind-Value="Transh.Kurs" />
@@ -107,6 +116,14 @@
                     <td>
                         <div class="form-group">
                             <label>
+                                Diskon :
+                                <InputNumber class="form-control" @bind-Value="Transh.Discount" @onchange="HitungTotal" />
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="form-group">
+                            <label>
                                 PPN % :
                                 <InputNumber class="form-control" @bind-Value="Transh.PpnPersen" @onchange="rubahppn" />
                             </label>
@@ -139,7 +156,7 @@
                         </div>
                     </td>
                     <td>
-                       @* <div class="row">
+                        @* <div class="row">
                             <div class=" col-sm  form-message">
                                 <span>Balance   : @Transh.Nilai.ToString("N")</span>
                             </div>
@@ -171,6 +188,7 @@
                 <th scope="col">Nama Item</th>
                 <th scope="col">Satuan</th>
                 <th scope="col">Qty</th>
+                <th scope="col">Sisa (Max)</th>
                 <th scope="col">Harga</th>
                 <th scope="col">Diskon</th>
                 <th scope="col">Jumlah</th>
@@ -182,7 +200,21 @@
                 <td>@transaksi.ItemCode</td>
                 <td>@transaksi.NamaItem</td>
                 <td>@transaksi.Satuan</td>
-                <td>@transaksi.Qty.ToString("#,##0.##")</td>
+                <td>
+                    <InputNumber class="form-control form-control-sm"
+                                 @bind-Value="transaksi.Qty"
+                                 @bind-Value:after="() => OnQtyChanged(transaksi)"
+                                 min="0"
+                                 step="0.01" />
+                </td>
+                <td>
+                    @{
+                        // var soItem = transaksi.GetType().Name == "OeTransDView" ?
+                        //     TransaksiSoItem(transaksi.ItemCode) : null;
+                        // var maxQty = soItem?.Qty-soItem?.QtyBo ?? 0;
+                        <span class="badge bg-info">@transaksi.QtyBo.ToString("#,##0.##")</span>
+                    }
+                </td>
                 <td>@transaksi.Harga.ToString("#,##0.##")</td>
                 <td>@transaksi.Discount.ToString("#,##0.##")</td>
                 <td>@transaksi.Jumlah.ToString("#,##0.##")</td>
@@ -217,7 +249,7 @@
 
 
 @code {
-    OeTransHView Transh = new OeTransHView() { OeTransDs = new List<OeTransDView>() };
+    private OeTransHView Transh = new OeTransHView() { OeTransDs = new List<OeTransDView>() };
 
     private List<IcLokasi> lokasi;
     private List<PoTransH> banks;
@@ -229,6 +261,8 @@
     private string enabled { get; set; }
     private int termin = 0;
     private int dblclick = 1;
+    private string ValidationMessage = "";  // Store validation error message
+    private bool ShowValidationError = false;  // Show/hide error display
 
     public PoTransH transaksi { get; set; }
     public int SupplierId { get; set; }
@@ -279,16 +313,57 @@
 
     }
 
+    private void HitungTotal()
+    {
+        // ✅ Header totals auto-calculate from model
+        // Just trigger re-render
+        StateHasChanged();
+    }
+
     private void HandleValidSubmit()
     {
         if (dblclick != 1) return;
 
         dblclick++;
 
-        var newEdit = service.AddTransH(Transh,false);
+        // Validate quantities before saving
+        foreach (var item in Transh.OeTransDs)
+        {
+            // ✅ ALLOW Qty = 0 (untuk barang yang belum datang / tidak include)
+            if (item.Qty < 0)
+            {
+                // Show error: qty cannot be negative
+                var message = $"❌ Qty untuk item '{item.ItemCode} - {item.NamaItem}' tidak boleh minus (negatif)";
+                ValidationMessage = message;
+                ShowValidationError = true;
+                dblclick--;
+                return;
+            }
+
+            // Get original qty from SO (remaining available)
+            var soItem = transaksi?.PoTransDs?.FirstOrDefault(x => x.ItemCode == item.ItemCode);
+            if (soItem != null && item.Qty > (soItem.Qty - soItem.QtyBo))
+            {
+                // Show error: qty exceeds original SO qty
+                var message = $"❌ Qty untuk item '{item.ItemCode} - {item.NamaItem}' tidak boleh melebihi {(soItem.Qty - soItem.QtyBo).ToString("#,##0.##")}\n(Anda isi: {item.Qty.ToString("#,##0.##")})";
+                ValidationMessage = message;
+                ShowValidationError = true;
+                dblclick--;
+                return;
+            }
+        }
+
+        var newEdit = service.AddTransH(Transh, false);
         if (newEdit != null)
         {
-            serviceOrder.SaveOrderAktif(Transh.NoPrj);
+            var soldItems = Transh.OeTransDs.Select(x => new PoTransDView
+            {
+                ItemCode = x.ItemCode,
+                Qty = x.Qty
+            }).ToList();
+
+            // Call smart SaveOrderAktif dengan qty yang dijual
+            serviceOrder.SaveOrderAktif(Transh.NoPrj, soldItems);
 
             var id = newEdit.OeTransHId.ToString().Trim();
             //  navigationmanager.NavigateTo("/PrintBuktiBayar/{id", false);
@@ -358,10 +433,11 @@
 
     private void rubahppn()
     {
-
-        var persen = Transh.TtlJumlah * (Transh.PpnPersen / 100);
-
+        var persen = (Transh.TtlJumlah - Transh.Discount) * (Transh.PpnPersen / 100);
         Transh.Ppn = persen;
+
+        // ✅ Re-render so header totals update
+        StateHasChanged();
     }
 
     private void BtnChoose(string textSearch)
@@ -394,32 +470,63 @@
         transaksi = serviceOrder.GetOrderAktif(args.Value.ToString());
         Transh.Customer = transaksi.Vendor;
         Transh.NamaCust = transaksi.NamaVendor;
-        Transh.AlamatKirim = serviceAR.GetCustomerCode(transaksi.Vendor).AlmtKrm;
-        Transh.Discount = transaksi.Discount;
         Transh.PpnPersen = transaksi.PpnPersen;
+        Transh.AlamatKirim = serviceAR.GetCustomerCode(transaksi.Vendor).AlmtKrm + "\r\n" + serviceAR.GetCustomerCode(transaksi.Vendor).KotaKrm;
+        Transh.Discount = transaksi.Discount;
         Transh.Ppn = transaksi.Ppn;
         Transh.Ongkos = transaksi.Ongkos;
         termin = serviceAR.GetCustomerCode(transaksi.Vendor).Termin;
 
         Transh.JthTempo = Transh.Tanggal.AddDays(termin);
+
         Transh.OeTransDs.Clear();
         if (transaksi != null)
         {
             foreach (var item in transaksi.PoTransDs)
             {
+                // ✅ CORRECT LOGIC: Remaining Qty = Original Qty - QtyBo
+                // QtyBo is stored in PoTransD for each line item
+                // QtyBo = qty yang sudah dijual/backorder
+                // This gives us exactly: Qty Sisa = Qty - QtyBo
+
+                decimal remainingQty = item.Qty - item.QtyBo;
+
+                // Make sure remaining is not negative
+                if (remainingQty < 0) remainingQty = 0;
+
                 Transh.OeTransDs.Add(new OeTransDView()
                 {
                     ItemCode = item.ItemCode,
                     NamaItem = item.NamaItem,
-                    Qty = item.Qty,
+                    Qty = remainingQty,  // ✅ Set initial Qty to remaining available
+                    QtyBo = remainingQty,  // ✅ Initial state: not yet sold
                     Satuan = item.Satuan,
                     Harga = item.Harga,
-                    Discount =item.Discount,
-                    Lokasi = item.Lokasi,
-                    Jumlah = item.Jumlah
+                    Discount = item.Discount,
+                    Jumlah = (remainingQty * item.Harga) - item.Discount,  // ✅ Initial Jumlah based on remaining Qty
+                    Lokasi = item.Lokasi
 
+                    // ✅ Jumlah auto-calculated via property getter!
                 });
             }
         }
+
+        // ✅ Force re-render so header totals calculate
+        StateHasChanged();
+    }
+
+    // ✅ BARU: Method untuk handle qty change dan recalculate Jumlah
+    private void OnQtyChanged(OeTransDView item)
+    {
+        item.Jumlah = (item.Qty * item.Harga) - item.Discount;
+
+        StateHasChanged();
+    }
+
+
+    // Helper method to get SO item for maximum qty display
+    private PoTransD TransaksiSoItem(string itemCode)
+    {
+        return transaksi?.PoTransDs?.FirstOrDefault(x => x.ItemCode == itemCode);
     }
 }

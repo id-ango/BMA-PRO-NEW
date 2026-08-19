@@ -35,43 +35,11 @@
             </NavLink>
         </li>
 
-        @*<AuthorizeView Roles="Admin, Finance">
-        <li class="nav-item px-3">
-        <NavLink class="nav-link" href="#" @onclick="(()=>expandLaporan = !expandLaporan)">
-        <span class="oi oi-list-rich" aria-hidden="true"></span> Laporan
-        </NavLink>
-        @if (expandLaporan)
-        {
-        <ul class="nav flex-column">
-
-        <li class="nav-item px-3">
-        <NavLink class="nav-link" href="ModuleHutang/LaporanAgingHutang">
-        <span aria-hidden="true"></span>Aging Hutang
-        </NavLink>
-        </li>
-
-        <li class="nav-item px-3">
-        <NavLink class="nav-link" href="ModulePiutang/LaporanAgingPiutang">
-        <span aria-hidden="true"></span>Aging Piutang
-        </NavLink>
-        </li>
-
-        <li class="nav-item px-3">
-        <NavLink class="nav-link" href="ModuleBank/LaporanCashBank">
-        <span aria-hidden="true"></span>Kas Bank
-        </NavLink>
-        </li>
-
-        </ul>
-
-
-        }
-        </li>  <!--   Laporan  -->
-        </AuthorizeView>*@
+       
 
         <li class="nav-section-label">Operational Modules</li>
 
-        <AuthorizeView Roles="Admin, Finance">
+        <AuthorizeView Roles="Admin, Finance, warehouse" Context="salesAuth">
             <li class="nav-item px-3">
                 <button type="button" class="@GetNavButtonClass("Penjualan")" @onclick='() => ToggleSection("Penjualan")'>
                     <span class="oi oi-cart nav-group-icon nav-group-icon-sales" aria-hidden="true"></span> Penjualan
@@ -85,11 +53,13 @@
                                 <span aria-hidden="true"></span> Order Penjualan
                             </NavLink>
                         </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModuleJual/CekStockSalesOrder">
-                                <span aria-hidden="true"></span> Cek Stock SO
-                            </NavLink>
-                        </li>
+                        <AuthorizeView Roles="Admin, Finance" Context="salesRestrictedAuth">
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModuleJual/CekStockSalesOrder">
+                                    <span aria-hidden="true"></span> Cek Stock SO
+                                </NavLink>
+                            </li>
+                        </AuthorizeView>
                         <li class="nav-item px-3">
                             <NavLink class="nav-link" href="ModuleJual/TransJual">
                                 <span aria-hidden="true"></span> Penjualan/Retur
@@ -102,16 +72,18 @@
                             </NavLink>
                         </li>
 
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModuleJual/SetupKurir">
-                                <span aria-hidden="true"></span> Setup Kurir
-                            </NavLink>
-                        </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModuleJual/SetupSalesman">
-                                <span aria-hidden="true"></span> Setup Salesman
-                            </NavLink>
-                        </li>
+                        <AuthorizeView Roles="Admin, Finance" Context="salesSetupAuth">
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModuleJual/SetupKurir">
+                                    <span aria-hidden="true"></span> Setup Kurir
+                                </NavLink>
+                            </li>
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModuleJual/SetupSalesman">
+                                    <span aria-hidden="true"></span> Setup Salesman
+                                </NavLink>
+                            </li>
+                        </AuthorizeView>
                        @*  <li class="nav-item px-3">
                             <NavLink class="nav-link" href="ModuleJual/uploadpdf">
                                 <span aria-hidden="true"></span> Upload PDF
