@@ -129,7 +129,7 @@
             </li>  <!--   Pembelian  -->
         </AuthorizeView>
 
-        <AuthorizeView Roles="Admin, Finance, Warehouse">
+        <AuthorizeView Roles="Admin, Finance,warehouse">
             <li class="nav-item px-3">
                 <button type="button" class="@GetNavButtonClass("Persediaan")" @onclick='() => ToggleSection("Persediaan")'>
                     <span class="oi oi-layers nav-group-icon nav-group-icon-stock" aria-hidden="true"></span> Persediaan

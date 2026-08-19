@@ -64,13 +64,14 @@
     {
         base.OnInitialized();
 
-        bank.Name = " ";
+        bank.Name = string.Empty;
 
     }
 
     private void cekKode()
     {
-        Testing = bank.Name.ToUpper();
+        bank.Name = bank.Name?.Trim();
+        Testing = bank.Name?.ToUpper();
         DialogOpen = ServiceRole.CekNameRole(Testing);// RoleExistsAsync(Testing);
         if (DialogOpen)
         {
@@ -93,6 +94,7 @@
     {
         //  bank.Id = bank.Name;
         //  bank.NormalizedName = bank.Name.Normalize();
+        bank.Name = bank.Name?.Trim();
          var newEdit = ServiceRole.AddRoles(bank);
         if (newEdit)
         {

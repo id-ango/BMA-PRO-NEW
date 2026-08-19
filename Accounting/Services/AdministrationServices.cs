@@ -40,7 +40,7 @@ namespace Accounting.Services
 
         public bool CekNameRole(string kodeBank)
         {
-            string test = kodeBank.ToUpper();
+            string test = kodeBank?.Trim().ToUpper() ?? string.Empty;
             var cekFirst = _context.Roles.Where(x => x.NormalizedName == test).ToList();
             if (cekFirst.Count == 0)
             {
@@ -51,14 +51,15 @@ namespace Accounting.Services
 
         public bool AddRoles(IdentityRole banks)
         {
-            string test = banks.Name.ToUpper();
+            string roleName = banks.Name?.Trim() ?? string.Empty;
+            string test = roleName.ToUpper();
             var cekFirst = _context.Roles.Where(x => x.NormalizedName == test).ToList();
-            if (cekFirst.Count == 0)
+            if (cekFirst.Count == 0 && !string.IsNullOrWhiteSpace(roleName))
             {
                 IdentityRole Bank = new()
                 {
-                    Name = banks.Name,
-                   NormalizedName = banks.Name.ToUpper(),
+                    Name = roleName,
+                   NormalizedName = roleName.ToUpper(),
                     
 
                 };
@@ -79,10 +80,11 @@ namespace Accounting.Services
             try
             {
                 var ExistingBank = _context.Roles.Where(x =>x.Id == banks.Id).FirstOrDefault();
-                if (ExistingBank != null && banks.Name != String.Empty)
+                var roleName = banks.Name?.Trim() ?? string.Empty;
+                if (ExistingBank != null && !string.IsNullOrWhiteSpace(roleName))
                 {
-                    ExistingBank.Name = banks.Name;
-                    ExistingBank.NormalizedName = banks.Name.ToUpper();
+                    ExistingBank.Name = roleName;
+                    ExistingBank.NormalizedName = roleName.ToUpper();
                     
 
                     _context.Roles.Update(ExistingBank);

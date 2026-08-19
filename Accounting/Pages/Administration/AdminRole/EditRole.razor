@@ -82,7 +82,8 @@
 
        private void cekKode()
     {
-        Testing = bank.Name.ToUpper();
+        bank.Name = bank.Name?.Trim();
+        Testing = bank.Name?.ToUpper();
         DialogOpen = ServiceRole.CekNameRole(Testing);// RoleExistsAsync(Testing);
         if (DialogOpen)
         {
@@ -104,6 +105,7 @@
 
     private async Task HandleValidSubmit()
     {
+        bank.Name = bank.Name?.Trim();
         bank.NormalizedName = bank.Name.ToUpper();
 
         var newEdit = await ServiceRole.EditRoles(bank);
