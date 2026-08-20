@@ -63,23 +63,6 @@
         </section>
     }
 
-    @if (resetPasswordOpen)
-    {
-        <section class="setup-grid-card mt-3">
-            <div class="p-3">
-                <h5 class="mb-3">Reset Password - @selectedUserName</h5>
-                <div class="mb-3">
-                    <label class="form-label">New password</label>
-                    <InputText type="password" class="form-control" @bind-Value="newPassword" placeholder="Enter new password" />
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary" type="button" @onclick="ConfirmResetPassword">Save</button>
-                    <button class="btn btn-secondary" type="button" @onclick="CancelResetPassword">Cancel</button>
-                </div>
-            </div>
-        </section>
-    }
-
     <section class="setup-grid-card">
         @if (FilteredBanks.Any())
         {
@@ -139,6 +122,18 @@
                                             </svg>
                                             Save
                                         </button>
+                                        <button @onclick="() => BeginResetPassword(item)"
+                                                class="btn btn-sm btn-reset-password"
+                                                type="button"
+                                                title="Reset password">
+                                            Reset Password
+                                        </button>
+                                        <button @onclick="() => ConfirmDeleteUser(item)"
+                                                class="btn btn-sm btn-delete-user"
+                                                type="button"
+                                                title="Delete user">
+                                            Delete
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -169,6 +164,29 @@
 @if (NullDialogOpen)
 {
     <ModalDialogComponent Title="Success" Text="@successDialogText" TombolSave="false" OnClose="OnSuccessClose"></ModalDialogComponent>
+}
+
+@if (resetPasswordOpen)
+{
+    <div class="setup-modal-backdrop" @onclick="CancelResetPassword">
+        <div class="setup-modal-card" @onclick:stopPropagation="true">
+            <div class="setup-modal-header">
+                <div>
+                    <p class="setup-modal-eyebrow">User action</p>
+                    <h5 class="setup-modal-title">Reset Password - @selectedUserName</h5>
+                </div>
+                <button type="button" class="setup-modal-close" @onclick="CancelResetPassword" aria-label="Close">×</button>
+            </div>
+            <div class="setup-modal-body">
+                <label class="form-label">New password</label>
+                <InputText type="password" class="form-control" @bind-Value="newPassword" placeholder="Enter new password" />
+            </div>
+            <div class="setup-modal-footer">
+                <button class="btn btn-primary" type="button" @onclick="ConfirmResetPassword">Save</button>
+                <button class="btn btn-secondary" type="button" @onclick="CancelResetPassword">Cancel</button>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
