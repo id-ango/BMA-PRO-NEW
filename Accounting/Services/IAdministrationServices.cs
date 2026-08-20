@@ -20,6 +20,8 @@ namespace Accounting.Services
 
         List<IdentityView> GetUsersRole();
         bool SaveRole(string idUser, string idRole);
+        Task<bool> DeleteUser(string idUser);
+        Task<bool> ResetUserPassword(string idUser, string newPassword);
         Task SeedUserRole();
 
     }

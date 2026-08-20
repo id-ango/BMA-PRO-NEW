@@ -16,9 +16,12 @@ namespace Accounting.Services
     public  class AdministrationServices : IAdministrationServices
     {
         private readonly ApplicationDbContext _context;
-        public AdministrationServices(ApplicationDbContext context)
+        private readonly UserManager<IdentityUser> _userManager;
+
+        public AdministrationServices(ApplicationDbContext context, UserManager<IdentityUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         #region Roles Class
@@ -190,6 +193,31 @@ namespace Accounting.Services
             }
             return true;
 
+        }
+
+        public async Task<bool> DeleteUser(string idUser)
+        {
+            var user = await _userManager.FindByIdAsync(idUser);
+            if (user == null)
+            {
+                return false;
+            }
+
+            var result = await _userManager.DeleteAsync(user);
+            return result.Succeeded;
+        }
+
+        public async Task<bool> ResetUserPassword(string idUser, string newPassword)
+        {
+            var user = await _userManager.FindByIdAsync(idUser);
+            if (user == null || string.IsNullOrWhiteSpace(newPassword))
+            {
+                return false;
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+            return result.Succeeded;
         }
 
         #endregion

@@ -1,4 +1,5 @@
 ﻿@page "/ModuleAdministration/SetupUserRole"
+@attribute [Authorize(Roles = "Admin")]
 @using Microsoft.AspNetCore.Authorization;
 @using Microsoft.AspNetCore.Identity;
 @using Accounting.Services;
@@ -52,6 +53,32 @@
             Showing <strong>@FilteredBanks.Count()</strong> of <strong>@Banks?.Count ?? 0</strong> users
         </div>
     </section>
+
+    @if (!string.IsNullOrWhiteSpace(actionMessage))
+    {
+        <section class="setup-grid-card mt-3">
+            <div class="p-3 alert alert-info mb-0">
+                @actionMessage
+            </div>
+        </section>
+    }
+
+    @if (resetPasswordOpen)
+    {
+        <section class="setup-grid-card mt-3">
+            <div class="p-3">
+                <h5 class="mb-3">Reset Password - @selectedUserName</h5>
+                <div class="mb-3">
+                    <label class="form-label">New password</label>
+                    <InputText type="password" class="form-control" @bind-Value="newPassword" placeholder="Enter new password" />
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" type="button" @onclick="ConfirmResetPassword">Save</button>
+                    <button class="btn btn-secondary" type="button" @onclick="CancelResetPassword">Cancel</button>
+                </div>
+            </div>
+        </section>
+    }
 
     <section class="setup-grid-card">
         @if (FilteredBanks.Any())
@@ -136,12 +163,12 @@
 
 @if (DeleteDialogOpen)
 {
-    <ModalDialogComponent Title="Are you sure?" Text="Do you want to delete this entry?" OnClose="OnDeleteDialogClose"></ModalDialogComponent>
+    <ModalDialogComponent Title="Are you sure?" Text="Do you want to delete this user?" OnClose="OnDeleteDialogClose"></ModalDialogComponent>
 }
 
 @if (NullDialogOpen)
 {
-    <ModalDialogComponent Title="Success" Text="Role has been assigned successfully!" TombolSave="false" OnClose="OnSuccessClose"></ModalDialogComponent>
+    <ModalDialogComponent Title="Success" Text="@successDialogText" TombolSave="false" OnClose="OnSuccessClose"></ModalDialogComponent>
 }
 
 @code {
@@ -155,6 +182,12 @@
     private List<IdentityRole> roles = new();
     private string searchText = "";
     private Dictionary<string, string> selectedRoles = new();
+    private string actionMessage = string.Empty;
+    private string successDialogText = "Role has been assigned successfully!";
+    private string selectedUserId = string.Empty;
+    private string selectedUserName = string.Empty;
+    private string newPassword = string.Empty;
+    private bool resetPasswordOpen;
 
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
@@ -207,6 +240,7 @@
 
         if (result)
         {
+            successDialogText = "Role has been assigned successfully!";
             LoadGet();
             if (selectedRoles.ContainsKey(userId))
                 selectedRoles.Remove(userId);
@@ -214,16 +248,87 @@
         }
     }
 
+    private void ConfirmDeleteUser(IdentityView item)
+    {
+        selectedUserId = item.IdUser;
+        selectedUserName = item.Name;
+        DeleteDialogOpen = true;
+    }
+
+    private async Task DeleteUserAsync()
+    {
+        if (string.IsNullOrWhiteSpace(selectedUserId))
+        {
+            return;
+        }
+
+        var result = await service.DeleteUser(selectedUserId);
+        actionMessage = result
+            ? $"User '{selectedUserName}' deleted successfully."
+            : $"Unable to delete user '{selectedUserName}'.";
+
+        LoadGet();
+        DeleteDialogOpen = false;
+        StateHasChanged();
+    }
+
+    private void BeginResetPassword(IdentityView item)
+    {
+        selectedUserId = item.IdUser;
+        selectedUserName = item.Name;
+        newPassword = string.Empty;
+        resetPasswordOpen = true;
+        actionMessage = string.Empty;
+    }
+
+    private async Task ConfirmResetPassword()
+    {
+        if (string.IsNullOrWhiteSpace(selectedUserId) || string.IsNullOrWhiteSpace(newPassword))
+        {
+            actionMessage = "Please enter a new password.";
+            return;
+        }
+
+        var result = await service.ResetUserPassword(selectedUserId, newPassword.Trim());
+        actionMessage = result
+            ? $"Password updated for '{selectedUserName}'."
+            : $"Unable to update password for '{selectedUserName}'.";
+
+        if (result)
+        {
+            resetPasswordOpen = false;
+            newPassword = string.Empty;
+        }
+
+        StateHasChanged();
+    }
+
+    private void CancelResetPassword()
+    {
+        resetPasswordOpen = false;
+        newPassword = string.Empty;
+        selectedUserId = string.Empty;
+        selectedUserName = string.Empty;
+    }
+
     private void OnSuccessClose(bool accepted)
     {
         NullDialogOpen = false;
+        actionMessage = string.Empty;
         StateHasChanged();
     }
 
     private void OnDeleteDialogClose(bool accepted)
     {
         DeleteDialogOpen = false;
-        LoadGet();
+
+        if (accepted)
+        {
+            _ = DeleteUserAsync();
+            return;
+        }
+
+        StateHasChanged();
     }
 
     public void Dispose()

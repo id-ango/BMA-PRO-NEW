@@ -1,4 +1,5 @@
 ﻿@page "/ModuleAdministration/AddRole"
+@attribute [Authorize(Roles = "Admin")]
 @using Accounting.Services
 @using Microsoft.AspNetCore.Authorization;
 @using Microsoft.AspNetCore.Identity;
