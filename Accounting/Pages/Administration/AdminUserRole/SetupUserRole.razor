@@ -113,26 +113,33 @@
                                 <td class="col-action">
                                     <div class="action-buttons">
                                         <button @onclick="() => SaveUserRole(item.IdUser, selectedRoles.ContainsKey(item.IdUser) ? selectedRoles[item.IdUser] : item.IdRole)" 
-                                                class="btn btn-sm btn-save-role" 
+                                                class="btn btn-sm btn-success action-button action-button-save" 
                                                 type="button"
                                                 title="Save role assignment">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                                                 <path d="M15.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L12.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
                                                 <path d="M1 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
                                             </svg>
-                                            Save
+                                            <span>Save</span>
                                         </button>
                                         <button @onclick="() => BeginResetPassword(item)"
-                                                class="btn btn-sm btn-reset-password"
+                                                class="btn btn-sm btn-warning action-button action-button-reset"
                                                 type="button"
                                                 title="Reset password">
-                                            Reset Password
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M8 3a5 5 0 1 1-4.546 2.916.5.5 0 1 1 .908-.42A4 4 0 1 0 8 4V1.5a.5.5 0 0 1 .8-.4l2 1.5a.5.5 0 0 1 0 .8l-2 1.5A.5.5 0 0 1 8 4.5V3z"/>
+                                            </svg>
+                                            <span>Reset</span>
                                         </button>
                                         <button @onclick="() => ConfirmDeleteUser(item)"
-                                                class="btn btn-sm btn-delete-user"
+                                                class="btn btn-sm btn-danger action-button action-button-delete"
                                                 type="button"
                                                 title="Delete user">
-                                            Delete
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v5a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5.5a.5.5 0 0 0-1 0v5a.5.5 0 0 0 1 0V6Z"/>
+                                                <path d="M14.5 3a1 1 0 0 1-1 1H13l-.867 9.2A2 2 0 0 1 10.14 15H5.86a2 2 0 0 1-1.993-1.8L3 4h-.5a1 1 0 0 1 0-2h3.11a1 1 0 0 1 .91-.59h3.96a1 1 0 0 1 .91.59H14.5a1 1 0 0 1 1 1ZM4.118 4l.844 8.9a1 1 0 0 0 .998.9h4.08a1 1 0 0 0 .998-.9L11.882 4H4.118Z"/>
+                                            </svg>
+                                            <span>Delete</span>
                                         </button>
                                     </div>
                                 </td>
@@ -182,8 +189,8 @@
                 <InputText type="password" class="form-control" @bind-Value="newPassword" placeholder="Enter new password" />
             </div>
             <div class="setup-modal-footer">
-                <button class="btn btn-primary" type="button" @onclick="ConfirmResetPassword">Save</button>
-                <button class="btn btn-secondary" type="button" @onclick="CancelResetPassword">Cancel</button>
+                <button class="btn btn-success" type="button" @onclick="ConfirmResetPassword">Save</button>
+                <button class="btn btn-outline-secondary" type="button" @onclick="CancelResetPassword">Cancel</button>
             </div>
         </div>
     </div>

@@ -255,7 +255,8 @@
 .action-buttons {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
     gap: 0.5rem;
 }
 
@@ -290,46 +291,38 @@
     height: 0.9rem;
 }
 
-.btn-reset-password,
-.btn-delete-user {
+.action-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.85rem;
-    font-size: 0.82rem;
-    font-weight: 600;
+    gap: 0.35rem;
+    min-width: 96px;
+    border-radius: 0.55rem;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+
+.action-button svg {
+    flex: 0 0 auto;
+}
+
+.action-button-save {
     color: #fff;
-    cursor: pointer;
-    transition: all 0.25s ease;
 }
 
-.btn-reset-password {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.22);
+.action-button-reset {
+    color: #1f2937;
 }
 
-.btn-reset-password:hover {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    transform: translateY(-1px);
-}
-
-.btn-delete-user {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.22);
-}
-
-.btn-delete-user:hover {
-    background: linear-gradient(135deg, #f87171, #ef4444);
-    transform: translateY(-1px);
+.action-button-delete {
+    color: #fff;
 }
 
 /* ===== RESET PASSWORD MODAL ===== */
 .setup-modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1050;
+    z-index: 2000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -344,6 +337,7 @@
     background: #fff;
     box-shadow: 0 30px 70px rgba(15, 23, 42, 0.22);
     overflow: hidden;
+    transform: translateY(0);
 }
 
 .setup-modal-header {
@@ -485,8 +479,8 @@
         font-size: 0.75rem;
     }
 
-    .btn-reset-password,
-    .btn-delete-user {
+    .action-button {
+        min-width: 0;
         padding: 0.4rem 0.65rem;
         font-size: 0.72rem;
     }
