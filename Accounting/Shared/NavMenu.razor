@@ -602,7 +602,7 @@
                 {
 
                     <ul class="nav flex-column">
-                        <AuthorizeView Roles="Admin, Finance,Warehouse" Context="maintenanceSetupAuth">
+                       
                             <li class="nav-item px-3">
                                 <NavLink class="nav-link" href="ModuleMaintenance/ProsesStock">
                                     <span aria-hidden="true"></span> Proses Stock
@@ -613,7 +613,7 @@
                                     <span aria-hidden="true"></span> Proses CashBank
                                 </NavLink>
                             </li>
-                        </AuthorizeView>
+                        <AuthorizeView Roles="Admin, Finance" Context="maintenanceSetupAuth">
                         <li class="nav-item px-3">
                             <NavLink class="nav-link" href="ModuleMaintenance/ProsesHutang">
                                 <span aria-hidden="true"></span> Proses Hutang
@@ -639,7 +639,7 @@
                                 <span aria-hidden="true"></span> Test Run
                             </NavLink>
                         </li>
-
+                        </AuthorizeView>
                     </ul>
 
 
