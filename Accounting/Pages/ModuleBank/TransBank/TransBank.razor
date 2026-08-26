@@ -3,7 +3,7 @@
 @using eSoft.CashBank.Services
 
 
-@attribute [Authorize(Roles ="Admin, Finance")]
+@attribute [Authorize(Roles ="Admin, Finance, Warehouse")]
 
 @inject ICashBankServices cashBank
 @implements IDisposable
