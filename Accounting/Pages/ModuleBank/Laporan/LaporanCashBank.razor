@@ -9,7 +9,7 @@
 @implements IDisposable
 @inject NavigationManager navigationmanager
 
-@attribute [Authorize(Roles = "Admin, Finance")]
+@attribute [Authorize(Roles = "Admin, Finance, Warehouse")]
 
 <div class="container">
     <h1>Laporan Cash Bank <small> <button class="btn btn-success btn-small"  @onclick="prosesstock">Refresh</button></small> </h1>
