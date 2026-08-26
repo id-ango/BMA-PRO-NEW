@@ -39,7 +39,7 @@
 
         <li class="nav-section-label">Operational Modules</li>
 
-        <AuthorizeView Roles="Admin, Finance, warehouse" Context="salesAuth">
+        <AuthorizeView Roles="Admin, Finance, Warehouse" Context="salesAuth">
             <li class="nav-item px-3">
                 <button type="button" class="@GetNavButtonClass("Penjualan")" @onclick='() => ToggleSection("Penjualan")'>
                     <span class="oi oi-cart nav-group-icon nav-group-icon-sales" aria-hidden="true"></span> Penjualan
@@ -84,7 +84,7 @@
                                 </NavLink>
                             </li>
                         </AuthorizeView>
-                       @*  <li class="nav-item px-3">
+                        @*  <li class="nav-item px-3">
                             <NavLink class="nav-link" href="ModuleJual/uploadpdf">
                                 <span aria-hidden="true"></span> Upload PDF
                             </NavLink>
@@ -129,7 +129,7 @@
             </li>  <!--   Pembelian  -->
         </AuthorizeView>
 
-        <AuthorizeView Roles="Admin, Finance,warehouse">
+        <AuthorizeView Roles="Admin, Finance,Warehouse" Context="inventoryAuth">
             <li class="nav-item px-3">
                 <button type="button" class="@GetNavButtonClass("Persediaan")" @onclick='() => ToggleSection("Persediaan")'>
                     <span class="oi oi-layers nav-group-icon nav-group-icon-stock" aria-hidden="true"></span> Persediaan
@@ -161,26 +161,28 @@
                                 <span aria-hidden="true"></span> Setup Lokasi
                             </NavLink>
                         </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModulePersediaan/SetupItem">
-                                <span aria-hidden="true"></span> Setup Item
-                            </NavLink>
-                        </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModulePersediaan/SetupAcctSet">
-                                <span aria-hidden="true"></span> Setup Account Set
-                            </NavLink>
-                        </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModulePersediaan/SetupCategory">
-                                <span aria-hidden="true"></span> Setup Category
-                            </NavLink>
-                        </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModulePersediaan/CheckingPrice">
-                                <span aria-hidden="true"></span> Periksa Harga
-                            </NavLink>
-                        </li>
+                        <AuthorizeView Roles="Admin, Finance" Context="inventorySetupAuth">
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModulePersediaan/SetupItem">
+                                    <span aria-hidden="true"></span> Setup Item
+                                </NavLink>
+                            </li>
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModulePersediaan/SetupAcctSet">
+                                    <span aria-hidden="true"></span> Setup Account Set
+                                </NavLink>
+                            </li>
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModulePersediaan/SetupCategory">
+                                    <span aria-hidden="true"></span> Setup Category
+                                </NavLink>
+                            </li>
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModulePersediaan/CheckingPrice">
+                                    <span aria-hidden="true"></span> Periksa Harga
+                                </NavLink>
+                            </li>
+                        </AuthorizeView>
                     </ul>
 
 
@@ -324,7 +326,7 @@
                 }
             </li>  <!--   Piutang    -->
         </AuthorizeView>
-        <AuthorizeView Roles="Admin, Finance">
+        <AuthorizeView Roles="Admin, Finance, Warehouse" Context="cashBankAuth">
             <li class="nav-item px-3">
 
                 <button type="button" class="@GetNavButtonClass("CashBank")" @onclick='() => ToggleSection("CashBank")'>
@@ -345,28 +347,29 @@
                                 <span class="oi oi-arrow-right" aria-hidden="true"></span> Transfer Antar Bank
                             </NavLink>
                         </li>
+                        <AuthorizeView Roles="Admin, Finance,Warehouse" Context="cashBankSetupAuth">
 
-                      
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModuleBank/SetupCashBank">
-                                <span aria-hidden="true"></span> Setup Bank/Kas
-                            </NavLink>
-                        </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModuleBank/SetupSrcCode">
-                                <span aria-hidden="true"></span> Setup Src Code
-                            </NavLink>
-                        </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModuleBank/SetupSrcGroup">
-                                <span aria-hidden="true"></span> Setup Src Group
-                            </NavLink>
-                        </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModuleBank/BankTransaction">
-                                <span aria-hidden="true"></span> Tarik CSV BCA
-                            </NavLink>
-                        </li>
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModuleBank/SetupCashBank">
+                                    <span aria-hidden="true"></span> Setup Bank/Kas
+                                </NavLink>
+                            </li>
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModuleBank/SetupSrcCode">
+                                    <span aria-hidden="true"></span> Setup Src Code
+                                </NavLink>
+                            </li>
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModuleBank/SetupSrcGroup">
+                                    <span aria-hidden="true"></span> Setup Src Group
+                                </NavLink>
+                            </li>
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModuleBank/BankTransaction">
+                                    <span aria-hidden="true"></span> Tarik CSV BCA
+                                </NavLink>
+                            </li>
+                        </AuthorizeView>
                     </ul>
 
 
@@ -588,7 +591,7 @@
         </AuthorizeView>
 
         <!--  Maintenance  -->
-        <AuthorizeView Roles="Admin, Finance">
+        <AuthorizeView Roles="Admin, Finance,Warehouse" Context="maintenanceAuth">
             <li class="nav-item px-3">
 
                 <button type="button" class="@GetNavButtonClass("Maintenance")" @onclick='() => ToggleSection("Maintenance")'>
@@ -599,16 +602,18 @@
                 {
 
                     <ul class="nav flex-column">
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModuleMaintenance/ProsesStock">
-                                <span aria-hidden="true"></span> Proses Stock
-                            </NavLink>
-                        </li>
-                        <li class="nav-item px-3">
-                            <NavLink class="nav-link" href="ModuleMaintenance/ProsesCashBank">
-                                <span aria-hidden="true"></span> Proses CashBank
-                            </NavLink>
-                        </li>
+                        <AuthorizeView Roles="Admin, Finance,Warehouse" Context="maintenanceSetupAuth">
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModuleMaintenance/ProsesStock">
+                                    <span aria-hidden="true"></span> Proses Stock
+                                </NavLink>
+                            </li>
+                            <li class="nav-item px-3">
+                                <NavLink class="nav-link" href="ModuleMaintenance/ProsesCashBank">
+                                    <span aria-hidden="true"></span> Proses CashBank
+                                </NavLink>
+                            </li>
+                        </AuthorizeView>
                         <li class="nav-item px-3">
                             <NavLink class="nav-link" href="ModuleMaintenance/ProsesHutang">
                                 <span aria-hidden="true"></span> Proses Hutang
