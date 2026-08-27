@@ -229,13 +229,19 @@
                 lastDivision = item.KodeDivisi;
                 rowNumber = 1;
 
+                // Check if ANY item in this division is selected for printing
+                bool hasPrintableChild = TransDetail.Any(x => 
+                    x.KodeDivisi == item.KodeDivisi && 
+                    !x.IsDivisionHeader && 
+                    x.IsSelectedForPrinting);
+
                 // Create virtual division header row
                 DisplayItems.Add(new IcStockCardView
                 {
                     IsDivisionHeader = true,
                     KodeDivisi = item.KodeDivisi,
                     Divisi = item.Divisi,
-                    IsSelectedForPrinting = item.IsSelectedForPrinting
+                    IsSelectedForPrinting = hasPrintableChild
                 });
             }
 

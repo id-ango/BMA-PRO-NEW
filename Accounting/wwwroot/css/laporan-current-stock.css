@@ -63,37 +63,37 @@
 }
 
 .col-code {
-    width: 100px;
+    width: 80px;
     text-align: left;
 }
 
 .col-name {
-    width: 200px;
+    width: 300px;
     text-align: left;
 }
 
 .col-unit {
-    width: 80px;
+    width: 70px;
     text-align: center;
 }
 
 .col-qty {
-    width: 100px;
+    width: 90px;
     text-align: right;
 }
 
 .col-po {
-    width: 100px;
+    width: 90px;
     text-align: right;
 }
 
 .col-so {
-    width: 100px;
+    width: 90px;
     text-align: right;
 }
 
 .col-total {
-    width: 100px;
+    width: 90px;
     text-align: right;
 }
 
@@ -216,12 +216,7 @@
     }
 
     /* Hide rows that are NOT selected for printing */
-    .data-table tbody tr:not(.to-print):not(.division-header):not(.separator-row) {
-        display: none !important;
-    }
-
-    /* Hide division headers yang tidak punya child dengan to-print class */
-    .data-table tbody tr.division-header:not(:has(~ tr.to-print:not(.division-header))) {
+    .data-table tbody tr:not(.to-print):not(.separator-row) {
         display: none !important;
     }
 
