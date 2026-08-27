@@ -97,6 +97,21 @@
     text-align: right;
 }
 
+/* Stock Opname Columns */
+.col-opname-result {
+    width: 120px;
+    text-align: center;
+    border: 1px solid #999;
+    min-height: 30px;
+}
+
+.col-opname-note {
+    width: 150px;
+    text-align: left;
+    border: 1px solid #999;
+    min-height: 30px;
+}
+
 /* Data Row Styling */
 .data-table tbody td {
     padding: 8px;
@@ -202,6 +217,11 @@
 
     /* Hide rows that are NOT selected for printing */
     .data-table tbody tr:not(.to-print):not(.division-header):not(.separator-row) {
+        display: none !important;
+    }
+
+    /* Hide division headers yang tidak punya child dengan to-print class */
+    .data-table tbody tr.division-header:not(:has(~ tr.to-print:not(.division-header))) {
         display: none !important;
     }
 

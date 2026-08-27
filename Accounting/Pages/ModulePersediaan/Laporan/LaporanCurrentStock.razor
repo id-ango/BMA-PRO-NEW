@@ -12,6 +12,7 @@
 @inject IInventoryServices serviceIC
 @inject IOrderSalesServices serviceOrdJual
 @inject NavigationManager navigationmanager
+@inject IJSRuntime JSRuntime
 
 <link rel="stylesheet" href="css/laporan-current-stock.css" />
 
@@ -24,9 +25,11 @@
     &emsp;
     <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
     &emsp;
+    <button class="btn btn-info btn-lg" @onclick="PrintStockOpname">&nbsp; Stock Opname &nbsp;</button>
+    &emsp;
 </div>
 
-<div class="report-table">
+<div class="report-table" data-print-mode="@printMode">
     <div class="report-title">@Title</div>
 
     @if (DisplayItems != null && DisplayItems.Count > 0)
@@ -40,9 +43,17 @@
                         <th class="col-name">Nama Barang</th>
                         <th class="col-unit">Satuan</th>
                         <th class="col-qty">Qty</th>
-                        <th class="col-po">PO</th>
-                        <th class="col-so">SO</th>
-                        <th class="col-total">Total</th>
+                        @if (printMode == "normal")
+                        {
+                            <th class="col-po">PO</th>
+                            <th class="col-so">SO</th>
+                            <th class="col-total">Total</th>
+                        }
+                        else if (printMode == "opname")
+                        {
+                            <th class="col-opname-result">Hasil Stock</th>
+                            <th class="col-opname-note">Keterangan</th>
+                        }
                     </tr>
                 </thead>
                 <tbody>
@@ -51,7 +62,7 @@
                         @if (item.IsDivisionHeader)
                         {
                             <tr class="division-header @(item.IsSelectedForPrinting ? "to-print" : "")">
-                                <td colspan="8">
+                                <td colspan="@(printMode == "normal" ? 8 : 7)">
                                     @item.Divisi
                                     <span class="dontprint">
                                         <button type="button" class="btn btn-primary btn-sm @(item.IsSelectedForPrinting ? "btn-marked" : "")" @onclick="@(() => ToggleRowsWithSameDivision(item.KodeDivisi))">Cetak</button>
@@ -83,16 +94,24 @@
                                         <button class="dontprint btn btn-info btn-sm" @onclick="@(() => CicilanJual(item.ItemCode))">SO</button>
                                     }
                                 </td>
-                                <td class="col-unit">@item.Satuan</td>
-                                <td class="col-qty @item.QtyClass">@item.Qty.ToString("N")</td>
-                                <td class="col-po">@item.QtyBeli.ToString("N")</td>
-                                <td class="col-so">@item.QtyJual.ToString("N")</td>
-                                <td class="col-total @item.QtyOrderClass">@item.QtyOrder.ToString("N")</td>
-                            </tr>
+                                    <td class="col-unit">@item.Satuan</td>
+                                    <td class="col-qty @item.QtyClass">@item.Qty.ToString("N")</td>
+                                    @if (printMode == "normal")
+                                    {
+                                       <td class="col-po">@item.QtyBeli.ToString("N")</td>
+                                       <td class="col-so">@item.QtyJual.ToString("N")</td>
+                                       <td class="col-total @item.QtyOrderClass">@item.QtyOrder.ToString("N")</td>
+                                    }
+                                    else if (printMode == "opname")
+                                    {
+                                       <td class="col-opname-result">&nbsp;</td>
+                                       <td class="col-opname-note">&nbsp;</td>
+                                    }
+                                </tr>
                         }
                     }
                     <tr class="separator-row">
-                        <td colspan="8">&nbsp;</td>
+                        <td colspan="@(printMode == "normal" ? 8 : 7)">&nbsp;</td>
                     </tr>
                 </tbody>
             </table>
@@ -155,6 +174,7 @@
     public List<IcStockCardView> TransParsial = new List<IcStockCardView>();
 
     private string Title = "Laporan Stock";
+    private string printMode = "normal"; // "normal" or "opname"
 
     private bool dispCicilan { get; set; }
 
@@ -263,6 +283,23 @@
         dispCicilan = false;
         StateHasChanged();
         _shouldRender = false;
+    }
+
+    private async Task PrintStockOpname()
+    {
+        printMode = "opname";
+        _shouldRender = true;
+        StateHasChanged();
+        _shouldRender = false;
+
+        // Tunggu render selesai, baru trigger print
+        await Task.Delay(200);
+        await JSRuntime.InvokeVoidAsync("window.print");
+
+        // Reset mode kembali ke normal setelah print
+        await Task.Delay(500);
+        printMode = "normal";
+        StateHasChanged();
     }
 
     private void TogglePrintRow(IcStockCardView item)
