@@ -1,0 +1,267 @@
+/* Laporan Persediaan - Current Stock Report Styling */
+
+/* Table Container & Layout */
+.report-table {
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 4px;
+}
+
+.report-title {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.data-table-container {
+    overflow-x: auto;
+    margin-top: 15px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.data-table tbody tr {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.data-table tbody tr:hover:not(.division-header):not(.separator-row) {
+    background-color: #f5f5f5;
+}
+
+/* Header Row */
+.header-row {
+    background-color: #2c3e50;
+    color: white;
+    font-weight: bold;
+    text-align: left;
+    padding: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.header-row th {
+    padding: 10px 8px;
+    border-right: 1px solid #34495e;
+}
+
+.header-row th:last-child {
+    border-right: none;
+}
+
+/* Column Widths */
+.col-no {
+    width: 40px;
+    text-align: center;
+}
+
+.col-code {
+    width: 100px;
+    text-align: left;
+}
+
+.col-name {
+    width: 200px;
+    text-align: left;
+}
+
+.col-unit {
+    width: 80px;
+    text-align: center;
+}
+
+.col-qty {
+    width: 100px;
+    text-align: right;
+}
+
+.col-po {
+    width: 100px;
+    text-align: right;
+}
+
+.col-so {
+    width: 100px;
+    text-align: right;
+}
+
+.col-total {
+    width: 100px;
+    text-align: right;
+}
+
+/* Data Row Styling */
+.data-table tbody td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+/* Quantity Highlighting */
+.qty-negative {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.qty-zero {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+.highlight-row {
+    background-color: #fff3cd;
+}
+
+/* Division Header Styling */
+.division-header {
+    background-color: #dfe6e9;
+    font-weight: bold;
+    padding: 12px !important;
+}
+
+.division-header td {
+    padding: 12px 8px;
+    border-top: 2px solid #b0bec5;
+    border-bottom: 2px solid #b0bec5;
+}
+
+/* Selected for Printing */
+.to-print {
+    background-color: #e8f5e9 !important;
+    border-left: 4px solid #4caf50;
+}
+
+.to-print.highlight-row {
+    background-color: #fff176 !important;
+}
+
+/* Separator Row */
+.separator-row {
+    height: 8px;
+    background-color: #f9f9f9;
+}
+
+.separator-row td {
+    padding: 0;
+    border: none;
+}
+
+/* Button Styling */
+.btn-marked {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-icon-tiny {
+    padding: 2px 4px;
+    font-size: 12px;
+    border: 1px solid #ddd;
+    background-color: transparent;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.btn-icon-tiny:hover {
+    background-color: #f0f0f0;
+}
+
+/* Print Styles */
+@media print {
+    .dontprint,
+    .print-hidden {
+        display: none !important;
+    }
+
+    .data-table {
+        font-size: 12px;
+    }
+
+    .header-row {
+        background-color: #666;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .division-header {
+        background-color: #ddd;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .to-print {
+        background-color: #e8f5e9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .to-print.highlight-row {
+        background-color: #fff176 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .qty-negative {
+        color: #dc3545;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .qty-zero {
+        color: #ffc107;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .report-table {
+        padding: 10px;
+    }
+
+    .data-table-container {
+        overflow: visible;
+    }
+
+    .data-table tbody tr {
+        page-break-inside: avoid;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .col-name,
+    .col-code {
+        width: auto;
+    }
+
+    .col-qty,
+    .col-po,
+    .col-so,
+    .col-total {
+        width: 80px;
+        font-size: 12px;
+    }
+
+    .data-table tbody td {
+        padding: 6px 4px;
+    }
+}

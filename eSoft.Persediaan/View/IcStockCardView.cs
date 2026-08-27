@@ -73,5 +73,17 @@ namespace eSoft.Persediaan.View
         public bool IsSubTitleSelectedForPrinting { get; set; } = true;
         public bool Disabled { get; set; }
 
+        // OPTIMIZATION: Pre-computed properties for bandwidth reduction
+        // These properties are calculated once at data load, not at every render
+        public bool HasPurchaseOrder { get; set; }      // Replaces @if (item.QtyBeli != 0) check
+        public bool HasSalesOrder { get; set; }         // Replaces @if (item.QtyJual != 0) check
+        public bool HasHighlightedQty { get; set; }     // For yellow row highlighting
+        public string QtyClass { get; set; }            // CSS class: qty-negative, qty-zero, or empty
+        public string QtyOrderClass { get; set; }       // CSS class for QtyOrder column
+
+        // PHASE 2: Virtual scrolling with division grouping
+        public bool IsDivisionHeader { get; set; }      // Marks row as division header vs data row
+        public int RowNumber { get; set; }              // Sequential row number within division
+
     }
 }

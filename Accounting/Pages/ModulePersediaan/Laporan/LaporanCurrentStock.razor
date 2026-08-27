@@ -1,4 +1,4 @@
-﻿@layout PrintLayout
+@layout PrintLayout
 
 @page "/ModulePersediaan/LaporanCurrentStock"
 
@@ -6,304 +6,282 @@
 @using eSoft.Persediaan.View
 @using eSoft.Persediaan.Services
 @using eSoft.Order.Services
-
 @using eSoft.LaporanStock.Services
+@using Microsoft.AspNetCore.Components.QuickGrid
 
 @inject IInventoryServices serviceIC
 @inject IOrderSalesServices serviceOrdJual
-
 @inject NavigationManager navigationmanager
 
+<link rel="stylesheet" href="css/laporan-current-stock.css" />
 
-
-<div class="dontprint" style="display:none inline">
+<div class="dontprint" style="display:inline">
     <br />
     &emsp;
     <button class="btn btn-warning btn-lg" style="background-color: @BackgroundColor" @onclick="TogglePrintAll">Toggle Print All</button>
-
     &emsp;
-
     <NavLink href="/" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
-
     &emsp;
     <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
     &emsp;
 </div>
 
-<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<div class="report-table">
+    <div class="report-title">@Title</div>
 
-    <thead>
-
-        <tr>
-            <td colspan="3">&nbsp;</td>
-        </tr>
-
-
-        <tr>
-            <td colspan="3" style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:15px;" align="center">
-                @Title
-            </td>
-        </tr>
-
-    </thead>
-    <tbody>
-        <tr>
-            <td colspan="3">
-                <table width="100%" border="0" cellspacing="0" cellpadding="4">
-                    <thead>
-                        <tr>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-left:1px solid #333; border-right:1px solid #333;" width="5%" height="32" align="center">No.</td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">Kode</td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="40%" align="center">Nama Barang</td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="5%" align="center">Satuan</td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">Qty</td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">PO</td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">SO</td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px; border-top:1px solid #333; border-bottom:1px solid #333; border-right:1px solid #333;" width="10%" align="center">Total</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in TransDetail)
+    @if (DisplayItems != null && DisplayItems.Count > 0)
+    {
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr class="header-row">
+                        <th class="col-no">No.</th>
+                        <th class="col-code">Kode</th>
+                        <th class="col-name">Nama Barang</th>
+                        <th class="col-unit">Satuan</th>
+                        <th class="col-qty">Qty</th>
+                        <th class="col-po">PO</th>
+                        <th class="col-so">SO</th>
+                        <th class="col-total">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in DisplayItems)
+                    {
+                        @if (item.IsDivisionHeader)
                         {
-                           
-                            @if (cekDivisi != item.KodeDivisi)
-                            {
-                                cekDivisi = item.KodeDivisi;
-                                No = 1;
-                                <tr class="print-selected @(item.IsSelectedForPrinting ? "to-print" : "")">
-                                    <td colspan="8" style="font-family:Verdana, Geneva, sans-serif; font-weight:600; font-size:13px;  border-left:1px solid #333;  border-right:1px solid #333;" align="center">
-                                        @item.Divisi
-                                       <span class="dontprint">
-                                           <button type="button" class="btn btn-primary btn-sm btn-primary-custom @(item.IsSelectedForPrinting ? "yellow" : "")" style="background-color: @(item.IsSelectedForPrinting ? "yellow" : ""); color: @(item.IsSelectedForPrinting ? "black" : "")" @onclick="@(() => ToggleRowsWithSameDivision(item.KodeDivisi))">Cetak</button>
-                                        </span>
-                                       </td>
-                                </tr>
-                                
-                            }
-                            
-
-                            <tr class="print-selected @(item.IsSelectedForPrinting ? "to-print" : "")"  style="background-color:@(item.QtyJual != 0 ? "yellow" : "") ">
-                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  border-left:1px solid #333; " align="left">@(No++)</td>
-                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="left">@item.ItemCode
-                                    @if (!string.IsNullOrEmpty(item.Foto))
-                                    {
-                                        <button @onclick="() => OpenDisplayDialog(item)" class="btn btn-light">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-display" viewBox="0 0 16 16">
-                                                <path d="M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2h-4c0 .667.083 1.167.25 1.5H11a.5.5 0 0 1 0 1H5a.5.5 0 0 1 0-1h.75c.167-.333.25-.833.25-1.5H2s-2 0-2-2V4zm1.398-.855a.758.758 0 0 0-.254.302A1.46 1.46 0 0 0 1 4.01V10c0 .325.078.502.145.602.07.105.17.188.302.254a1.464 1.464 0 0 0 .538.143L2.01 11H14c.325 0 .502-.078.602-.145a.758.758 0 0 0 .254-.302 1.464 1.464 0 0 0 .143-.538L15 9.99V4c0-.325-.078-.502-.145-.602a.757.757 0 0 0-.302-.254A1.46 1.46 0 0 0 13.99 3H2c-.325 0-.502.078-.602.145z" />
-                                            </svg>
-                                        </button>
-                                       
-                                    }
+                            <tr class="division-header @(item.IsSelectedForPrinting ? "to-print" : "")">
+                                <td colspan="8">
+                                    @item.Divisi
+                                    <span class="dontprint">
+                                        <button type="button" class="btn btn-primary btn-sm @(item.IsSelectedForPrinting ? "btn-marked" : "")" @onclick="@(() => ToggleRowsWithSameDivision(item.KodeDivisi))">Cetak</button>
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr class="@(item.IsSelectedForPrinting ? "to-print" : "") @(item.HasHighlightedQty ? "highlight-row" : "")">
+                                <td class="col-no">@item.RowNumber</td>
+                                 <td class="col-code">
+                                    @item.ItemCode
                                     <button class="dontprint btn btn-info btn-sm" @onclick="@(() => CetakStockCard(item.ItemCode,item.NamaItem,item.Satuan))">Kartu</button>
                                 </td>
-                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="left" data-toogle="tooltip" title="@item.Keterangan">
+                                <td class="col-name" title="@item.Keterangan">
                                     @item.NamaItem
-                                    &emsp; @if (item.QtyBeli != 0)
+                                    @if (item.HasPurchaseOrder)
                                     {
                                         <button class="dontprint btn btn-success btn-sm" @onclick="@(() => CicilanBeli(item.ItemCode))">PO</button>
                                     }
-                                    &emsp; @if (item.QtyJual != 0)
+                                    @if (item.HasSalesOrder)
                                     {
                                         <button class="dontprint btn btn-info btn-sm" @onclick="@(() => CicilanJual(item.ItemCode))">SO</button>
                                     }
                                 </td>
-                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@item.Satuan</td>
-                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; background-color:@(item.Qty < 0 ? "magenta" : (item.Qty == 0 ? "gold" : "" ) ) " align="right" >@item.Qty.ToString("N")</td>
-                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">
-                                    @item.QtyBeli.ToString("N")
-
-                                </td>
-                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">
-                                    @item.QtyJual.ToString("N")
-
-
-                                </td>
-                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;   border-right:1px solid #333; background-color:@(item.QtyOrder < 0 ? "magenta" : (item.QtyOrder == 0 ? "gold" : "" ) )" align="right">@item.QtyOrder.ToString("N")</td>
+                                <td class="col-unit">@item.Satuan</td>
+                                <td class="col-qty @item.QtyClass">@item.Qty.ToString("N")</td>
+                                <td class="col-po">@item.QtyBeli.ToString("N")</td>
+                                <td class="col-so">@item.QtyJual.ToString("N")</td>
+                                <td class="col-total @item.QtyOrderClass">@item.QtyOrder.ToString("N")</td>
                             </tr>
                         }
+                    }
+                    <tr class="separator-row">
+                        <td colspan="8">&nbsp;</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
 
-
-
-                        <tr>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  border-left:1px solid #333; " align="center">&emsp;</td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;  " align="center"></td>
-                            <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px; border-bottom:1px solid #333;   border-right:1px solid #333;" align="center"></td>
-                        </tr>
-
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="8" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:13px;" align="right">
-                            </td>
-                        </tr>
-                    </tfoot>
-
-                </table>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2">Tanggal cetak. @DateTime.Now</td>
-        </tr>
-
-
-
-        <tr>
-            <td colspan="2">&nbsp;</td>
-        </tr>
-
-    </tbody>
-</table>
-
+<div style="margin-top: 20px;">
+    <p>Tanggal cetak: @DateTime.Now</p>
+    <p>&nbsp;</p>
+</div>
 
 @if (dispCicilan)
 {
-
     <ModalSearchComponent OnClose="OnSearchClose" Items="TransParsial" Context="transaksi2">
         <TableHeader>
-            <th scope="col">Bukti</th>
-            <th scope="col">Tanggal</th>
             <th scope="col">Vendor</th>
+            <th scope="col">Tanggal</th>
+            <th scope="col">No. PO</th>
             <th scope="col">Keterangan</th>
             <th scope="col">Qty</th>
             <th scope="col">Harga</th>
-
-
-
             <th></th>
         </TableHeader>
         <RowTemplate>
             <td>
-                @transaksi2.NoLpb
-                <br />
-                <span class="badge bg-primary">@transaksi2.NoPrj</span>
+                @transaksi2.NamaVendor
             </td>
-            <td>@transaksi2.Tanggal.ToShortDateString()</td>
-            <td>@transaksi2.NamaVendor</td>
-            <td>@transaksi2.Keterangan</td>
-            <td style="text-align:right">@transaksi2.Qty.ToString("N")</td>
-            <td style="text-align:right">@transaksi2.Harga.ToString("N")</td>
+            <td>
+                @transaksi2.Tanggal.ToString("dd-MM-yyyy")
+            </td>
+            <td>
+                @transaksi2.NoLpb
+            </td>
+            <td>
+                @transaksi2.Keterangan
+            </td>
+            <td>
+                @transaksi2.Qty
+            </td>
 
+            <td>
+                @transaksi2.Harga
+            </td>
 
+            <td>
+
+            </td>
         </RowTemplate>
-    </ModalSearchComponent>
+         </ModalSearchComponent>
+    }
 
+    @code {
 
-}
+         public List<IcStockCardView> TransDetail = new List<IcStockCardView>();
 
-@if (DisplayDialogOpen)
-{
-    <ModalDisplayImageComponent Title="IMAGE" Text=@imaging TombolSave="false" OnClose="OnDisplayClose"></ModalDisplayImageComponent>
-}
+    // PHASE 2: Display items includes division headers for proper grouping with virtualization
+    public List<IcStockCardView> DisplayItems { get; set; } = new List<IcStockCardView>();
 
-
-
-@code {
-
-
-    public List<IcStockCardView> TransDetail;
-
-    public List<IcStockCardView> TransParsial;
-    private string imaging;
-
-    public bool DisplayDialogOpen { get; set; }
+    public List<IcStockCardView> TransParsial = new List<IcStockCardView>();
 
     private string Title = "Laporan Stock";
-    private string cekDivisi = "";
-    private int No = 0;
 
     private bool dispCicilan { get; set; }
-    private bool IsBackgroundYellow = true;
 
     private bool printAllSelected = true;
-    private string BackgroundColor = ""; // Inisialisasi dengan string kosong
+    private string BackgroundColor = "";
 
+    // OPTIMIZATION: Control render cycles
+    private bool _shouldRender = true;
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
         loadStock();
-
     }
 
-
+    /// <summary>
+    /// OPTIMIZATION: Only render when necessary
+    /// Prevents unnecessary re-renders and reduces bandwidth
+    /// </summary>
+    protected override bool ShouldRender() => _shouldRender;
 
     private void loadStock()
     {
-
         TransDetail = serviceIC.GetCurrentStock();
         TransDetail = serviceOrdJual.GetCurrentOrderJual(TransDetail);
-        //  TransDetail = TransDetail.OrderBy(x => x.KodeDivisi).ToList();
 
+        // OPTIMIZATION: Pre-compute conditions once at load time
+        foreach (var item in TransDetail)
+        {
+            item.HasPurchaseOrder = item.QtyBeli != 0;
+            item.HasSalesOrder = item.QtyJual != 0;
+            item.HasHighlightedQty = item.QtyJual != 0;
+            item.QtyClass = item.Qty < 0 ? "qty-negative" : (item.Qty == 0 ? "qty-zero" : "");
+            item.QtyOrderClass = item.QtyOrder < 0 ? "qty-negative" : (item.QtyOrder == 0 ? "qty-zero" : "");
+        }
+
+        // PHASE 2: Build display items with division headers for grouping
+        BuildDisplayItems();
+
+        _shouldRender = true;
         StateHasChanged();
+        _shouldRender = false;
+    }
 
+    /// <summary>
+    /// PHASE 2: Builds display list including division headers
+    /// This replaces the foreach logic in the template
+    /// Handles division grouping with proper row numbering
+    /// </summary>
+    private void BuildDisplayItems()
+    {
+        DisplayItems = new List<IcStockCardView>();
+        string lastDivision = null;
+        int rowNumber = 1;
+
+        if (TransDetail == null || TransDetail.Count == 0)
+            return;
+
+        foreach (var item in TransDetail)
+        {
+            // Add division header when division changes
+            if (lastDivision != item.KodeDivisi)
+            {
+                lastDivision = item.KodeDivisi;
+                rowNumber = 1;
+
+                // Create virtual division header row
+                DisplayItems.Add(new IcStockCardView
+                {
+                    IsDivisionHeader = true,
+                    KodeDivisi = item.KodeDivisi,
+                    Divisi = item.Divisi,
+                    IsSelectedForPrinting = item.IsSelectedForPrinting
+                });
+            }
+
+            // Add data row
+            item.RowNumber = rowNumber++;
+            DisplayItems.Add(item);
+        }
     }
 
     private void CicilanBeli(string itemcode)
     {
         TransParsial = serviceOrdJual.GetListOrderAktif(itemcode, "71");
-        dispCicilan = true;
 
+        _shouldRender = true;
+        dispCicilan = true;
+        StateHasChanged();
+        _shouldRender = false;
     }
 
     private void CicilanJual(string itemcode)
     {
         TransParsial = serviceOrdJual.GetListOrderAktif(itemcode, "76");
-        dispCicilan = true;
 
+        _shouldRender = true;
+        dispCicilan = true;
+        StateHasChanged();
+        _shouldRender = false;
     }
 
     private void OnSearchClose(bool accepted)
     {
-
+        _shouldRender = true;
         dispCicilan = false;
-        //  loadStock();
-        // StateHasChanged();
-
-    }
-    private void OnDisplayClose(bool accepted)
-    {
-        DisplayDialogOpen = false;
-        //  loadStock();
         StateHasChanged();
-
-    }
-
-    private void OpenDisplayDialog(IcStockCardView bank)
-    {
-        if (!string.IsNullOrEmpty(bank.Foto))
-        {
-            DisplayDialogOpen = true;
-            imaging = bank.Foto;
-        }
-        else
-        {
-            DisplayDialogOpen = false;
-            imaging = "";
-        }
-
-
-        //  _bankToDelete = bank;
-        StateHasChanged();
+        _shouldRender = false;
     }
 
     private void ToggleRowsWithSameDivision(string divisionCode)
     {
-        // Tentukan status saat ini divisi dari item pertamanya, lalu balikkan
+        // Find first item with this division to determine current state
         var firstItem = TransDetail.FirstOrDefault(x => x.KodeDivisi == divisionCode);
         bool newState = !(firstItem?.IsSelectedForPrinting ?? true);
 
-        foreach (var item in TransDetail.Where(x => x.KodeDivisi == divisionCode))
+        // Toggle all items in TransDetail for this division
+        foreach (var item in TransDetail.Where(x => x.KodeDivisi == divisionCode && !x.IsDivisionHeader))
         {
             item.IsSelectedForPrinting = newState;
             item.IsSubTitleSelectedForPrinting = newState;
         }
 
+        // Also update all items in DisplayItems for this division
+        foreach (var item in DisplayItems.Where(x => x.KodeDivisi == divisionCode))
+        {
+            item.IsSelectedForPrinting = newState;
+        }
+
+        _shouldRender = true;
         StateHasChanged();
+        _shouldRender = false;
     }
 
     private void TogglePrintAll()
@@ -315,29 +293,25 @@
             item.IsSelectedForPrinting = printAllSelected;
         }
 
-        // Mengubah warna latar belakang tombol sesuai dengan nilai printAllSelected
-        if (printAllSelected)
+        // Update display headers
+        foreach (var item in DisplayItems.Where(x => x.IsDivisionHeader))
         {
-            BackgroundColor = "yellow";
-        }
-        else
-        {
-            BackgroundColor = ""; // Kosongkan untuk menggunakan warna aslinya
+            item.IsSelectedForPrinting = printAllSelected;
         }
 
+        BackgroundColor = printAllSelected ? "yellow" : "";
 
-        StateHasChanged(); // Memperbarui tampilan komponen
+        _shouldRender = true;
+        StateHasChanged();
+        _shouldRender = false;
     }
 
     private void CetakStockCard(string kodeItem, string namaItem, string satuan)
     {
-        // Meng-encode parameter untuk menghindari karakter khusus dalam URL
         string encodedNamaItem = Uri.EscapeDataString(namaItem);
         string encodedSatuan = Uri.EscapeDataString(satuan);
         string encodedKodeItem = Uri.EscapeDataString(kodeItem);
 
-        // Navigasi ke halaman dengan URL yang sudah ter-encode
         navigationmanager.NavigateTo($"/ModulePrinting/stockCard/{encodedNamaItem}/{encodedSatuan}/{encodedKodeItem}");
     }
-
 }
