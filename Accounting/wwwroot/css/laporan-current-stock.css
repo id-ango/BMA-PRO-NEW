@@ -236,19 +236,38 @@
     [data-print-mode="opname"] .col-opname-result,
     [data-print-mode="opname"] .col-opname-note {
         display: table-cell !important;
-        width: 120px;
-        border: 2px solid #333;
+        width: 150px;
+        border: 1px solid #000;
         text-align: center;
+        padding: 5px;
+    }
+
+    /* Repeating header pada setiap halaman */
+    .data-table thead {
+        display: table-header-group;
+    }
+
+    .data-table tbody {
+        display: table-row-group;
+    }
+
+    /* Report title repeating */
+    .report-title {
+        display: block;
+        page-break-after: avoid;
     }
 
     .data-table {
         font-size: 12px;
+        width: 100%;
+        border-collapse: collapse;
     }
 
     /* Remove background colors to save ink - only keep text color */
     .header-row {
         background-color: transparent;
         color: #000;
+        border-top: 2px solid #000;
         border-bottom: 2px solid #000;
     }
 
@@ -271,12 +290,16 @@
     }
 
     .qty-negative {
-        color: #000;
+        color: #dc3545;
     }
 
     .qty-zero {
-        color: #000;
-        print-color-adjust: exact;
+        color: #ffc107;
+
+    /* Hide opname columns on normal display */
+    .col-opname-result,
+    .col-opname-note {
+        display: none;
     }
 
     body {
