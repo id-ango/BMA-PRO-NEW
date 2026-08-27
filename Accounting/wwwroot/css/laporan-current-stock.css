@@ -200,6 +200,11 @@
         display: none !important;
     }
 
+    /* Hide rows that are NOT selected for printing */
+    .data-table tbody tr:not(.to-print):not(.division-header):not(.separator-row) {
+        display: none !important;
+    }
+
     .data-table {
         font-size: 12px;
     }
