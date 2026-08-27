@@ -43,17 +43,9 @@
                         <th class="col-name">Nama Barang</th>
                         <th class="col-unit">Satuan</th>
                         <th class="col-qty">Qty</th>
-                        @if (printMode == "normal")
-                        {
-                            <th class="col-po">PO</th>
-                            <th class="col-so">SO</th>
-                            <th class="col-total">Total</th>
-                        }
-                        else if (printMode == "opname")
-                        {
-                            <th class="col-opname-result">Hasil Stock</th>
-                            <th class="col-opname-note">Keterangan</th>
-                        }
+                        <th class="col-po">PO</th>
+                        <th class="col-so">SO</th>
+                        <th class="col-total">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,7 +54,7 @@
                         @if (item.IsDivisionHeader)
                         {
                             <tr class="division-header @(item.IsSelectedForPrinting ? "to-print" : "")">
-                                <td colspan="@(printMode == "normal" ? 8 : 7)">
+                                <td colspan="8">
                                     @item.Divisi
                                     <span class="dontprint">
                                         <button type="button" class="btn btn-primary btn-sm @(item.IsSelectedForPrinting ? "btn-marked" : "")" @onclick="@(() => ToggleRowsWithSameDivision(item.KodeDivisi))">Cetak</button>
@@ -94,24 +86,16 @@
                                         <button class="dontprint btn btn-info btn-sm" @onclick="@(() => CicilanJual(item.ItemCode))">SO</button>
                                     }
                                 </td>
-                                    <td class="col-unit">@item.Satuan</td>
-                                    <td class="col-qty @item.QtyClass">@item.Qty.ToString("N")</td>
-                                    @if (printMode == "normal")
-                                    {
-                                       <td class="col-po">@item.QtyBeli.ToString("N")</td>
-                                       <td class="col-so">@item.QtyJual.ToString("N")</td>
-                                       <td class="col-total @item.QtyOrderClass">@item.QtyOrder.ToString("N")</td>
-                                    }
-                                    else if (printMode == "opname")
-                                    {
-                                       <td class="col-opname-result">&nbsp;</td>
-                                       <td class="col-opname-note">&nbsp;</td>
-                                    }
-                                </tr>
+                                        <td class="col-unit">@item.Satuan</td>
+                                        <td class="col-qty @item.QtyClass">@item.Qty.ToString("N")</td>
+                                        <td class="col-po">@item.QtyBeli.ToString("N")</td>
+                                        <td class="col-so">@item.QtyJual.ToString("N")</td>
+                                        <td class="col-total @item.QtyOrderClass">@item.QtyOrder.ToString("N")</td>
+                                    </tr>
                         }
                     }
                     <tr class="separator-row">
-                        <td colspan="@(printMode == "normal" ? 8 : 7)">&nbsp;</td>
+                        <td colspan="8">&nbsp;</td>
                     </tr>
                 </tbody>
             </table>
@@ -287,6 +271,7 @@
 
     private async Task PrintStockOpname()
     {
+        // Set flag untuk CSS tahu mode opname saat print
         printMode = "opname";
         _shouldRender = true;
         StateHasChanged();
@@ -296,10 +281,12 @@
         await Task.Delay(200);
         await JSRuntime.InvokeVoidAsync("window.print");
 
-        // Reset mode kembali ke normal setelah print
+        // Reset mode kembali ke normal setelah print dialog ditutup
         await Task.Delay(500);
         printMode = "normal";
+        _shouldRender = true;
         StateHasChanged();
+        _shouldRender = false;
     }
 
     private void TogglePrintRow(IcStockCardView item)

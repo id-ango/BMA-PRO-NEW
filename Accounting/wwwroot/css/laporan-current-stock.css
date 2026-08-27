@@ -97,8 +97,10 @@
     text-align: right;
 }
 
-/* Stock Opname Columns */
-.col-opname-result {
+/* Stock Opname Columns - Hidden by default (normal display) */
+.col-opname-result,
+.col-opname-note {
+    display: none;
     width: 120px;
     text-align: center;
     border: 1px solid #999;
@@ -108,8 +110,6 @@
 .col-opname-note {
     width: 150px;
     text-align: left;
-    border: 1px solid #999;
-    min-height: 30px;
 }
 
 /* Data Row Styling */
@@ -225,53 +225,69 @@
         display: none !important;
     }
 
+    /* Stock Opname Mode - Hide PO, SO, Total columns */
+    [data-print-mode="opname"] .col-po,
+    [data-print-mode="opname"] .col-so,
+    [data-print-mode="opname"] .col-total {
+        display: none !important;
+    }
+
+    /* Stock Opname Mode - Show opname columns */
+    [data-print-mode="opname"] .col-opname-result,
+    [data-print-mode="opname"] .col-opname-note {
+        display: table-cell !important;
+        width: 120px;
+        border: 2px solid #333;
+        text-align: center;
+    }
+
     .data-table {
         font-size: 12px;
     }
 
+    /* Remove background colors to save ink - only keep text color */
     .header-row {
-        background-color: #666;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        background-color: transparent;
+        color: #000;
+        border-bottom: 2px solid #000;
     }
 
     .division-header {
-        background-color: #ddd;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        background-color: transparent;
+        color: #000;
+        border-top: 1px solid #000;
+        border-bottom: 1px solid #000;
     }
 
     .to-print {
-        background-color: #e8f5e9 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        background-color: transparent !important;
+        color: #000;
+        border-left: none;
     }
 
     .to-print.highlight-row {
-        background-color: #fff176 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        background-color: transparent !important;
+        color: #000;
     }
 
     .qty-negative {
-        color: #dc3545;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        color: #000;
     }
 
     .qty-zero {
-        color: #ffc107;
-        -webkit-print-color-adjust: exact;
+        color: #000;
         print-color-adjust: exact;
     }
 
     body {
         margin: 0;
         padding: 0;
+        background-color: white;
     }
 
     .report-table {
         padding: 10px;
+        background-color: white !important;
     }
 
     .data-table-container {
@@ -281,6 +297,14 @@
     .data-table tbody tr {
         page-break-inside: avoid;
     }
+
+    /* Remove all backgrounds to save ink */
+    * {
+        background-color: transparent !important;
+    }
+
+    /* But keep text visible */
+    color: #000 !important;
 }
 
 /* Responsive Design */
