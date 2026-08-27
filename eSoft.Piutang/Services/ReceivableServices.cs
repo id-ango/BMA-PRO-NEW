@@ -348,6 +348,14 @@ namespace eSoft.Piutang.Services
 
         }
 
+        public List<ArPiutng> GetPiutangByDokumen(string bukti)
+        {
+            return _context.ArPiutngs
+                .Where(x => x.Dokumen == bukti)
+                .OrderBy(x => x.ArPiutngId)
+                .ToList();
+        }
+
 
         public List<ArTransH> GetTransH()
         {
@@ -412,6 +420,22 @@ namespace eSoft.Piutang.Services
             return true;
 
         }
+
+        public bool BatalPiutang(int piutngId)
+        {
+            var piutang = _context.ArPiutngs.FirstOrDefault(x => x.ArPiutngId == piutngId);
+
+            if (piutang == null)
+            {
+                return false;
+            }
+
+            _context.ArPiutngs.Remove(piutang);
+            _context.SaveChanges();
+
+            return true;
+        }
+
         public ArTransH AddTransH(ArTransHView trans)
         {
             //string test = codeview.SrcCode.ToUpper();

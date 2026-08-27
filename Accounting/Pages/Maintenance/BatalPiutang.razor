@@ -1,18 +1,14 @@
 ﻿@page "/ModuleMaintenance/BatalPiutang"
 @using Microsoft.AspNetCore.Authorization;
 @using Microsoft.AspNetCore.Identity;
-@using Accounting.Services;
 @using Accounting.Services.View;
-@using Accounting.Data;
 @using eSoft.Piutang.Data;
 @using eSoft.Piutang.Model;
 @using eSoft.Piutang.Services;
-@using eSoft.Penjualan.Model;
-@using eSoft.Penjualan.Services;
+@using System.Linq;
 
 
 @inject IReceivableServices service;
-@inject ISalesServices serviceOE;
 
 
 <h3>Batal Piutang</h3>
@@ -27,20 +23,72 @@
                 <InputText id="codeBank" class="form-control" @bind-Value="bank.Dokumen" style="text-transform:uppercase" />
             </label>
         </div>
-        
+
         <br/>
 
         <div class="float-md-right">
             <button class="btn-success" type="submit">Proses</button>
-       
         </div>
 
     </EditForm>
+
+    @if (!string.IsNullOrWhiteSpace(StatusText))
+    {
+        <div class="alert alert-info mt-3">@StatusText</div>
+    }
+
+    @if (PiutangRows.Count > 0)
+    {
+        <div class="table-responsive mt-3">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>LPB</th>
+                        <th>KodeTran</th>
+                        <th>Tanggal</th>
+                        <th>Customer</th>
+                        <th>Keterangan</th>
+                        <th>Bayar</th>
+                        <th>Sisa</th>
+                        <th>Remarks</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in PiutangRows)
+                    {
+                        <tr class="@GetRowClass(item)">
+                            <td>@item.ArPiutngId</td>
+                            <td>@item.LPB</td>
+                            <td>@item.KodeTran</td>
+                            <td>@item.Tanggal.ToShortDateString()</td>
+                            <td>@item.Customer</td>
+                            <td>@item.Keterangan</td>
+                            <td>@item.Bayar.ToString("N")</td>
+                            <td>@item.Sisa.ToString("N")</td>
+                            <td>@item.Remarks</td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-danger btn-sm" @onclick="() => OpenDeleteDialog(item)" disabled="@IsLocked(item)">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
 
 @if (DialogOpen)
 {
     <ModalDialogComponent Title="Alert" Text=@Testing TombolSave="false" OnClose="OnDialogClose"></ModalDialogComponent>
+}
+
+@if (DeleteDialogOpen)
+{
+    <ModalDialogComponent Title="Konfirmasi" Text=@DeleteText OnClose="OnDeleteDialogClose"></ModalDialogComponent>
 }
 
 <style>
@@ -52,8 +100,13 @@
 
 @code {
     ArPiutng bank = new ArPiutng();
+    private List<ArPiutng> PiutangRows = new List<ArPiutng>();
+    private ArPiutng SelectedPiutang;
     private bool DialogOpen { get; set; }
+    private bool DeleteDialogOpen { get; set; }
     public string Testing { get; set; }
+    public string StatusText { get; set; }
+    public string DeleteText { get; set; }
 
 
     private void OnDialogClose(bool accepted)
@@ -64,38 +117,107 @@
 
     }
 
+    private void OnDeleteDialogClose(bool accepted)
+    {
+        DeleteDialogOpen = false;
+
+        if (accepted && SelectedPiutang != null)
+        {
+            DeletePiutang(SelectedPiutang.ArPiutngId);
+        }
+
+        SelectedPiutang = null;
+        StateHasChanged();
+    }
+
 
     private void HandleValidSubmit()
     {
-        var newEdit = service.GetPiutang(bank.Dokumen);
-        var newOE = serviceOE.GetOeTransDokumen(bank.Dokumen);
+        var dokumen = NormalizeDokumen(bank.Dokumen);
+        bank.Dokumen = dokumen;
 
-        if(newEdit != null)
+        if (string.IsNullOrWhiteSpace(dokumen))
         {
-            if(newEdit.Bayar != 0)
-            {
-                DialogOpen = true;
-                Testing = "Dokumen ini sdh ada Pembayaran";
-            } 
-            else
-            {
-                if(newOE == null)
-                {
-                    var Batal = service.BatalPiutang(newEdit);
-
-                    if(Batal)
-                    {
-                        DialogOpen = true;
-                        Testing = "Dokumen ini sdh dihapus";
-                    }
-                }
-                else
-                {
-                    DialogOpen = true;
-                    Testing = "Dokumen ini bukan satu-satunya";
-                }
-            }
+            PiutangRows = new List<ArPiutng>();
+            StatusText = "Dokumen harus diisi";
+            return;
         }
 
+        PiutangRows = service.GetPiutangByDokumen(dokumen);
+
+        if (PiutangRows.Count == 0)
+        {
+            StatusText = "Dokumen tidak ditemukan";
+            return;
+        }
+
+        if (PiutangRows.Count > 1)
+        {
+            StatusText = $"Ditemukan {PiutangRows.Count} data. Pilih baris yang akan dihapus.";
+            return;
+        }
+
+        StatusText = "Ditemukan 1 data. Tekan Delete jika data belum ada pembayaran.";
+    }
+
+    private void DeletePiutang(int piutngId)
+    {
+        var target = PiutangRows.FirstOrDefault(x => x.ArPiutngId == piutngId);
+
+        if (target == null)
+        {
+            DialogOpen = true;
+            Testing = "Data tidak ditemukan";
+            return;
+        }
+
+        if (target.Bayar != 0)
+        {
+            DialogOpen = true;
+            Testing = "Dokumen ini sdh ada Pembayaran";
+            return;
+        }
+
+        var deleted = service.BatalPiutang(piutngId);
+
+        if (deleted)
+        {
+            PiutangRows = service.GetPiutangByDokumen(bank.Dokumen);
+            StatusText = PiutangRows.Count > 0
+                ? $"Sisa {PiutangRows.Count} data untuk dokumen ini."
+                : "Data berhasil dihapus dan tidak ada sisa data.";
+            DialogOpen = true;
+            Testing = "Dokumen berhasil dihapus";
+            StateHasChanged();
+            return;
+        }
+
+        DialogOpen = true;
+        Testing = "Gagal menghapus data";
+
+    }
+
+    private void OpenDeleteDialog(ArPiutng item)
+    {
+        SelectedPiutang = item;
+
+        DeleteText = $"Hapus data ID {item.ArPiutngId} untuk dokumen {item.Dokumen}?";
+        DeleteDialogOpen = true;
+        StateHasChanged();
+    }
+
+    private static string NormalizeDokumen(string dokumen)
+    {
+        return string.IsNullOrWhiteSpace(dokumen) ? string.Empty : dokumen.Trim().ToUpperInvariant();
+    }
+
+    private static bool IsLocked(ArPiutng item)
+    {
+        return item.Bayar != 0;
+    }
+
+    private static string GetRowClass(ArPiutng item)
+    {
+        return item.Bayar != 0 ? "table-warning" : string.Empty;
     }
 }

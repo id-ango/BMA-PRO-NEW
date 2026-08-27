@@ -38,7 +38,9 @@ namespace eSoft.Piutang.Services
         ArTransH EditTransH(ArTransHView transH);
         Task<bool> DelTransH(int id);
         ArPiutng GetPiutang(string bukti);
+        List<ArPiutng> GetPiutangByDokumen(string bukti);
         bool BatalPiutang(ArPiutng piutang);
+        bool BatalPiutang(int piutngId);
 
         bool CekAlreadyPayment(string dokumen);
         List<ArPiutng> Detail1(string xKdHeader);
