@@ -154,8 +154,20 @@
 
 /* Button Styling */
 .btn-marked {
-    background-color: #28a745;
-    color: white;
+    background-color: #28a745 !important;
+    color: white !important;
+    font-weight: bold;
+}
+
+.btn-outline-secondary {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #e2e3e5;
+    border-color: #6c757d;
 }
 
 .btn-info {

@@ -62,7 +62,12 @@
                         else
                         {
                             <tr class="@(item.IsSelectedForPrinting ? "to-print" : "") @(item.HasHighlightedQty ? "highlight-row" : "")">
-                                <td class="col-no">@item.RowNumber</td>
+                                <td class="col-no">
+                                    @item.RowNumber
+                                    <span class="dontprint">
+                                        <button type="button" class="btn btn-sm @(item.IsSelectedForPrinting ? "btn-marked btn-success" : "btn-outline-secondary")" @onclick="@(() => TogglePrintRow(item))">✓</button>
+                                    </span>
+                                </td>
                                  <td class="col-code">
                                     @item.ItemCode
                                     <button class="dontprint btn btn-info btn-sm" @onclick="@(() => CetakStockCard(item.ItemCode,item.NamaItem,item.Satuan))">Kartu</button>
@@ -260,6 +265,20 @@
         _shouldRender = false;
     }
 
+    private void TogglePrintRow(IcStockCardView item)
+    {
+        if (item == null || item.IsDivisionHeader)
+            return;
+
+        // Toggle print state for this individual row
+        item.IsSelectedForPrinting = !item.IsSelectedForPrinting;
+        item.IsSubTitleSelectedForPrinting = item.IsSelectedForPrinting;
+
+        _shouldRender = true;
+        StateHasChanged();
+        _shouldRender = false;
+    }
+
     private void ToggleRowsWithSameDivision(string divisionCode)
     {
         // Find first item with this division to determine current state
@@ -288,13 +307,14 @@
     {
         printAllSelected = !printAllSelected;
 
+        // Toggle all rows in TransDetail
         foreach (var item in TransDetail)
         {
             item.IsSelectedForPrinting = printAllSelected;
         }
 
-        // Update display headers
-        foreach (var item in DisplayItems.Where(x => x.IsDivisionHeader))
+        // Also update DisplayItems (division headers and data rows)
+        foreach (var item in DisplayItems)
         {
             item.IsSelectedForPrinting = printAllSelected;
         }
