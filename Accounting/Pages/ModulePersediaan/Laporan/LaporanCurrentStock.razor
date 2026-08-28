@@ -443,8 +443,9 @@
 
             rowNum++;
 
-            // Track row grouping for outline feature
-            int groupStartRow = 0;
+            // Track row grouping for outline feature - per division
+            int divisionHeaderRow = 0;
+            int divisionFirstDataRow = 0;
             string currentDivision = null;
             int divisionItemCount = 0;
 
@@ -457,15 +458,16 @@
 
                 if (item.IsDivisionHeader)
                 {
-                    // End previous group if exists
-                    if (currentDivision != null && divisionItemCount > 0)
+                    // End previous group if exists - group ONLY data rows (exclude header)
+                    if (currentDivision != null && divisionItemCount > 0 && divisionFirstDataRow > 0)
                     {
-                        // Group dari header sampai item terakhir
-                        worksheet.Rows(groupStartRow, rowNum - 1).Group();
+                        // Group dari first data row sampai row sebelum divisi baru
+                        worksheet.Rows(divisionFirstDataRow, rowNum - 1).Group();
                     }
 
                     currentDivision = item.Divisi;
-                    groupStartRow = rowNum;  // Start dari division header
+                    divisionHeaderRow = rowNum;
+                    divisionFirstDataRow = 0;  // Reset, akan set saat item pertama
                     divisionItemCount = 0;
 
                     // Add division header row
@@ -480,6 +482,10 @@
                 }
                 else
                 {
+                    // Set first data row marker untuk group
+                    if (divisionFirstDataRow == 0)
+                        divisionFirstDataRow = rowNum;
+
                     // Add data row
                     divisionItemCount++;
                     worksheet.Cell(rowNum, 1).Value = item.RowNumber;
@@ -511,9 +517,9 @@
             }
 
             // End last group
-            if (currentDivision != null && divisionItemCount > 0)
+            if (currentDivision != null && divisionItemCount > 0 && divisionFirstDataRow > 0)
             {
-                worksheet.Rows(groupStartRow, rowNum - 1).Group();
+                worksheet.Rows(divisionFirstDataRow, rowNum - 1).Group();
             }
 
             // Set column widths to match CSS
