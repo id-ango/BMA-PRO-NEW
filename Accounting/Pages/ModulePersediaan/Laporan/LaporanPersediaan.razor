@@ -29,42 +29,54 @@
 <link rel="stylesheet" href="css/laporan-persediaan.css" />
 
 <h3>Laporan Persediaan</h3>
-<div class="row">
-    <div class="col-4">
-        <EditForm Model="transh">
-            <div class="laporan-form-group">
-                <label>
-                    Dari Tanggal :
-                    <InputDate class="laporan-form-control" @bind-Value="Tanggal1" />
-                </label>
-            </div>
-            <div class="laporan-form-group">
-                <label>
-                    Sd Tanggal :
-                    <InputDate class="laporan-form-control" @bind-Value="Tanggal2" />
-                </label>
-            </div>
-        </EditForm>
-    </div>
 
-    <div class="col-4">
-        <br />
-        <button class="btn btn-primary" @onclick="@(() => proses1())">Display Mutasi</button>
-        <br />
-    </div>
+<!-- Date Range & Display Buttons Section -->
+<div class="card card-default mb-3">
+    <div class="card-body">
+        <div class="row align-items-end">
+            <!-- Date Range Inputs -->
+            <div class="col-lg-3">
+                <div class="laporan-form-group">
+                    <label class="form-label">Dari Tanggal</label>
+                    <InputDate class="form-control" @bind-Value="Tanggal1" />
+                </div>
+            </div>
 
-    <div class="col-4">
-        <br />
-        <button class="btn btn-primary" @onclick="@(() => proses2())">Display Lokasi</button>
-        <br />
-    </div>
-    <div class="col-4">
-        <br />
-        <button class="btn btn-primary" @onclick="@(() => proses3())">Display Rekap Stock</button>
-        <br />
-        <br />
-        <button class="btn btn-success" @onclick="DownloadRekapToExcel">Export Rekap to Excel</button>
-        <button class="btn btn-success" @onclick="DownloadRekapPjlSlsToExcel">Export Rekap (PJL vs SLS)</button>
+            <div class="col-lg-3">
+                <div class="laporan-form-group">
+                    <label class="form-label">Sd Tanggal</label>
+                    <InputDate class="form-control" @bind-Value="Tanggal2" />
+                </div>
+            </div>
+
+            <!-- Display Mode Buttons -->
+            <div class="col-lg-6">
+                <div class="btn-group-wrapper">
+                    <button class="btn btn-outline-primary" @onclick="@(() => proses1())" title="Tampilkan mutasi per item">
+                        <span class="oi oi-list"></span> Display Mutasi
+                    </button>
+                    <button class="btn btn-outline-primary" @onclick="@(() => proses2())" title="Tampilkan qty per lokasi">
+                        <span class="oi oi-map"></span> Display Lokasi
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Buttons Section -->
+        <div class="row mt-3 pt-2 border-top">
+            <div class="col-12">
+                <label class="form-label d-block mb-2"><small class="text-muted">📊 Rekap Stock & Export</small></label>
+                <button class="btn btn-outline-primary btn-sm me-2" @onclick="@(() => proses3())" title="Tampilkan rekap stock">
+                    <span class="oi oi-spreadsheet"></span> Display Rekap
+                </button>
+                <button class="btn btn-success btn-sm me-2" @onclick="DownloadRekapToExcel">
+                    <span class="oi oi-cloud-download"></span> Export Rekap to Excel
+                </button>
+                <button class="btn btn-success btn-sm" @onclick="DownloadRekapPjlSlsToExcel">
+                    <span class="oi oi-cloud-download"></span> Export (PJL vs SLS)
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
