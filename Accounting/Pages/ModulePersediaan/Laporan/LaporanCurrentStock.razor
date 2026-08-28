@@ -378,19 +378,30 @@
     {
         try
         {
+            Console.WriteLine("ExportToExcel button clicked");
+            _shouldRender = true;
+
             // Generate Excel file
             var excelStream = GenerateExcelWorkbook();
 
             // Create file name with date
             string fileName = $"LaporanStock_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
 
+            Console.WriteLine($"Excel file generated: {fileName}, Size: {excelStream.Length} bytes");
+
             // Trigger browser download
             var bytes = excelStream.ToArray();
             await JSRuntime.InvokeVoidAsync("downloadFile", bytes, fileName);
+
+            Console.WriteLine("Download invoked successfully");
+
+            _shouldRender = false;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error exporting to Excel: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            _shouldRender = false;
         }
     }
 
