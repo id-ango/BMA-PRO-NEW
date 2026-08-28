@@ -98,7 +98,7 @@
                     <th class="modal-table-col-cost">Cost</th>
                     <th class="modal-table-col-balance">Balance</th>
                     <th class="modal-table-col-total">Total</th>
-                    <th></th>
+                    <th class="modal-table-col-action"></th>
                 </TableHeader>
                 <RowTemplate>
                     <td class="modal-table-col-dokumen">
@@ -111,6 +111,11 @@
                     <td class="modal-table-col-cost">@transaksi2.Cost.ToString("N")</td>
                     <td class="modal-table-col-balance">@transaksi2.Jumlah.ToString("N")</td>
                     <td class="modal-table-col-total">@transaksi2.CostJumlah.ToString("N")</td>
+                    <td class="modal-table-col-action">
+                        <button class="btn btn-info btn-sm" @onclick="@(() => printDetailByItemCode(transaksi2.ItemCode))" title="Cetak kartu stock item ini">
+                            <span class="oi oi-print"></span>
+                        </button>
+                    </td>
                 </RowTemplate>
             </ModalSearchComponent>
         }
@@ -170,7 +175,7 @@
     private List<IcItemQtyByLocationView> TransItemLokasi = new();
     private List<IcRekapStock> TransRekap = new();
 
-    // Cache untuk detail mutasi per ItemCode
+    // Cache untuk detail mutasi per ItemCode + range tanggal
     private Dictionary<string, List<IcStockCardView>> _detailCache = new();
     private string _loadingItemCode = null;
     private bool _isLoadingDetail = false;
@@ -229,30 +234,32 @@
         _shouldRender = true;
     }
 
+    private string BuildDetailCacheKey(string itemCode)
+    {
+        return $"{itemCode}|{Tanggal1:yyyy-MM-dd}|{Tanggal2:yyyy-MM-dd}";
+    }
+
     private async Task OpenDetail(IcItem xKdBank)
     {
-        // Cek cache dulu
-        if (_detailCache.ContainsKey(xKdBank.ItemCode))
+        var cacheKey = BuildDetailCacheKey(xKdBank.ItemCode);
+
+        if (_detailCache.TryGetValue(cacheKey, out var cachedDetail))
         {
-            TransDetail = _detailCache[xKdBank.ItemCode];
+            TransDetail = cachedDetail;
             DetailOpen = !DetailOpen;
             _shouldRender = true;
             return;
         }
 
-        // Jika tidak ada di cache, load dengan showing loading state
         _isLoadingDetail = true;
         _loadingItemCode = xKdBank.ItemCode;
         _shouldRender = true;
 
         try
         {
-            // Async call, biar UI tidak blocking
-            await Task.Run(() =>
-            {
-                TransDetail = services.CetakMutasi(Tanggal1, Tanggal2, xKdBank.ItemCode);
-                _detailCache[xKdBank.ItemCode] = TransDetail;
-            });
+            var detail = await Task.Run(() => services.CetakMutasi(Tanggal1, Tanggal2, xKdBank.ItemCode));
+            TransDetail = detail;
+            _detailCache[cacheKey] = detail;
         }
         finally
         {
@@ -266,8 +273,13 @@
 
     private void printDetail(IcItem xKdBank)
     {
-        string words = xKdBank.ItemCode + '+' + Tanggal1.ToString("yyyy-MM-dd") + '+' + Tanggal2.ToString("yyyy-MM-dd");
-        navigationmanager.NavigateTo($"/ModulePrinting/Kartustock/{words}");
+        printDetailByItemCode(xKdBank.ItemCode);
+    }
+
+    private void printDetailByItemCode(string itemCode)
+    {
+        string words = itemCode + '+' + Tanggal1.ToString("yyyy-MM-dd") + '+' + Tanggal2.ToString("yyyy-MM-dd");
+        navigationmanager.NavigateTo($"/ModulePrinting/KartuStock/{words}");
         _shouldRender = false;
     }
 

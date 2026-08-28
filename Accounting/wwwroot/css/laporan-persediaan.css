@@ -173,6 +173,11 @@
     text-align: right;
 }
 
+.modal-table-col-action {
+    width: 5%;
+    text-align: center;
+}
+
 /* Badge styling */
 .table-badge {
     display: inline-block;
