@@ -56,7 +56,9 @@ window.BlazorDownloadFile = (filename, contentBase64) => {
 };
 
 window.downloadFile = (bytes, filename) => {
-    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    // Convert byte array to Uint8Array
+    const uint8Array = new Uint8Array(bytes);
+    const blob = new Blob([uint8Array], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
