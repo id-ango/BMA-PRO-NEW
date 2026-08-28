@@ -390,8 +390,8 @@
             Console.WriteLine($"Excel file generated: {fileName}, Size: {excelStream.Length} bytes");
 
             // Trigger browser download
-            var bytes = excelStream.ToArray();
-            await JSRuntime.InvokeVoidAsync("downloadFile", bytes, fileName);
+            using var streamRef = new DotNetStreamReference(stream: excelStream);
+            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
 
             Console.WriteLine("Download invoked successfully");
 
