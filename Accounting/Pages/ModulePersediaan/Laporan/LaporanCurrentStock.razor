@@ -8,6 +8,7 @@
 @using eSoft.Order.Services
 @using eSoft.LaporanStock.Services
 @using Microsoft.AspNetCore.Components.QuickGrid
+@using ClosedXML.Excel
 
 @inject IInventoryServices serviceIC
 @inject IOrderSalesServices serviceOrdJual
@@ -26,6 +27,8 @@
     <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
     &emsp;
     <button class="btn btn-info btn-lg" @onclick="PrintStockOpname">&nbsp; Stock Opname &nbsp;</button>
+    &emsp;
+    <button class="btn btn-secondary btn-lg" @onclick="ExportToExcel">&nbsp; Export Excel &nbsp;</button>
     &emsp;
 </div>
 
@@ -369,5 +372,152 @@
         string encodedKodeItem = Uri.EscapeDataString(kodeItem);
 
         navigationmanager.NavigateTo($"/ModulePrinting/stockCard/{encodedNamaItem}/{encodedSatuan}/{encodedKodeItem}");
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            // Generate Excel file
+            var excelStream = GenerateExcelWorkbook();
+
+            // Create file name with date
+            string fileName = $"LaporanStock_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            // Trigger browser download
+            var bytes = excelStream.ToArray();
+            await JSRuntime.InvokeVoidAsync("downloadFile", bytes, fileName);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error exporting to Excel: {ex.Message}");
+        }
+    }
+
+    private MemoryStream GenerateExcelWorkbook()
+    {
+        using (var workbook = new XLWorkbook())
+        {
+            var worksheet = workbook.Worksheets.Add("Stock Report");
+
+            int rowNum = 1;
+
+            // Add title
+            var titleCell = worksheet.Cell(rowNum, 1);
+            titleCell.Value = Title;
+            titleCell.Style.Font.Bold = true;
+            titleCell.Style.Font.FontSize = 14;
+            worksheet.Range(rowNum, 1, rowNum, 8).Merge();
+            rowNum += 2;
+
+            // Add header row
+            var headerRow = rowNum;
+            worksheet.Cell(rowNum, 1).Value = "No.";
+            worksheet.Cell(rowNum, 2).Value = "Kode";
+            worksheet.Cell(rowNum, 3).Value = "Nama Barang";
+            worksheet.Cell(rowNum, 4).Value = "Satuan";
+            worksheet.Cell(rowNum, 5).Value = "Qty";
+            worksheet.Cell(rowNum, 6).Value = "PO";
+            worksheet.Cell(rowNum, 7).Value = "SO";
+            worksheet.Cell(rowNum, 8).Value = "Total";
+
+            // Format header
+            var headerRange = worksheet.Range(rowNum, 1, rowNum, 8);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.DarkGray;
+            headerRange.Style.Font.FontColor = XLColor.White;
+            headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            rowNum++;
+
+            // Track row grouping for outline feature
+            int groupStartRow = rowNum;
+            string currentDivision = null;
+            int divisionItemCount = 0;
+
+            // Add data rows grouped by division
+            foreach (var item in DisplayItems)
+            {
+                // Only include rows marked for printing
+                if (!item.IsSelectedForPrinting)
+                    continue;
+
+                if (item.IsDivisionHeader)
+                {
+                    // End previous group if exists
+                    if (currentDivision != null && divisionItemCount > 0)
+                    {
+                        worksheet.Rows(groupStartRow, rowNum - 1).Group();
+                    }
+
+                    currentDivision = item.Divisi;
+                    groupStartRow = rowNum;
+                    divisionItemCount = 0;
+
+                    // Add division header row
+                    var divisionCell = worksheet.Cell(rowNum, 1);
+                    divisionCell.Value = item.Divisi;
+                    divisionCell.Style.Font.Bold = true;
+                    divisionCell.Style.Fill.BackgroundColor = XLColor.LightGray;
+                    worksheet.Range(rowNum, 1, rowNum, 8).Merge();
+                    worksheet.Range(rowNum, 1, rowNum, 8).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+                    rowNum++;
+                }
+                else
+                {
+                    // Add data row
+                    divisionItemCount++;
+                    worksheet.Cell(rowNum, 1).Value = item.RowNumber;
+                    worksheet.Cell(rowNum, 2).Value = item.ItemCode;
+                    worksheet.Cell(rowNum, 3).Value = item.NamaItem;
+                    worksheet.Cell(rowNum, 4).Value = item.Satuan;
+                    worksheet.Cell(rowNum, 5).Value = item.Qty;
+                    worksheet.Cell(rowNum, 6).Value = item.QtyBeli;
+                    worksheet.Cell(rowNum, 7).Value = item.QtyJual;
+                    worksheet.Cell(rowNum, 8).Value = item.QtyOrder;
+
+                    // Format cells
+                    var rowRange = worksheet.Range(rowNum, 1, rowNum, 8);
+                    rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+                    // Format numbers
+                    worksheet.Cell(rowNum, 5).Style.NumberFormat.Format = "#,##0.00";
+                    worksheet.Cell(rowNum, 6).Style.NumberFormat.Format = "#,##0.00";
+                    worksheet.Cell(rowNum, 7).Style.NumberFormat.Format = "#,##0.00";
+                    worksheet.Cell(rowNum, 8).Style.NumberFormat.Format = "#,##0.00";
+
+                    // Color negative values red
+                    if (item.Qty < 0) worksheet.Cell(rowNum, 5).Style.Font.FontColor = XLColor.Red;
+                    if (item.QtyOrder < 0) worksheet.Cell(rowNum, 8).Style.Font.FontColor = XLColor.Red;
+
+                    rowNum++;
+                }
+            }
+
+            // End last group
+            if (currentDivision != null && divisionItemCount > 0)
+            {
+                worksheet.Rows(groupStartRow, rowNum - 1).Group();
+            }
+
+            // Set column widths to match CSS
+            worksheet.Column(1).Width = 6;    // No.
+            worksheet.Column(2).Width = 12;   // Kode
+            worksheet.Column(3).Width = 35;   // Nama Barang
+            worksheet.Column(4).Width = 10;   // Satuan
+            worksheet.Column(5).Width = 12;   // Qty
+            worksheet.Column(6).Width = 12;   // PO
+            worksheet.Column(7).Width = 12;   // SO
+            worksheet.Column(8).Width = 12;   // Total
+
+            // Save workbook to stream
+            var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+            return stream;
+        }
     }
 }
