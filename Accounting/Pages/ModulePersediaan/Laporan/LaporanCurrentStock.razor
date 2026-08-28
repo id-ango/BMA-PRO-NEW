@@ -9,6 +9,7 @@
 @using eSoft.LaporanStock.Services
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using ClosedXML.Excel
+@using Microsoft.AspNetCore.Components.Web
 
 @inject IInventoryServices serviceIC
 @inject IOrderSalesServices serviceOrdJual
@@ -443,7 +444,7 @@
             rowNum++;
 
             // Track row grouping for outline feature
-            int groupStartRow = rowNum;
+            int groupStartRow = 0;
             string currentDivision = null;
             int divisionItemCount = 0;
 
@@ -459,11 +460,12 @@
                     // End previous group if exists
                     if (currentDivision != null && divisionItemCount > 0)
                     {
+                        // Group dari header sampai item terakhir
                         worksheet.Rows(groupStartRow, rowNum - 1).Group();
                     }
 
                     currentDivision = item.Divisi;
-                    groupStartRow = rowNum;
+                    groupStartRow = rowNum;  // Start dari division header
                     divisionItemCount = 0;
 
                     // Add division header row
