@@ -69,6 +69,9 @@
                 <button class="btn btn-outline-primary btn-sm me-2" @onclick="@(() => proses3())" title="Tampilkan rekap stock">
                     <span class="oi oi-spreadsheet"></span> Display Rekap
                 </button>
+                <button class="btn btn-success btn-sm me-2" @onclick="DownloadMutasiLokasiToExcel">
+                    <span class="oi oi-cloud-download"></span> Export Mutasi + Lokasi
+                </button>
                 <button class="btn btn-success btn-sm me-2" @onclick="DownloadRekapToExcel">
                     <span class="oi oi-cloud-download"></span> Export Rekap to Excel
                 </button>
@@ -303,6 +306,25 @@
         Tampilan = 3;
         _lastTampilan = 3;
         _shouldRender = true;
+    }
+
+    private async Task DownloadMutasiLokasiToExcel()
+    {
+        try
+        {
+            var mutasiData = TransItem.Count == 0 ? serviceIC.GetIcItem(false) : TransItem;
+            var lokasiData = TransItemLokasi.Count == 0 ? serviceIC.GetAllIcItemQtyByLocation() : TransItemLokasi;
+            var bytes = serviceXL.CreateMutasiLokasiWorksheet(mutasiData, lokasiData);
+            using var ms = new MemoryStream(bytes);
+            using var streamRef = new DotNetStreamReference(stream: ms);
+            var fileName = $"Mutasi_Lokasi_{DateTime.Today:yyyy-MM-dd}.xlsx";
+            await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Export error: {ex.Message}");
+        }
+        _shouldRender = false;
     }
 
     private async Task DownloadRekapToExcel()

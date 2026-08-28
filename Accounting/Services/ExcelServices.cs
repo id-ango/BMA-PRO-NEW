@@ -12,6 +12,7 @@ using eSoft.Order.Services;
 using eSoft.Order.View;
 using eSoft.Penjualan.Data;
 using eSoft.Penjualan.Model;
+using eSoft.Persediaan.Model;
 using eSoft.Persediaan.View;
 using eSoft.Piutang.Model;
 using Microsoft.AspNetCore.Authorization;
@@ -337,6 +338,71 @@ namespace Accounting.Services
 
             // Optionally auto-fit columns
             worksheet.Columns().AdjustToContents();
+
+            return ConvertToByte(workbook);
+        }
+
+        public byte[] CreateMutasiLokasiWorksheet(List<IcItem> mutasiItems, List<IcItemQtyByLocationView> lokasiItems)
+        {
+            var workbook = new XLWorkbook();
+
+            var mutasiSheet = workbook.Worksheets.Add("Mutasi");
+            mutasiSheet.Cell(1, 1).Value = "ItemCode";
+            mutasiSheet.Cell(1, 2).Value = "NamaItem";
+            mutasiSheet.Cell(1, 3).Value = "Satuan";
+            mutasiSheet.Cell(1, 4).Value = "Qty";
+            mutasiSheet.Cell(1, 5).Value = "Hrg Import";
+            mutasiSheet.Cell(1, 6).Value = "Hrg Net";
+            mutasiSheet.Cell(1, 7).Value = "Cost";
+
+            for (int i = 0; i < mutasiItems.Count; i++)
+            {
+                var row = i + 2;
+                var item = mutasiItems[i];
+                mutasiSheet.Cell(row, 1).Value = item.ItemCode;
+                mutasiSheet.Cell(row, 2).Value = item.NamaItem;
+                mutasiSheet.Cell(row, 3).Value = item.Satuan;
+                mutasiSheet.Cell(row, 4).Value = item.Qty;
+                mutasiSheet.Cell(row, 5).Value = item.HrgUsd;
+                mutasiSheet.Cell(row, 6).Value = item.HrgNetto;
+                mutasiSheet.Cell(row, 7).Value = item.Cost;
+            }
+            mutasiSheet.Columns().AdjustToContents();
+
+            var lokasiSheet = workbook.Worksheets.Add("Lokasi");
+            lokasiSheet.Cell(1, 1).Value = "ItemCode";
+            lokasiSheet.Cell(1, 2).Value = "NamaItem";
+            lokasiSheet.Cell(1, 3).Value = "Satuan";
+            lokasiSheet.Cell(1, 4).Value = "Stock";
+
+            var lokasiNames = lokasiItems
+                .SelectMany(x => x.Locations ?? new List<IcLocationQtyView>())
+                .GroupBy(x => x.Lokasi)
+                .Select(g => g.First())
+                .OrderBy(x => x.NamaLokasi)
+                .ToList();
+
+            for (int i = 0; i < lokasiNames.Count; i++)
+            {
+                lokasiSheet.Cell(1, i + 5).Value = lokasiNames[i].NamaLokasi;
+            }
+
+            for (int i = 0; i < lokasiItems.Count; i++)
+            {
+                var row = i + 2;
+                var item = lokasiItems[i];
+                lokasiSheet.Cell(row, 1).Value = item.ItemCode;
+                lokasiSheet.Cell(row, 2).Value = item.NamaItem;
+                lokasiSheet.Cell(row, 3).Value = item.Satuan;
+                lokasiSheet.Cell(row, 4).Value = item.Qty;
+
+                for (int j = 0; j < lokasiNames.Count; j++)
+                {
+                    var lokasiQty = item.Locations?.FirstOrDefault(x => x.Lokasi == lokasiNames[j].Lokasi);
+                    lokasiSheet.Cell(row, j + 5).Value = lokasiQty?.Qty ?? 0;
+                }
+            }
+            lokasiSheet.Columns().AdjustToContents();
 
             return ConvertToByte(workbook);
         }
