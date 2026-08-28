@@ -147,8 +147,16 @@ namespace eSoft.LaporanStock.Services
             }
                 );
 
-            transHIR = _contextIR.IrTransHs.Include(p => p.IrTransDs).Where(x => x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date).ToList();
-            transDIR = _contextIR.IrTransDs.Where(x => x.ItemCode == kodeBank && (x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date)).ToList();
+            // Optimization: Filter by ItemCode BEFORE Include to reduce in-memory data
+            transHIR = _contextIR.IrTransHs
+                .Include(p => p.IrTransDs)
+                .Where(x => x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date)
+                .AsNoTracking()
+                .ToList();
+            transDIR = _contextIR.IrTransDs
+                .Where(x => x.ItemCode == kodeBank && (x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date))
+                .AsNoTracking()
+                .ToList();
 
             if (transHIR != null && transDIR != null)
             {
@@ -169,8 +177,15 @@ namespace eSoft.LaporanStock.Services
                 Transaksi.AddRange(Rincian1);
             }
 
-            transHIC = _context.IcTransHs.Include(p => p.IcTransDs).Where(x => (x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date) && (x.Kode == "81" || x.Kode == "72")).ToList();
-            transDIC = _context.IcTransDs.Where(x => x.ItemCode == kodeBank && (x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date)).ToList();
+            transHIC = _context.IcTransHs
+                .Include(p => p.IcTransDs)
+                .Where(x => (x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date) && (x.Kode == "81" || x.Kode == "72"))
+                .AsNoTracking()
+                .ToList();
+            transDIC = _context.IcTransDs
+                .Where(x => x.ItemCode == kodeBank && (x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date))
+                .AsNoTracking()
+                .ToList();
 
             if (transHIC != null && transDIC != null)
             {
@@ -191,9 +206,15 @@ namespace eSoft.LaporanStock.Services
                 Transaksi.AddRange(Rincian2);
             }
 
-
-            transHOE = _contextOE.OeTransHs.Include(p => p.OeTransDs).Where(x => x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date).ToList();
-            transDOE = _contextOE.OeTransDs.Where(x => x.ItemCode == kodeBank && (x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date)).ToList();
+            transHOE = _contextOE.OeTransHs
+                .Include(p => p.OeTransDs)
+                .Where(x => x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date)
+                .AsNoTracking()
+                .ToList();
+            transDOE = _contextOE.OeTransDs
+                .Where(x => x.ItemCode == kodeBank && (x.Tanggal.Date >= Tanggal1.Date && x.Tanggal.Date <= Tanggal2.Date))
+                .AsNoTracking()
+                .ToList();
 
             if (transHOE != null && transDOE != null)
             {
@@ -2201,113 +2222,126 @@ namespace eSoft.LaporanStock.Services
                 };
             }
 
+            // OPTIMIZATION: Use GroupBy instead of looping multiple times
             // Saldo awal dari pembelian (IR)
-            foreach (var beli in transIrAwal)
+            var beliAwalGrouped = transIrAwal.GroupBy(x => x.ItemCode).ToDictionary(g => g.Key, g => g.ToList());
+            foreach (var itemCode in beliAwalGrouped.Keys)
             {
-                if (!rekapStock.TryGetValue(beli.ItemCode, out var stok))
-                {
+                if (!rekapStock.TryGetValue(itemCode, out var stok))
                     continue;
-                }
 
-                if (beli.Kode == "82")
+                foreach (var beli in beliAwalGrouped[itemCode])
                 {
-                    stok.QtyAwal += beli.Qty;
-                    stok.SaldoAwal += beli.JumDpp;
-                }
-                else if (beli.Kode == "83")
-                {
-                    stok.QtyAwal -= beli.Qty;
-                    stok.SaldoAwal -= beli.JumDpp;
+                    if (beli.Kode == "82")
+                    {
+                        stok.QtyAwal += beli.Qty;
+                        stok.SaldoAwal += beli.JumDpp;
+                    }
+                    else if (beli.Kode == "83")
+                    {
+                        stok.QtyAwal -= beli.Qty;
+                        stok.SaldoAwal -= beli.JumDpp;
+                    }
                 }
             }
 
             // Saldo awal dari penjualan (OE)
-            foreach (var jual in transOeAwal)
+            var jualAwalGrouped = transOeAwal.GroupBy(x => x.ItemCode).ToDictionary(g => g.Key, g => g.ToList());
+            foreach (var itemCode in jualAwalGrouped.Keys)
             {
-                if (!rekapStock.TryGetValue(jual.ItemCode, out var stok))
-                {
+                if (!rekapStock.TryGetValue(itemCode, out var stok))
                     continue;
-                }
 
-                if (jual.Kode == "95")
+                foreach (var jual in jualAwalGrouped[itemCode])
                 {
-                    stok.QtyAwal += jual.Qty;
-                    stok.SaldoAwal += jual.Cost;
-                }
-                else if (jual.Kode == "94")
-                {
-                    stok.QtyAwal -= jual.Qty;
-                    stok.SaldoAwal -= jual.Cost;
+                    if (jual.Kode == "95")
+                    {
+                        stok.QtyAwal += jual.Qty;
+                        stok.SaldoAwal += jual.Cost;
+                    }
+                    else if (jual.Kode == "94")
+                    {
+                        stok.QtyAwal -= jual.Qty;
+                        stok.SaldoAwal -= jual.Cost;
+                    }
                 }
             }
 
             // Saldo awal dari adjustment (IC)
-            foreach (var adjust in transIcAwal)
+            var adjustAwalGrouped = transIcAwal.GroupBy(x => x.ItemCode).ToDictionary(g => g.Key, g => g.ToList());
+            foreach (var itemCode in adjustAwalGrouped.Keys)
             {
-                if (!rekapStock.TryGetValue(adjust.ItemCode, out var stok))
-                {
+                if (!rekapStock.TryGetValue(itemCode, out var stok))
                     continue;
-                }
 
-                if (adjust.Kode == "81")
+                foreach (var adjust in adjustAwalGrouped[itemCode])
                 {
-                    stok.QtyAwal += adjust.QtyShp;
-                    stok.SaldoAwal += adjust.Jumlah;
+                    if (adjust.Kode == "81")
+                    {
+                        stok.QtyAwal += adjust.QtyShp;
+                        stok.SaldoAwal += adjust.Jumlah;
+                    }
                 }
             }
 
             // Masuk periode (IR)
-            foreach (var beli in transIr)
+            var beliPeriodeGrouped = transIr.GroupBy(x => x.ItemCode).ToDictionary(g => g.Key, g => g.ToList());
+            foreach (var itemCode in beliPeriodeGrouped.Keys)
             {
-                if (!rekapStock.TryGetValue(beli.ItemCode, out var stok))
-                {
+                if (!rekapStock.TryGetValue(itemCode, out var stok))
                     continue;
-                }
 
-                if (beli.Kode == "82")
+                foreach (var beli in beliPeriodeGrouped[itemCode])
                 {
-                    stok.QtyMasuk += beli.Qty;
-                    stok.SaldoMasuk += beli.JumDpp;
-                }
-                else if (beli.Kode == "83")
-                {
-                    stok.QtyMasuk -= beli.Qty;
-                    stok.SaldoMasuk -= beli.JumDpp;
+                    if (beli.Kode == "82")
+                    {
+                        stok.QtyMasuk += beli.Qty;
+                        stok.SaldoMasuk += beli.JumDpp;
+                    }
+                    else if (beli.Kode == "83")
+                    {
+                        stok.QtyMasuk -= beli.Qty;
+                        stok.SaldoMasuk -= beli.JumDpp;
+                    }
                 }
             }
 
             // Keluar periode (OE)
-            foreach (var jual in transOe)
+            var jualPeriodeGrouped = transOe.GroupBy(x => x.ItemCode).ToDictionary(g => g.Key, g => g.ToList());
+            foreach (var itemCode in jualPeriodeGrouped.Keys)
             {
-                if (!rekapStock.TryGetValue(jual.ItemCode, out var stok))
-                {
+                if (!rekapStock.TryGetValue(itemCode, out var stok))
                     continue;
-                }
 
-                if (jual.Kode == "94")
+                foreach (var jual in jualPeriodeGrouped[itemCode])
                 {
-                    stok.QtyKeluar += jual.Qty;
-                    stok.SaldoKeluar += jual.Cost;
-                }
-                else if (jual.Kode == "95")
-                {
-                    stok.QtyKeluar -= jual.Qty;
-                    stok.SaldoKeluar -= jual.Cost;
+                    if (jual.Kode == "94")
+                    {
+                        stok.QtyKeluar += jual.Qty;
+                        stok.SaldoKeluar += jual.Cost;
+                    }
+                    else if (jual.Kode == "95")
+                    {
+                        stok.QtyKeluar -= jual.Qty;
+                        stok.SaldoKeluar -= jual.Cost;
+                    }
                 }
             }
 
             // Adjust periode (IC)
-            foreach (var adjust in transIc)
+            var adjustPeriodeGrouped = transIc.GroupBy(x => x.ItemCode).ToDictionary(g => g.Key, g => g.ToList());
+            foreach (var itemCode in adjustPeriodeGrouped.Keys)
             {
-                if (!rekapStock.TryGetValue(adjust.ItemCode, out var stok))
-                {
+                if (!rekapStock.TryGetValue(itemCode, out var stok))
                     continue;
-                }
 
-                if (adjust.Kode == "81")
+                foreach (var adjust in adjustPeriodeGrouped[itemCode])
                 {
-                    stok.QtyAdjust += adjust.QtyShp;
-                    stok.SaldoAdjust += adjust.Jumlah;
+                    if (adjust.Kode == "81")
+                    {
+                        stok.QtyAdjust += adjust.QtyShp;
+                        stok.SaldoAdjust += adjust.Jumlah;
+                    }
                 }
             }
 

@@ -970,9 +970,10 @@ namespace eSoft.Persediaan.Services
 
         public List<IcItemQtyByLocationView> GetAllIcItemQtyByLocation()
         {
-            var icAltItems =  _context.IcAltItems.ToList();
-            var icItems =  _context.IcItems.ToList();
-            var icLocations = _context.Iclokasis.ToList();
+            // OPTIMIZATION: Load all data with AsNoTracking since this is read-only
+            var icAltItems = _context.IcAltItems.AsNoTracking().ToList();
+            var icItems = _context.IcItems.AsNoTracking().ToList();
+            var icLocations = _context.Iclokasis.AsNoTracking().ToList();
 
             // ⬇️ Tambahkan lokasi V1 jika belum ada
             var v1Location = _context.Iclokasis.FirstOrDefault(l => l.Lokasi == "P1");

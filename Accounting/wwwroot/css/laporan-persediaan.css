@@ -1,0 +1,126 @@
+/* Laporan Persediaan - Styles */
+
+/* Form controls */
+.laporan-form-group {
+    margin-bottom: 0.5rem;
+}
+
+.laporan-form-group label {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.laporan-form-control {
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+}
+
+/* Table styling - Modal Search */
+.modal-table-col-dokumen {
+    width: 10%;
+}
+
+.modal-table-col-keterangan {
+    width: 30%;
+}
+
+.modal-table-col-qty {
+    width: 10%;
+    text-align: right;
+}
+
+.modal-table-col-cost {
+    width: 20%;
+    text-align: right;
+}
+
+.modal-table-col-balance {
+    width: 10%;
+    text-align: right;
+}
+
+.modal-table-col-total {
+    width: 20%;
+    text-align: right;
+}
+
+/* Badge styling */
+.table-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    background-color: #0d6efd;
+    color: white;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+}
+
+/* Rekap table columns */
+.rekap-col-itemcode {
+    width: 10%;
+}
+
+.rekap-col-name {
+    width: 10%;
+}
+
+.rekap-col-qty {
+    width: 10%;
+}
+
+.rekap-col-cost {
+    width: 10%;
+}
+
+.rekap-col-masuk-qty {
+    width: 10%;
+}
+
+.rekap-col-masuk-cost {
+    width: 10%;
+}
+
+.rekap-col-keluar-qty {
+    width: 10%;
+}
+
+.rekap-col-keluar-cost {
+    width: 10%;
+}
+
+.rekap-col-adjust-qty {
+    width: 10%;
+}
+
+.rekap-col-adjust-cost {
+    width: 10%;
+}
+
+.rekap-col-total-qty {
+    width: 10%;
+}
+
+.rekap-col-total-cost {
+    width: 10%;
+}
+
+/* Row highlighting for negative stock */
+.rekap-row-negative {
+    background-color: #fff3cd !important;
+}
+
+/* Number formatting */
+.number-right {
+    text-align: right;
+}
+
+/* Spacing utilities */
+.mt-20 {
+    margin-top: 20px;
+}
+
+.br-spacer {
+    display: block;
+    height: 1rem;
+}
