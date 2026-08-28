@@ -111,11 +111,11 @@
                     <td class="modal-table-col-cost">@transaksi2.Cost.ToString("N")</td>
                     <td class="modal-table-col-balance">@transaksi2.Jumlah.ToString("N")</td>
                     <td class="modal-table-col-total">@transaksi2.CostJumlah.ToString("N")</td>
-                    <td class="modal-table-col-action">
+                    @* <td class="modal-table-col-action">
                         <button class="btn btn-info btn-sm" @onclick="@(() => printDetailByItemCode(transaksi2.ItemCode))" title="Cetak kartu stock item ini">
                             <span class="oi oi-print"></span>
                         </button>
-                    </td>
+                    </td> *@
                 </RowTemplate>
             </ModalSearchComponent>
         }
