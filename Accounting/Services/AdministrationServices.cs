@@ -226,22 +226,15 @@ namespace Accounting.Services
 
         public async Task SeedUserRole()
         {
-            var users = _context.Users.ToList();
-            var roles = _context.Roles.ToList();
-          //  var userRole = _context.UserRoles.ToList();
-            IdentityUserRole<string> role = new IdentityUserRole<string>();
-            IdentityUser user = new IdentityUser();
-            IdentityRole role2 = new IdentityRole();
-
-            if (!roles.Any() && !users.Any())
+            if (!await _context.Roles.AnyAsync() && !await _context.Users.AnyAsync())
             {
-                role2 = new()
+                var role2 = new IdentityRole
                 {
                     Name = "Admin",
                     NormalizedName = "ADMIN"
                 };
 
-                user = new()
+                var user = new IdentityUser
                 {
                     UserName = "admin@admin.com",
                     Email = "admin@admin.com",
@@ -260,18 +253,14 @@ namespace Accounting.Services
 
                await _context.SaveChangesAsync();
 
-                var idRoles = _context.Roles.Where(x => x.NormalizedName == "ADMIN").FirstOrDefault();
-                var idUsers = _context.Users.Where(x => x.NormalizedUserName == "ADMIN@ADMIN.COM").FirstOrDefault();
-
-                role = new()
+                _context.UserRoles.Add(new IdentityUserRole<string>
                 {
-                    RoleId = idRoles.Id,
-                    UserId = idUsers.Id
-                };
+                    RoleId = role2.Id,
+                    UserId = user.Id
+                });
                 
-                _context.UserRoles.Add(role);
-              await  _context.SaveChangesAsync();
-            }          
+                await _context.SaveChangesAsync();
+            }
 
         }
 

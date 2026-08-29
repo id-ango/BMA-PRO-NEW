@@ -25,6 +25,13 @@ namespace eSoft.Penjualan.Services
                 .ToList();
         }
 
+        public async Task<List<OeSalesman>> GetSalesmanAsync()
+        {
+            return await _context.OeSalesmans
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
         public OeSalesman GetSalesmanId(int id)
         {
             return _context.OeSalesmans

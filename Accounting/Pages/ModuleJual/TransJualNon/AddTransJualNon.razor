@@ -266,14 +266,14 @@
     public bool IsEdit { get; set; }
     public bool SearchOpen { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        base.OnInitialized();
+        await base.OnInitializedAsync();
         Transh.Tanggal = DateTime.Now;
         Transh.JthTempo = Transh.Tanggal.AddDays(termin);
 
-        Loadsupplier();
-        LoadSrcCode();
+        await LoadsupplierAsync();
+        await LoadSrcCodeAsync();
         Loadlokasi();
         loadSalesman();
     }
@@ -316,11 +316,9 @@
         salesman = service.GetSalesman();
     }
 
-    void Loadsupplier()
+    private async Task LoadsupplierAsync()
     {
-
-        supplier = serviceAR.GetCustomer();
-
+        supplier = await serviceAR.GetCustomerAsync();
     }
 
     private void HandleValidSubmit()
@@ -361,11 +359,9 @@
         Transh.JthTempo = Transh.Tanggal.AddDays(termin);
     }
 
-    void LoadSrcCode()
+    private async Task LoadSrcCodeAsync()
     {
-
-        srccode = serviceIC.GetIcItem();
-
+        srccode = await serviceIC.GetIcItemAsync();
     }
 
     void Loadlokasi()

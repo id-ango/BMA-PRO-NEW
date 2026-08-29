@@ -793,13 +793,12 @@ else
     protected override async Task OnInitializedAsync()
     {
         currentUri = navigationmanager.Uri;
-        LoadCek();
-        await Task.CompletedTask;
+        await LoadCekAsync();
     }
 
-    private void LoadCek()
+    private async Task LoadCekAsync()
     {
-        service.SeedUserRole();
+        await service.SeedUserRole();
     }
 
     public void Dispose()

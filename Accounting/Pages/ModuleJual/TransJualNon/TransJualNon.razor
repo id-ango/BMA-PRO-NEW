@@ -166,29 +166,30 @@
     private DateTime tgl1 = DateTime.Now.AddDays(-30);
     private DateTime tgl2 = DateTime.Now;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        base.OnInitialized();
+        await base.OnInitializedAsync();
         currentUri = navigationmanager.Uri;
-        LoadFirst();
-        LoadSalesmans();
+        await LoadFirstAsync();
+        await LoadSalesmansAsync();
     }
 
-    private void LoadFirst()
+    private async Task LoadFirstAsync()
     {
         int hari = 30;
-        DateTime startDate = DateTime.Now.AddDays(-hari);
-        DateTime endDate = DateTime.Now.AddDays(hari); ;
+        DateTime now = DateTime.Now;
+        DateTime startDate = now.AddDays(-hari);
+        DateTime endDate = now.AddDays(hari);
 
-        TransHeader = service.GetFirstTransHNon();
+        TransHeader = await service.GetTransHNon(startDate, endDate);
 
         // var filteredTrans = service.GetFirstTransH();
         //  TransHeader = filteredTrans.Where(e => e.Tanggal >= startDate && e.Tanggal <= endDate).ToList();
 
     }
-    private void LoadSalesmans()
+    private async Task LoadSalesmansAsync()
     {
-        salesmans = service.GetSalesman();
+        salesmans = await service.GetSalesmanAsync();
     }
 
 
@@ -241,13 +242,13 @@
         }
 
         DeleteDialogOpen = false;
-        LoadFirst();
+        await LoadFirstAsync();
 
         StateHasChanged();
 
     }
 
-    private void OnDeleteNullClose(bool accepted)
+    private async Task OnDeleteNullClose(bool accepted)
     {
         //if (accepted)
         //{
@@ -257,7 +258,7 @@
 
         DeleteDialogOpen = false;
         NullDialogOpen = false;
-        LoadFirst();
+        await LoadFirstAsync();
         StateHasChanged();
 
     }

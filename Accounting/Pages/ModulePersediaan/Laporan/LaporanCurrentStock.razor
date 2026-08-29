@@ -503,17 +503,6 @@
                     worksheet.Cell(rowNum, 7).Value = item.QtyJual;
                     worksheet.Cell(rowNum, 8).Value = item.QtyOrder;
 
-                    // Format cells
-                    var rowRange = worksheet.Range(rowNum, 1, rowNum, 8);
-                    rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-                    rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-
-                    // Format numbers
-                    worksheet.Cell(rowNum, 5).Style.NumberFormat.Format = "#,##0.00";
-                    worksheet.Cell(rowNum, 6).Style.NumberFormat.Format = "#,##0.00";
-                    worksheet.Cell(rowNum, 7).Style.NumberFormat.Format = "#,##0.00";
-                    worksheet.Cell(rowNum, 8).Style.NumberFormat.Format = "#,##0.00";
-
                     // Color negative values red
                     if (item.Qty < 0) worksheet.Cell(rowNum, 5).Style.Font.FontColor = XLColor.Red;
                     if (item.QtyOrder < 0) worksheet.Cell(rowNum, 8).Style.Font.FontColor = XLColor.Red;
@@ -526,6 +515,16 @@
             if (currentDivision != null && divisionItemCount > 0 && divisionFirstDataRow > 0)
             {
                 worksheet.Rows(divisionFirstDataRow, rowNum - 1).Group();
+            }
+
+            if (rowNum > headerRow)
+            {
+                var reportRange = worksheet.Range(headerRow, 1, rowNum - 1, 8);
+                reportRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                reportRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+                worksheet.Range(headerRow + 1, 5, rowNum - 1, 8)
+                    .Style.NumberFormat.Format = "#,##0.00";
             }
 
             // Freeze top rows (title + spacer + header)

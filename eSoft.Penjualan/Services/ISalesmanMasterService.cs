@@ -8,6 +8,7 @@ namespace eSoft.Penjualan.Services
     public interface ISalesmanMasterService
     {
         List<OeSalesman> GetSalesman();
+        Task<List<OeSalesman>> GetSalesmanAsync();
         OeSalesman GetSalesmanId(int id);
         string GetSalesmanKode(string id);
         Task<bool> DelSalesman(int id);

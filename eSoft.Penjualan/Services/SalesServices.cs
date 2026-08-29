@@ -79,6 +79,12 @@ namespace eSoft.Penjualan.Services
         {
             return _salesmanMasterService.GetSalesman();
         }
+
+        public async Task<List<OeSalesman>> GetSalesmanAsync()
+        {
+            return await _salesmanMasterService.GetSalesmanAsync();
+        }
+
         public OeSalesman GetSalesmanId(int id)
         {
             return _salesmanMasterService.GetSalesmanId(id);

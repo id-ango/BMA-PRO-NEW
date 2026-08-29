@@ -11,6 +11,7 @@ namespace eSoft.Piutang.Services
     {
         bool CekKdCustomer(string customer);
         List<ArCust> GetCustomer();
+        Task<List<ArCust>> GetCustomerAsync();
         ArCust GetCustomerId(int id);
         ArCust GetCustomerCode(string xKode);
         bool AddCustomer(CustomerView customers);

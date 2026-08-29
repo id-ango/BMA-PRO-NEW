@@ -33,7 +33,18 @@ namespace eSoft.Piutang.Services
 
         public List<ArCust> GetCustomer()
         {
-            return _context.ArCusts.OrderBy(x => x.NamaCust).ToList();
+            return _context.ArCusts
+                .AsNoTracking()
+                .OrderBy(x => x.NamaCust)
+                .ToList();
+        }
+
+        public async Task<List<ArCust>> GetCustomerAsync()
+        {
+            return await _context.ArCusts
+                .AsNoTracking()
+                .OrderBy(x => x.NamaCust)
+                .ToListAsync();
         }
 
         public ArCust GetCustomerId(int id)

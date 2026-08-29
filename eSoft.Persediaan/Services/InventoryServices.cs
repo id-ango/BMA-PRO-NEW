@@ -51,9 +51,19 @@ namespace eSoft.Persediaan.Services
         public List<IcItem> GetIcItem(bool disabled = true)
         {
             return _context.IcItems
+                           .AsNoTracking()
                            .Where(x => disabled || !x.Disabled)
                            .OrderBy(x => x.NamaItem)
                            .ToList();
+        }
+
+        public async Task<List<IcItem>> GetIcItemAsync(bool disabled = false)
+        {
+            return await _context.IcItems
+                           .AsNoTracking()
+                           .Where(x => disabled || !x.Disabled)
+                           .OrderBy(x => x.NamaItem)
+                           .ToListAsync();
         }
 
         /// <summary>

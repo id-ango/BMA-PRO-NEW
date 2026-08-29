@@ -23,6 +23,7 @@ namespace eSoft.Penjualan.Services
         Task<List<OeTransH>> GetTransHNon(DateTime tgl1, DateTime tgl2);
         List<OeTransH> Get3TransH();
         List<OeTransD> GetTransD();
+        Task<List<OeSalesman>> GetSalesmanAsync();
         OeTransH AddTransH(OeTransHView trans, bool pajak);
         OeTransH AddTransHRetur(OeTransHView trans, bool pajak);
         Task<bool> DelTransH(int id);
