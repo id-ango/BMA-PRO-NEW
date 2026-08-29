@@ -11,3 +11,6 @@
 ## Service Refactoring Guidelines
 - When refactoring `OrderPurchaseServices`, preserve original intent: `AddTransH` passes header currency (`trans.Currency`) to item price updates; `EditTransH` originally also passed `trans.Currency`, so helpers should allow an explicit currency override.
 - Validate that refactored service logic is identical to the original before accepting changes. Continue to perform side-by-side equivalence checks when refactoring and explicitly flag any behavioral differences.
+
+## Export Formatting Guidelines
+- When user requests Excel formatting changes, apply them to the export used by LaporanCurrentStock if explicitly specified, not to other report exports.

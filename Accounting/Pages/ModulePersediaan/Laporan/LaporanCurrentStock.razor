@@ -419,7 +419,10 @@
             titleCell.Value = Title;
             titleCell.Style.Font.Bold = true;
             titleCell.Style.Font.FontSize = 14;
-            worksheet.Range(rowNum, 1, rowNum, 8).Merge();
+            titleCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            var titleRange = worksheet.Range(rowNum, 1, rowNum, 8);
+            titleRange.Merge();
+            titleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             rowNum += 2;
 
             // Add header row
@@ -436,6 +439,7 @@
             // Format header
             var headerRange = worksheet.Range(rowNum, 1, rowNum, 8);
             headerRange.Style.Font.Bold = true;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             headerRange.Style.Fill.BackgroundColor = XLColor.DarkGray;
             headerRange.Style.Font.FontColor = XLColor.White;
             headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
@@ -475,8 +479,10 @@
                     divisionCell.Value = item.Divisi;
                     divisionCell.Style.Font.Bold = true;
                     divisionCell.Style.Fill.BackgroundColor = XLColor.LightGray;
-                    worksheet.Range(rowNum, 1, rowNum, 8).Merge();
-                    worksheet.Range(rowNum, 1, rowNum, 8).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    var divisionRange = worksheet.Range(rowNum, 1, rowNum, 8);
+                    divisionRange.Merge();
+                    divisionRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    divisionRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
 
                     rowNum++;
                 }
@@ -521,6 +527,9 @@
             {
                 worksheet.Rows(divisionFirstDataRow, rowNum - 1).Group();
             }
+
+            // Freeze top rows (title + spacer + header)
+            worksheet.SheetView.FreezeRows(3);
 
             // Set column widths to match CSS
             worksheet.Column(1).Width = 6;    // No.

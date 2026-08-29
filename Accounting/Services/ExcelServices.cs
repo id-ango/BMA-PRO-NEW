@@ -347,34 +347,43 @@ namespace Accounting.Services
             var workbook = new XLWorkbook();
 
             var mutasiSheet = workbook.Worksheets.Add("Mutasi");
-            mutasiSheet.Cell(1, 1).Value = "ItemCode";
-            mutasiSheet.Cell(1, 2).Value = "NamaItem";
-            mutasiSheet.Cell(1, 3).Value = "Satuan";
-            mutasiSheet.Cell(1, 4).Value = "Qty";
-            mutasiSheet.Cell(1, 5).Value = "Hrg Import";
-            mutasiSheet.Cell(1, 6).Value = "Hrg Net";
-            mutasiSheet.Cell(1, 7).Value = "Cost";
+            var mutasiHeaders = new[] { "No.", "Kode", "Nama Barang", "Satuan", "Qty", "Hrg Import", "Hrg Net", "Total" };
+
+            mutasiSheet.Cell(1, 1).Value = "Laporan Stock - Mutasi";
+            mutasiSheet.Range(1, 1, 1, mutasiHeaders.Length).Merge();
+            mutasiSheet.Cell(1, 1).Style.Font.Bold = true;
+            mutasiSheet.Cell(1, 1).Style.Font.FontSize = 14;
+            mutasiSheet.Cell(1, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            for (int i = 0; i < mutasiHeaders.Length; i++)
+            {
+                mutasiSheet.Cell(3, i + 1).Value = mutasiHeaders[i];
+            }
+
+            var mutasiHeaderRange = mutasiSheet.Range(3, 1, 3, mutasiHeaders.Length);
+            mutasiHeaderRange.Style.Font.Bold = true;
+            mutasiHeaderRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            mutasiHeaderRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#9aa0a6");
+            mutasiHeaderRange.Style.Font.FontColor = XLColor.White;
 
             for (int i = 0; i < mutasiItems.Count; i++)
             {
-                var row = i + 2;
+                var row = i + 4;
                 var item = mutasiItems[i];
-                mutasiSheet.Cell(row, 1).Value = item.ItemCode;
-                mutasiSheet.Cell(row, 2).Value = item.NamaItem;
-                mutasiSheet.Cell(row, 3).Value = item.Satuan;
-                mutasiSheet.Cell(row, 4).Value = item.Qty;
-                mutasiSheet.Cell(row, 5).Value = item.HrgUsd;
-                mutasiSheet.Cell(row, 6).Value = item.HrgNetto;
-                mutasiSheet.Cell(row, 7).Value = item.Cost;
+                mutasiSheet.Cell(row, 1).Value = i + 1;
+                mutasiSheet.Cell(row, 2).Value = item.ItemCode;
+                mutasiSheet.Cell(row, 3).Value = item.NamaItem;
+                mutasiSheet.Cell(row, 4).Value = item.Satuan;
+                mutasiSheet.Cell(row, 5).Value = item.Qty;
+                mutasiSheet.Cell(row, 6).Value = item.HrgUsd;
+                mutasiSheet.Cell(row, 7).Value = item.HrgNetto;
+                mutasiSheet.Cell(row, 8).Value = item.Cost;
             }
+
+            mutasiSheet.SheetView.FreezeRows(3);
             mutasiSheet.Columns().AdjustToContents();
 
             var lokasiSheet = workbook.Worksheets.Add("Lokasi");
-            lokasiSheet.Cell(1, 1).Value = "ItemCode";
-            lokasiSheet.Cell(1, 2).Value = "NamaItem";
-            lokasiSheet.Cell(1, 3).Value = "Satuan";
-            lokasiSheet.Cell(1, 4).Value = "Stock";
-
             var lokasiNames = lokasiItems
                 .SelectMany(x => x.Locations ?? new List<IcLocationQtyView>())
                 .GroupBy(x => x.Lokasi)
@@ -382,26 +391,48 @@ namespace Accounting.Services
                 .OrderBy(x => x.NamaLokasi)
                 .ToList();
 
+            var lokasiLastColumn = 5 + lokasiNames.Count;
+            lokasiSheet.Cell(1, 1).Value = "Laporan Stock - Lokasi";
+            lokasiSheet.Range(1, 1, 1, lokasiLastColumn).Merge();
+            lokasiSheet.Cell(1, 1).Style.Font.Bold = true;
+            lokasiSheet.Cell(1, 1).Style.Font.FontSize = 14;
+            lokasiSheet.Cell(1, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            lokasiSheet.Cell(3, 1).Value = "No.";
+            lokasiSheet.Cell(3, 2).Value = "Kode";
+            lokasiSheet.Cell(3, 3).Value = "Nama Barang";
+            lokasiSheet.Cell(3, 4).Value = "Satuan";
+            lokasiSheet.Cell(3, 5).Value = "Qty";
+
             for (int i = 0; i < lokasiNames.Count; i++)
             {
-                lokasiSheet.Cell(1, i + 5).Value = lokasiNames[i].NamaLokasi;
+                lokasiSheet.Cell(3, i + 6).Value = lokasiNames[i].NamaLokasi;
             }
+
+            var lokasiHeaderRange = lokasiSheet.Range(3, 1, 3, lokasiLastColumn);
+            lokasiHeaderRange.Style.Font.Bold = true;
+            lokasiHeaderRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            lokasiHeaderRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#9aa0a6");
+            lokasiHeaderRange.Style.Font.FontColor = XLColor.White;
 
             for (int i = 0; i < lokasiItems.Count; i++)
             {
-                var row = i + 2;
+                var row = i + 4;
                 var item = lokasiItems[i];
-                lokasiSheet.Cell(row, 1).Value = item.ItemCode;
-                lokasiSheet.Cell(row, 2).Value = item.NamaItem;
-                lokasiSheet.Cell(row, 3).Value = item.Satuan;
-                lokasiSheet.Cell(row, 4).Value = item.Qty;
+                lokasiSheet.Cell(row, 1).Value = i + 1;
+                lokasiSheet.Cell(row, 2).Value = item.ItemCode;
+                lokasiSheet.Cell(row, 3).Value = item.NamaItem;
+                lokasiSheet.Cell(row, 4).Value = item.Satuan;
+                lokasiSheet.Cell(row, 5).Value = item.Qty;
 
                 for (int j = 0; j < lokasiNames.Count; j++)
                 {
                     var lokasiQty = item.Locations?.FirstOrDefault(x => x.Lokasi == lokasiNames[j].Lokasi);
-                    lokasiSheet.Cell(row, j + 5).Value = lokasiQty?.Qty ?? 0;
+                    lokasiSheet.Cell(row, j + 6).Value = lokasiQty?.Qty ?? 0;
                 }
             }
+
+            lokasiSheet.SheetView.FreezeRows(3);
             lokasiSheet.Columns().AdjustToContents();
 
             return ConvertToByte(workbook);
