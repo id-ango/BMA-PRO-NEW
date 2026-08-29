@@ -244,10 +244,10 @@
 
 @code {
     OeTransHView Transh = new OeTransHView() { OeTransDs = new List<OeTransDView>() };
-    private List<ArCust> supplier;
-    private List<OeSalesman> salesman;
-    private List<IcItem> srccode;
-    private List<IcLokasi> lokasi;
+    private List<ArCust> supplier = new();
+    private List<OeSalesman> salesman = new();
+    private List<IcItem> srccode = new();
+    private List<IcLokasi> lokasi = new();
     private OeTransDView Transd = new OeTransDView();
     private OeTransDView TransK = new OeTransDView();
     private int dblclick = 1;
