@@ -311,7 +311,7 @@ namespace eSoft.Penjualan.Services
 
         public List<SalesTransactionWithDetailDto> GetTransactionsWithDetails(int? top = null)
         {
-            var headers = _salesQueryService.GetTransKurirAsync(top).GetAwaiter().GetResult();
+            var headers = _salesQueryService.GetTransKurir(top);
             if (headers == null || headers.Count == 0)
                 return new List<SalesTransactionWithDetailDto>();
 

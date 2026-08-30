@@ -18,6 +18,7 @@ namespace eSoft.Penjualan.Services
         List<OeTransH> Get3TransH();
         List<OeTransD> GetTransD();
         Task<List<OeTransH>> GetTransKurirAsync(int? top = null);
+        List<OeTransH> GetTransKurir(int? top = null);
         void SimpanKurir(OeTransH transaksi);
         void SimpanSalesman(OeTransH transaksi);
         List<OeTransD> GetOeTransDByDokumen(string dokumen);

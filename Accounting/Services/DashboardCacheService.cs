@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,6 +20,8 @@ namespace Accounting.Services
         private const string CacheKeyAgingPiutang = "Dashboard_AgingPiutang";
         private const string CacheKeyAgingHutang = "Dashboard_AgingHutang";
         private const string CacheKeyDashboardSummary = "Dashboard_Summary";
+
+        private static readonly ConcurrentDictionary<string, byte> _bankCacheKeys = new();
 
         private readonly IMemoryCache _memoryCache;
         private readonly IConfiguration _configuration;
@@ -43,6 +46,8 @@ namespace Accounting.Services
         public async Task<List<CbBank>> GetBankListAsync(bool forceRefresh = false, int? pageNumber = null, int? pageSize = null)
         {
             var cacheKey = $"{CacheKeyBankList}_{pageNumber}_{pageSize}";
+            _bankCacheKeys.TryAdd(cacheKey, 0);
+
             if (!forceRefresh && _memoryCache.TryGetValue(cacheKey, out List<CbBank> cached))
             {
                 return cached;
@@ -133,7 +138,11 @@ namespace Accounting.Services
 
         public void InvalidateBankCache()
         {
-            _memoryCache.Remove($"{CacheKeyBankList}_null_null");
+            foreach (var key in _bankCacheKeys.Keys)
+            {
+                _memoryCache.Remove(key);
+            }
+            _bankCacheKeys.Clear();
             _memoryCache.Remove(CacheKeyDashboardSummary);
         }
 
