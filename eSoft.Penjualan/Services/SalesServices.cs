@@ -76,8 +76,7 @@ namespace eSoft.Penjualan.Services
 
         public async Task<Dictionary<string, List<OeTrans>>> GetTransDetailsBatchAsync(IEnumerable<string> noLpbs)
         {
-            var details = await _salesReportService.GetTransDetailsByNoLpbsAsync(noLpbs);
-            return details.GroupBy(x => x.NoLpb).ToDictionary(g => g.Key, g => g.ToList());
+            return await _salesReportService.GetTransDetailsBatchAsync(noLpbs);
         }
 
         public List<OeTrans> Detail4(string xKdHeader, DateTime tgl1, DateTime tgl2)

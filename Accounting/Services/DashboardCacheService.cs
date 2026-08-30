@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using eSoft.CashBank.Model;
 using eSoft.CashBank.Services;
@@ -11,6 +11,7 @@ using eSoft.Piutang.Services;
 using eSoft.Piutang.View;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Primitives;
 
 namespace Accounting.Services
 {
@@ -21,7 +22,10 @@ namespace Accounting.Services
         private const string CacheKeyAgingHutang = "Dashboard_AgingHutang";
         private const string CacheKeyDashboardSummary = "Dashboard_Summary";
 
-        private static readonly ConcurrentDictionary<string, byte> _bankCacheKeys = new();
+        private static CancellationTokenSource _bankResetTokenSource = new();
+        private static CancellationTokenSource _agingPiutangResetTokenSource = new();
+        private static CancellationTokenSource _agingHutangResetTokenSource = new();
+        private static CancellationTokenSource _summaryResetTokenSource = new();
 
         private readonly IMemoryCache _memoryCache;
         private readonly IConfiguration _configuration;
@@ -46,7 +50,6 @@ namespace Accounting.Services
         public async Task<List<CbBank>> GetBankListAsync(bool forceRefresh = false, int? pageNumber = null, int? pageSize = null)
         {
             var cacheKey = $"{CacheKeyBankList}_{pageNumber}_{pageSize}";
-            _bankCacheKeys.TryAdd(cacheKey, 0);
 
             if (!forceRefresh && _memoryCache.TryGetValue(cacheKey, out List<CbBank> cached))
             {
@@ -55,7 +58,12 @@ namespace Accounting.Services
 
             var result = await _cashBankServices.GetBankListAsync(pageNumber, pageSize) ?? new List<CbBank>();
             var minutes = _configuration.GetValue<int?>("DashboardCacheSettings:BankListCacheMinutes") ?? 30;
-            _memoryCache.Set(cacheKey, result, TimeSpan.FromMinutes(minutes));
+
+            var options = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes))
+                .AddExpirationToken(new CancellationChangeToken(_bankResetTokenSource.Token));
+
+            _memoryCache.Set(cacheKey, result, options);
             return result;
         }
 
@@ -68,7 +76,12 @@ namespace Accounting.Services
 
             var result = await _receivableServices.GetAgingScheduleOptimizedAsync() ?? new List<ArAgingView>();
             var minutes = _configuration.GetValue<int?>("DashboardCacheSettings:AgingDataCacheMinutes") ?? 15;
-            _memoryCache.Set(CacheKeyAgingPiutang, result, TimeSpan.FromMinutes(minutes));
+
+            var options = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes))
+                .AddExpirationToken(new CancellationChangeToken(_agingPiutangResetTokenSource.Token));
+
+            _memoryCache.Set(CacheKeyAgingPiutang, result, options);
             return result;
         }
 
@@ -81,7 +94,12 @@ namespace Accounting.Services
 
             var result = await _payableServices.GetAgingScheduleOptimizedAsync() ?? new List<ApAgingView>();
             var minutes = _configuration.GetValue<int?>("DashboardCacheSettings:AgingDataCacheMinutes") ?? 15;
-            _memoryCache.Set(CacheKeyAgingHutang, result, TimeSpan.FromMinutes(minutes));
+
+            var options = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes))
+                .AddExpirationToken(new CancellationChangeToken(_agingHutangResetTokenSource.Token));
+
+            _memoryCache.Set(CacheKeyAgingHutang, result, options);
             return result;
         }
 
@@ -131,36 +149,37 @@ namespace Accounting.Services
             summary.ApMax = new[] { summary.ApCurrent, summary.Ap30, summary.Ap60, summary.Ap90, summary.ApOver }.DefaultIfEmpty().Max();
 
             var minutes = _configuration.GetValue<int?>("DashboardCacheSettings:DashboardSummaryCacheMinutes") ?? 10;
-            _memoryCache.Set(CacheKeyDashboardSummary, summary, TimeSpan.FromMinutes(minutes));
+
+            var options = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes))
+                .AddExpirationToken(new CancellationChangeToken(_summaryResetTokenSource.Token));
+
+            _memoryCache.Set(CacheKeyDashboardSummary, summary, options);
 
             return summary;
         }
 
         public void InvalidateBankCache()
         {
-            foreach (var key in _bankCacheKeys.Keys)
-            {
-                _memoryCache.Remove(key);
-            }
-            _bankCacheKeys.Clear();
-            _memoryCache.Remove(CacheKeyDashboardSummary);
+            ResetToken(ref _bankResetTokenSource);
+            InvalidateDashboardSummaryCache();
         }
 
         public void InvalidateAgingPiutangCache()
         {
-            _memoryCache.Remove(CacheKeyAgingPiutang);
-            _memoryCache.Remove(CacheKeyDashboardSummary);
+            ResetToken(ref _agingPiutangResetTokenSource);
+            InvalidateDashboardSummaryCache();
         }
 
         public void InvalidateAgingHutangCache()
         {
-            _memoryCache.Remove(CacheKeyAgingHutang);
-            _memoryCache.Remove(CacheKeyDashboardSummary);
+            ResetToken(ref _agingHutangResetTokenSource);
+            InvalidateDashboardSummaryCache();
         }
 
         public void InvalidateDashboardSummaryCache()
         {
-            _memoryCache.Remove(CacheKeyDashboardSummary);
+            ResetToken(ref _summaryResetTokenSource);
         }
 
         public void InvalidateAllCache()
@@ -169,6 +188,13 @@ namespace Accounting.Services
             InvalidateAgingPiutangCache();
             InvalidateAgingHutangCache();
             InvalidateDashboardSummaryCache();
+        }
+
+        private static void ResetToken(ref CancellationTokenSource cts)
+        {
+            var oldCts = Interlocked.Exchange(ref cts, new CancellationTokenSource());
+            oldCts.Cancel();
+            oldCts.Dispose();
         }
     }
 }
