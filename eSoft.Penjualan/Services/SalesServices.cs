@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using eSoft.Penjualan.Data;
 using eSoft.Penjualan.Model;
@@ -62,6 +63,23 @@ namespace eSoft.Penjualan.Services
         {
             return _salesReportService.Detail3Index(xKdHeader);
         }
+
+        public List<OeTrans> GetTransDetailsByNoLpbs(IEnumerable<string> noLpbs)
+        {
+            return _salesReportService.GetTransDetailsByNoLpbs(noLpbs);
+        }
+
+        public async Task<List<OeTrans>> GetTransDetailsByNoLpbsAsync(IEnumerable<string> noLpbs)
+        {
+            return await _salesReportService.GetTransDetailsByNoLpbsAsync(noLpbs);
+        }
+
+        public async Task<Dictionary<string, List<OeTrans>>> GetTransDetailsBatchAsync(IEnumerable<string> noLpbs)
+        {
+            var details = await _salesReportService.GetTransDetailsByNoLpbsAsync(noLpbs);
+            return details.GroupBy(x => x.NoLpb).ToDictionary(g => g.Key, g => g.ToList());
+        }
+
         public List<OeTrans> Detail4(string xKdHeader, DateTime tgl1, DateTime tgl2)
         {
             return _salesReportService.Detail4(xKdHeader, tgl1, tgl2);
@@ -252,9 +270,9 @@ namespace eSoft.Penjualan.Services
 
         #region indexjual
 
-        public async Task<List<OeTransH>> GetTransKurirAsync()
+        public async Task<List<OeTransH>> GetTransKurirAsync(int? top = null)
         {
-            return await _salesQueryService.GetTransKurirAsync();
+            return await _salesQueryService.GetTransKurirAsync(top);
         }
 
 
@@ -266,6 +284,53 @@ namespace eSoft.Penjualan.Services
         public void SimpanSalesman(OeTransH transaksi)
         {
             _salesQueryService.SimpanSalesman(transaksi);
+        }
+
+        public async Task<List<SalesTransactionWithDetailDto>> GetTransactionsWithDetailsAsync(int? top = null)
+        {
+            var headers = await _salesQueryService.GetTransKurirAsync(top);
+            if (headers == null || headers.Count == 0)
+                return new List<SalesTransactionWithDetailDto>();
+
+            var noLpbs = headers.Select(h => h.NoLpb).Where(n => !string.IsNullOrEmpty(n)).ToList();
+            var detailsBatch = await _salesReportService.GetTransDetailsBatchAsync(noLpbs);
+
+            var result = new List<SalesTransactionWithDetailDto>(headers.Count);
+            foreach (var header in headers)
+            {
+                detailsBatch.TryGetValue(header.NoLpb, out var details);
+                result.Add(new SalesTransactionWithDetailDto
+                {
+                    Header = header,
+                    Details = details ?? new List<OeTrans>()
+                });
+            }
+
+            return result;
+        }
+
+        public List<SalesTransactionWithDetailDto> GetTransactionsWithDetails(int? top = null)
+        {
+            var headers = _salesQueryService.GetTransKurirAsync(top).GetAwaiter().GetResult();
+            if (headers == null || headers.Count == 0)
+                return new List<SalesTransactionWithDetailDto>();
+
+            var noLpbs = headers.Select(h => h.NoLpb).Where(n => !string.IsNullOrEmpty(n)).ToList();
+            var detailsList = _salesReportService.GetTransDetailsByNoLpbs(noLpbs);
+            var detailsBatch = detailsList.GroupBy(d => d.NoLpb).ToDictionary(g => g.Key, g => g.ToList());
+
+            var result = new List<SalesTransactionWithDetailDto>(headers.Count);
+            foreach (var header in headers)
+            {
+                detailsBatch.TryGetValue(header.NoLpb, out var details);
+                result.Add(new SalesTransactionWithDetailDto
+                {
+                    Header = header,
+                    Details = details ?? new List<OeTrans>()
+                });
+            }
+
+            return result;
         }
 
         #endregion

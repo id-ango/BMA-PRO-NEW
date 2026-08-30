@@ -162,21 +162,35 @@ namespace eSoft.Order.Services
 
         public List<PoTransH> GetTransHAktif()
         {
-            List<PoTransH> PoTrans = new List<PoTransH>();
+            return GetTransHAktif(null);
+        }
 
+        public List<PoTransH> GetTransHAktif(int? top = null)
+        {
+            var query = _context.PoTransHs.AsNoTracking()
+                .OrderByDescending(x => x.Tanggal.Date)
+                .Where(x => x.Kode == "76" && x.Cek == "1");
 
-            try
+            if (top.HasValue && top.Value > 0)
             {
-                PoTrans = _context.PoTransHs.OrderByDescending(x => x.Tanggal.Date).Where(x => x.Kode == "76" && x.Cek == "1").ToList();
-
+                return query.Take(top.Value).ToList();
             }
-            catch (Exception)
+
+            return query.ToList();
+        }
+
+        public async Task<List<PoTransH>> GetTransHAktifAsync(int? top = null)
+        {
+            var query = _context.PoTransHs.AsNoTracking()
+                .OrderByDescending(x => x.Tanggal.Date)
+                .Where(x => x.Kode == "76" && x.Cek == "1");
+
+            if (top.HasValue && top.Value > 0)
             {
-                throw;
+                return await query.Take(top.Value).ToListAsync();
             }
-            return PoTrans;
 
-
+            return await query.ToListAsync();
         }
         public void SaveOrderAktif(string customer)
         {
@@ -479,7 +493,25 @@ namespace eSoft.Order.Services
 
         public List<PoTransD> GetTransD()
         {
-            return _context.PoTransDs.ToList();
+            return _context.PoTransDs.AsNoTracking().ToList();
+        }
+
+        public List<PoTransD> GetTransDByNoLpbs(IEnumerable<string> noLpbs)
+        {
+            if (noLpbs == null || !noLpbs.Any())
+                return new List<PoTransD>();
+
+            var list = noLpbs.ToList();
+            return _context.PoTransDs.AsNoTracking().Where(x => list.Contains(x.NoLpb)).ToList();
+        }
+
+        public async Task<List<PoTransD>> GetTransDByNoLpbsAsync(IEnumerable<string> noLpbs)
+        {
+            if (noLpbs == null || !noLpbs.Any())
+                return new List<PoTransD>();
+
+            var list = noLpbs.ToList();
+            return await _context.PoTransDs.AsNoTracking().Where(x => list.Contains(x.NoLpb)).ToListAsync();
         }
 
         public PoTransH AddTransH(PoTransHView trans)

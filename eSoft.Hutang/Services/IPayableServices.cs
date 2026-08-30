@@ -45,6 +45,9 @@ namespace eSoft.Hutang.Services
         List<ApHutangView> GetBayarDimuka();
         List<ApHutang> Detail1(string xKdHeader);
         List<ApAgingView> GetAgingSchedule();
+        Task<List<ApAgingView>> GetAgingScheduleAsync();
+        List<ApAgingView> GetAgingScheduleOptimized(int? page = null, int? pageSize = null);
+        Task<List<ApAgingView>> GetAgingScheduleOptimizedAsync(int? page = null, int? pageSize = null);
         Task ProsesHutang();
         List<ApHutang> GetAllApHutangBySupplier(string supplier, DateTime sampaiTanggal);
         Task<bool> UpdateApHutangWithPaymentAsync(string dokumen, decimal bayar, decimal discount);

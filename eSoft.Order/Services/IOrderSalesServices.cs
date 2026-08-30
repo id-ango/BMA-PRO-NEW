@@ -13,8 +13,12 @@ namespace eSoft.Order.Services
         PoTransH GetPoTrans(int id);
         List<PoTransH> GetTransH();
         List<PoTransH> GetTransHAktif();
+        List<PoTransH> GetTransHAktif(int? top = null);
+        Task<List<PoTransH>> GetTransHAktifAsync(int? top = null);
         List<PoTransH> Get3TransH();
         List<PoTransD> GetTransD();
+        List<PoTransD> GetTransDByNoLpbs(IEnumerable<string> noLpbs);
+        Task<List<PoTransD>> GetTransDByNoLpbsAsync(IEnumerable<string> noLpbs);
         PoTransH GetOrderAktif(string nolpb);
         PoTransH AddTransH(PoTransHView trans);
         Task<bool> DelTransH(int id);

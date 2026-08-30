@@ -49,6 +49,9 @@ namespace eSoft.Piutang.Services
 
         bool CekJual(string noLpb);
         List<ArAgingView> GetAgingSchedule();
+        Task<List<ArAgingView>> GetAgingScheduleAsync();
+        List<ArAgingView> GetAgingScheduleOptimized(int? page = null, int? pageSize = null);
+        Task<List<ArAgingView>> GetAgingScheduleOptimizedAsync(int? page = null, int? pageSize = null);
         List<ArAgingView> GetRemarksSchedule();
         void SimpanRemarks(string dokumen, string remarks);
 

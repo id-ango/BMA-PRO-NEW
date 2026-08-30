@@ -34,6 +34,9 @@ namespace eSoft.Penjualan.Services
         List<OeTrans> Detail2(string xKdHeader, DateTime tgl1, DateTime tgl2);
         List<OeTrans> Detail3(string xKdHeader, DateTime tgl1, DateTime tgl2);
         List<OeTrans> Detail3Index(string xKdHeader);
+        List<OeTrans> GetTransDetailsByNoLpbs(IEnumerable<string> noLpbs);
+        Task<List<OeTrans>> GetTransDetailsByNoLpbsAsync(IEnumerable<string> noLpbs);
+        Task<Dictionary<string, List<OeTrans>>> GetTransDetailsBatchAsync(IEnumerable<string> noLpbs);
         List<OeTrans> Detail4(string xKdHeader, DateTime tgl1, DateTime tgl2);
         List<OeTrans> Detail5(string xKdHeader, DateTime tgl1, DateTime tgl2);
         OeTransH GetOeTransDokumen(string id);
@@ -52,7 +55,9 @@ namespace eSoft.Penjualan.Services
         Task<bool> DelKurir(int kurirs);
         bool AddKurir(OeKurirView customers);
         Task<bool> EditKurir(OeKurirView customers);
-        Task<List<OeTransH>> GetTransKurirAsync();
+        Task<List<OeTransH>> GetTransKurirAsync(int? top = null);
+        Task<List<SalesTransactionWithDetailDto>> GetTransactionsWithDetailsAsync(int? top = null);
+        List<SalesTransactionWithDetailDto> GetTransactionsWithDetails(int? top = null);
         void SimpanKurir(OeTransH transaksi);
         void SimpanSalesman(OeTransH transaksi);
         List<OeTransD> GetOeTransDByDokumen(string dokumen);

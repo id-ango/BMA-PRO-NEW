@@ -741,33 +741,51 @@ namespace eSoft.Piutang.Services
 
         public List<ArAgingView> GetAgingSchedule()
         {
-            List<ArPiutng> trans = new List<ArPiutng>();
-            List<ArAgingView> transaksi = new List<ArAgingView>();
+            return GetAgingScheduleOptimized();
+        }
 
-            List<ArCust> supplier = _context.ArCusts.ToList();
+        public List<ArAgingView> GetAgingScheduleOptimized(int? page = null, int? pageSize = null)
+        {
+            var query = _context.ArPiutngs
+                .AsNoTracking()
+                .Where(x => x.Sisa != 0)
+                .OrderBy(x => x.Customer)
+                .ThenByDescending(x => x.Dokumen);
 
-            DateTime duedate = DateTime.Today.Date;
+            List<ArPiutng> trans;
+            if (page.HasValue && pageSize.HasValue && page.Value > 0 && pageSize.Value > 0)
+            {
+                trans = query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value).ToList();
+            }
+            else
+            {
+                trans = query.ToList();
+            }
+
+            var customerDict = _context.ArCusts
+                .AsNoTracking()
+                .Where(c => c.Customer != null)
+                .Select(c => new { c.Customer, c.NamaCust })
+                .ToList()
+                .GroupBy(c => c.Customer)
+                .ToDictionary(g => g.Key, g => g.First().NamaCust);
+
+            var docNumbers = trans.Select(x => x.Dokumen).Where(d => !string.IsNullOrEmpty(d)).Distinct().ToList();
+            var semuaPembayaran = _context.ArTransDs
+                .AsNoTracking()
+                .Include(x => x.ArTransH)
+                .Where(x => docNumbers.Contains(x.Lpb) && (x.Bayar > 0 || x.Discount > 0))
+                .ToList()
+                .GroupBy(x => x.Lpb)
+                .ToDictionary(g => g.Key, g => g.OrderBy(x => x.ArTransH?.Tanggal).ToList());
 
             DateTime currentDate = DateTime.Today.Date;
-
+            DateTime duedate = currentDate;
             DateTime date1 = currentDate.AddMonths(1);
             DateTime date2 = currentDate.AddMonths(2);
             DateTime date3 = currentDate.AddMonths(3);
 
-            trans = _context.ArPiutngs
-                .AsNoTracking()
-                .Where(x => x.Sisa != 0)
-                .OrderBy(x => x.Customer)
-                .ThenByDescending(x => x.Dokumen)
-                .ToList();
-
-            // Ambil semua pembayaran (ArTransD) sekaligus, join ke ArTransH untuk tanggal
-            var semuaPembayaran = _context.ArTransDs
-                .AsNoTracking()
-                .Include(x => x.ArTransH)
-                .Where(x => x.Bayar > 0 || x.Discount > 0)
-                .ToList();
-
+            var transaksi = new List<ArAgingView>(trans.Count);
             foreach (var ap in trans)
             {
                 duedate = ap.DueDate ?? ap.Tanggal;
@@ -775,11 +793,12 @@ namespace eSoft.Piutang.Services
                 date2 = duedate.AddMonths(2);
                 date3 = duedate.AddMonths(3);
 
-                // Cari histori pembayaran untuk dokumen ini
-                var pembayaranDok = semuaPembayaran
-                    .Where(x => x.Lpb == ap.Dokumen)
-                    .OrderBy(x => x.ArTransH?.Tanggal)
-                    .ToList();
+                List<ArTransD> pembayaranDok = null;
+                if (!string.IsNullOrEmpty(ap.Dokumen))
+                {
+                    semuaPembayaran.TryGetValue(ap.Dokumen, out pembayaranDok);
+                }
+                pembayaranDok ??= new List<ArTransD>();
 
                 int jumlahCicilan = pembayaranDok.Count;
                 decimal sudahBayar = pembayaranDok.Sum(x => x.Bayar + x.Discount);
@@ -787,6 +806,12 @@ namespace eSoft.Piutang.Services
                 int hariSejakBayar = tglTerakhirBayar.HasValue
                     ? (int)(currentDate - tglTerakhirBayar.Value.Date).TotalDays
                     : (int)(currentDate - ap.Tanggal.Date).TotalDays;
+
+                string namaCust = null;
+                if (ap.Customer != null)
+                {
+                    customerDict.TryGetValue(ap.Customer, out namaCust);
+                }
 
                 transaksi.Add(new ArAgingView()
                 {
@@ -796,8 +821,8 @@ namespace eSoft.Piutang.Services
                     Tanggal = ap.Tanggal,
                     Dokumen = ap.Dokumen,
                     Duedate = duedate,
-                    Cicilan = (ap.Sisa != ap.SldSisa ? true : false),
-                    NamaCust = (from e in supplier where e.Customer == ap.Customer select e.NamaCust).FirstOrDefault(),
+                    Cicilan = (ap.Sisa != ap.SldSisa),
+                    NamaCust = namaCust,
                     Salesman = ap.Salesman,
                     Keterangan = ap.Keterangan,
                     Remarks = (string.IsNullOrEmpty(ap.Remarks) ? ap.Keterangan : ap.Remarks),
@@ -815,7 +840,113 @@ namespace eSoft.Piutang.Services
                 });
             }
             return transaksi;
+        }
 
+        public async Task<List<ArAgingView>> GetAgingScheduleAsync()
+        {
+            return await GetAgingScheduleOptimizedAsync();
+        }
+
+        public async Task<List<ArAgingView>> GetAgingScheduleOptimizedAsync(int? page = null, int? pageSize = null)
+        {
+            var query = _context.ArPiutngs
+                .AsNoTracking()
+                .Where(x => x.Sisa != 0)
+                .OrderBy(x => x.Customer)
+                .ThenByDescending(x => x.Dokumen);
+
+            List<ArPiutng> trans;
+            if (page.HasValue && pageSize.HasValue && page.Value > 0 && pageSize.Value > 0)
+            {
+                trans = await query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value).ToListAsync();
+            }
+            else
+            {
+                trans = await query.ToListAsync();
+            }
+
+            var customers = await _context.ArCusts
+                .AsNoTracking()
+                .Where(c => c.Customer != null)
+                .Select(c => new { c.Customer, c.NamaCust })
+                .ToListAsync();
+
+            var customerDict = customers
+                .GroupBy(c => c.Customer)
+                .ToDictionary(g => g.Key, g => g.First().NamaCust);
+
+            var docNumbers = trans.Select(x => x.Dokumen).Where(d => !string.IsNullOrEmpty(d)).Distinct().ToList();
+            var pembayaranList = await _context.ArTransDs
+                .AsNoTracking()
+                .Include(x => x.ArTransH)
+                .Where(x => docNumbers.Contains(x.Lpb) && (x.Bayar > 0 || x.Discount > 0))
+                .ToListAsync();
+
+            var semuaPembayaran = pembayaranList
+                .GroupBy(x => x.Lpb)
+                .ToDictionary(g => g.Key, g => g.OrderBy(x => x.ArTransH?.Tanggal).ToList());
+
+            DateTime currentDate = DateTime.Today.Date;
+            DateTime duedate = currentDate;
+            DateTime date1 = currentDate.AddMonths(1);
+            DateTime date2 = currentDate.AddMonths(2);
+            DateTime date3 = currentDate.AddMonths(3);
+
+            var transaksi = new List<ArAgingView>(trans.Count);
+            foreach (var ap in trans)
+            {
+                duedate = ap.DueDate ?? ap.Tanggal;
+                date1 = duedate.AddMonths(1);
+                date2 = duedate.AddMonths(2);
+                date3 = duedate.AddMonths(3);
+
+                List<ArTransD> pembayaranDok = null;
+                if (!string.IsNullOrEmpty(ap.Dokumen))
+                {
+                    semuaPembayaran.TryGetValue(ap.Dokumen, out pembayaranDok);
+                }
+                pembayaranDok ??= new List<ArTransD>();
+
+                int jumlahCicilan = pembayaranDok.Count;
+                decimal sudahBayar = pembayaranDok.Sum(x => x.Bayar + x.Discount);
+                DateTime? tglTerakhirBayar = pembayaranDok.LastOrDefault()?.ArTransH?.Tanggal;
+                int hariSejakBayar = tglTerakhirBayar.HasValue
+                    ? (int)(currentDate - tglTerakhirBayar.Value.Date).TotalDays
+                    : (int)(currentDate - ap.Tanggal.Date).TotalDays;
+
+                string namaCust = null;
+                if (ap.Customer != null)
+                {
+                    customerDict.TryGetValue(ap.Customer, out namaCust);
+                }
+
+                transaksi.Add(new ArAgingView()
+                {
+                    Kode = ap.Kode,
+                    ArAgingId = ap.ArPiutngId,
+                    Customer = ap.Customer,
+                    Tanggal = ap.Tanggal,
+                    Dokumen = ap.Dokumen,
+                    Duedate = duedate,
+                    Cicilan = (ap.Sisa != ap.SldSisa),
+                    NamaCust = namaCust,
+                    Salesman = ap.Salesman,
+                    Keterangan = ap.Keterangan,
+                    Remarks = (string.IsNullOrEmpty(ap.Remarks) ? ap.Keterangan : ap.Remarks),
+                    JumlahAwal = ap.SldSisa,
+                    SudahBayar = sudahBayar,
+                    Sisa = ap.Sisa,
+                    JumlahCicilan = jumlahCicilan,
+                    TglTerakhirBayar = tglTerakhirBayar,
+                    HariSejakTerakhirBayar = hariSejakBayar,
+                    Jumlah = (currentDate < duedate ? ap.Sisa : 0),
+                    Jumlah1 = (currentDate >= duedate && currentDate <= date1 ? ap.Sisa : 0),
+                    Jumlah2 = (currentDate > date1 && currentDate <= date2 ? ap.Sisa : 0),
+                    Jumlah3 = (currentDate > date2 && currentDate <= date3 ? ap.Sisa : 0),
+                    Jumlah4 = (currentDate > date3 ? ap.Sisa : 0),
+                });
+            }
+            return transaksi;
         }
 
         #region prosesPiutang

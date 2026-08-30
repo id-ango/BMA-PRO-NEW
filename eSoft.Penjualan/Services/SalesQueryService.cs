@@ -102,7 +102,7 @@ namespace eSoft.Penjualan.Services
                 .ToList();
         }
 
-        public async Task<List<OeTransH>> GetTransKurirAsync()
+        public async Task<List<OeTransH>> GetTransKurirAsync(int? top = null)
         {
             // Filter transaksi 2 bulan terakhir ke belakang (tanpa batasan masa depan) yang belum ada kurir
             DateTime twoMonthsAgo = DateTime.Today.AddMonths(-2);
@@ -134,6 +134,11 @@ namespace eSoft.Penjualan.Services
                     Cek = e.Cek,
                     Pajak = e.Pajak
                 });
+
+            if (top.HasValue && top.Value > 0)
+            {
+                return await query.Take(top.Value).ToListAsync();
+            }
 
             return await query.ToListAsync();
         }

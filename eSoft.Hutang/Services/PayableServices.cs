@@ -681,27 +681,51 @@ namespace eSoft.Hutang.Services
 
         public List<ApAgingView> GetAgingSchedule()
         {
-            List<ApHutang> trans = new List<ApHutang>();
-            List<ApAgingView> transaksi = new List<ApAgingView>();
+            return GetAgingScheduleOptimized();
+        }
 
-            List<ApSuppl> supplier = _context.ApSuppls.ToList();
+        public List<ApAgingView> GetAgingScheduleOptimized(int? page = null, int? pageSize = null)
+        {
+            var query = _context.ApHutangs.AsNoTracking()
+                .Where(x => x.Sisa != 0)
+                .OrderBy(x => x.Supplier)
+                .ThenByDescending(x => x.Dokumen);
 
-            DateTime duedate = DateTime.Today.Date;
+            List<ApHutang> trans;
+            if (page.HasValue && pageSize.HasValue && page.Value > 0 && pageSize.Value > 0)
+            {
+                trans = query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value).ToList();
+            }
+            else
+            {
+                trans = query.ToList();
+            }
+
+            var supplierDict = _context.ApSuppls.AsNoTracking()
+                .Where(s => s.Supplier != null)
+                .Select(s => new { s.Supplier, s.NamaSup })
+                .ToList()
+                .GroupBy(s => s.Supplier)
+                .ToDictionary(g => g.Key, g => g.First().NamaSup);
 
             DateTime currentDate = DateTime.Today.Date;
             DateTime date1 = currentDate.AddMonths(1);
             DateTime date2 = currentDate.AddMonths(2);
             DateTime date3 = currentDate.AddMonths(3);
 
-            // trans = _context.ApHutangs.Where(x => x.Kode != "CA" && (x.Sisa != 0)).OrderBy(x => x.Supplier).ToList();
-            trans = _context.ApHutangs.Where(x => (x.Sisa != 0)).OrderBy(x => x.Supplier).ThenByDescending(x => x.Dokumen).ToList();
+            var transaksi = new List<ApAgingView>(trans.Count);
             foreach (var ap in trans)
             {
-                duedate = ap.DueDate ?? ap.Tanggal;
+                var duedate = ap.DueDate ?? ap.Tanggal;
                 date1 = duedate.AddMonths(1);
                 date2 = duedate.AddMonths(2);
                 date3 = duedate.AddMonths(3);
 
+                string namaSup = null;
+                if (ap.Supplier != null)
+                {
+                    supplierDict.TryGetValue(ap.Supplier, out namaSup);
+                }
 
                 transaksi.Add(new ApAgingView()
                 {
@@ -712,10 +736,9 @@ namespace eSoft.Hutang.Services
                     Dokumen = ap.Dokumen,
                     Kurs = ap.Kurs,
                     Duedate = duedate,
-                    Cicilan = (ap.Sisa != ap.SldSisa ? true : false),
-                    NamaSup = (from e in supplier where e.Supplier == ap.Supplier select e.NamaSup).FirstOrDefault(),
+                    Cicilan = (ap.Sisa != ap.SldSisa),
+                    NamaSup = namaSup,
                     Keterangan = ap.Keterangan,
-                    
                     Sisa = ap.Sisa,
                     Jumlah = (currentDate < duedate ? ap.Sisa : 0),
                     Jumlah1 = (currentDate >= duedate && currentDate <= date1 ? ap.Sisa : 0),
@@ -725,7 +748,79 @@ namespace eSoft.Hutang.Services
                 });
             }
             return transaksi;
+        }
 
+        public async Task<List<ApAgingView>> GetAgingScheduleAsync()
+        {
+            return await GetAgingScheduleOptimizedAsync();
+        }
+
+        public async Task<List<ApAgingView>> GetAgingScheduleOptimizedAsync(int? page = null, int? pageSize = null)
+        {
+            var query = _context.ApHutangs.AsNoTracking()
+                .Where(x => x.Sisa != 0)
+                .OrderBy(x => x.Supplier)
+                .ThenByDescending(x => x.Dokumen);
+
+            List<ApHutang> trans;
+            if (page.HasValue && pageSize.HasValue && page.Value > 0 && pageSize.Value > 0)
+            {
+                trans = await query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value).ToListAsync();
+            }
+            else
+            {
+                trans = await query.ToListAsync();
+            }
+
+            var suppliers = await _context.ApSuppls.AsNoTracking()
+                .Where(s => s.Supplier != null)
+                .Select(s => new { s.Supplier, s.NamaSup })
+                .ToListAsync();
+
+            var supplierDict = suppliers
+                .GroupBy(s => s.Supplier)
+                .ToDictionary(g => g.Key, g => g.First().NamaSup);
+
+            DateTime currentDate = DateTime.Today.Date;
+            DateTime date1 = currentDate.AddMonths(1);
+            DateTime date2 = currentDate.AddMonths(2);
+            DateTime date3 = currentDate.AddMonths(3);
+
+            var transaksi = new List<ApAgingView>(trans.Count);
+            foreach (var ap in trans)
+            {
+                var duedate = ap.DueDate ?? ap.Tanggal;
+                date1 = duedate.AddMonths(1);
+                date2 = duedate.AddMonths(2);
+                date3 = duedate.AddMonths(3);
+
+                string namaSup = null;
+                if (ap.Supplier != null)
+                {
+                    supplierDict.TryGetValue(ap.Supplier, out namaSup);
+                }
+
+                transaksi.Add(new ApAgingView()
+                {
+                    Kode = ap.Kode,
+                    ApAgingId = ap.ApHutangId,
+                    Supplier = ap.Supplier,
+                    Tanggal = ap.Tanggal,
+                    Dokumen = ap.Dokumen,
+                    Kurs = ap.Kurs,
+                    Duedate = duedate,
+                    Cicilan = (ap.Sisa != ap.SldSisa),
+                    NamaSup = namaSup,
+                    Keterangan = ap.Keterangan,
+                    Sisa = ap.Sisa,
+                    Jumlah = (currentDate < duedate ? ap.Sisa : 0),
+                    Jumlah1 = (currentDate >= duedate && currentDate <= date1 ? ap.Sisa : 0),
+                    Jumlah2 = (currentDate > date1 && currentDate <= date2 ? ap.Sisa : 0),
+                    Jumlah3 = (currentDate > date2 && currentDate <= date3 ? ap.Sisa : 0),
+                    Jumlah4 = (currentDate > date3 ? ap.Sisa : 0),
+                });
+            }
+            return transaksi;
         }
 
         #region proseshutang
