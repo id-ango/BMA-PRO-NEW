@@ -37,10 +37,15 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using System.Globalization;
 
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+var indonesiaCulture = new CultureInfo("id-ID");
+CultureInfo.DefaultThreadCurrentCulture = indonesiaCulture;
+CultureInfo.DefaultThreadCurrentUICulture = indonesiaCulture;
 
 //builder.WebHost.ConfigureKestrel(options =>
 //{
