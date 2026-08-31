@@ -27,8 +27,32 @@ namespace eSoft.CashBank.Services
 
         public List<CbBank> GetBank()
         {
-          
-           return _context.CbBanks.OrderBy(x =>x.KodeBank).ToList();
+            return _context.CbBanks.AsNoTracking().OrderBy(x => x.KodeBank).ToList();
+        }
+
+        public async Task<List<CbBank>> GetBankAsync()
+        {
+            return await _context.CbBanks.AsNoTracking().OrderBy(x => x.KodeBank).ToListAsync();
+        }
+
+        public List<CbBank> GetBankList(int? page = null, int? pageSize = null)
+        {
+            var query = _context.CbBanks.AsNoTracking().OrderBy(x => x.KodeBank);
+            if (page.HasValue && pageSize.HasValue && page.Value > 0 && pageSize.Value > 0)
+            {
+                return query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value).ToList();
+            }
+            return query.ToList();
+        }
+
+        public async Task<List<CbBank>> GetBankListAsync(int? page = null, int? pageSize = null)
+        {
+            var query = _context.CbBanks.AsNoTracking().OrderBy(x => x.KodeBank);
+            if (page.HasValue && pageSize.HasValue && page.Value > 0 && pageSize.Value > 0)
+            {
+                return await query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value).ToListAsync();
+            }
+            return await query.ToListAsync();
         }
 
         // Reflection helper removed from here and declared at namespace level below.
