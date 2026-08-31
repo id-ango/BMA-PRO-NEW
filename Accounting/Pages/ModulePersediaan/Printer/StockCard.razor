@@ -2,7 +2,7 @@
 
 
 
-@page "/moduleprinting/stockcard/{namaItem}/{satuanItem}/{kodeItem}"
+@page "/ModulePrinting/stockCard"
 
 
 <div class="dontprint" style="display:none inline">
@@ -59,7 +59,7 @@
         // Variabel untuk mengisi data yang sesuai
 
 
-    [Parameter] public string namaItem { get; set; }
-    [Parameter] public string satuanItem { get; set; }
-    [Parameter] public string KodeItem { get; set; }
+    [SupplyParameterFromQuery] public string namaItem { get; set; }
+    [SupplyParameterFromQuery] public string satuanItem { get; set; }
+    [SupplyParameterFromQuery(Name = "kodeItem")] public string KodeItem { get; set; }
 }
