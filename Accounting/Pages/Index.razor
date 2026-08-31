@@ -21,6 +21,7 @@
 @inject IReceivableServices serviceAR
 @inject ISalesServices serviceSales
 @inject IOrderSalesServices serviceOrderSales
+@inject IDashboardCacheService dashboardCacheService
 @inject NavigationManager navigationmanager
 
 <!-- Header dengan toggle Home/Dashboard -->
@@ -826,40 +827,34 @@ else
 
     private async Task LoadDashboardDataAsync()
     {
-        await Task.Run(() =>
-        {
-            // Load Bank Data
-            bankList = serviceBank.GetBank() ?? new List<CbBank>();
-            totalSaldoBank = bankList.Sum(x => x.Saldo);
+        var summary = await dashboardCacheService.GetDashboardSummaryAsync();
 
-            // Load Piutang Data
-            agingPiutang = serviceAR.GetAgingSchedule() ?? new List<ArAgingView>();
-            totalPiutang = agingPiutang.Sum(x => x.Sisa);
-            jumlahDokPiutang = agingPiutang.Count;
+        bankList = summary.BankList;
+        totalSaldoBank = summary.TotalSaldoBank;
 
-            arCurrent = agingPiutang.Sum(x => x.Jumlah1);
-            ar30 = agingPiutang.Sum(x => x.Jumlah2);
-            ar60 = agingPiutang.Sum(x => x.Jumlah3);
-            ar90 = agingPiutang.Sum(x => x.Jumlah4);
-            arOver = agingPiutang.Sum(x => x.Jumlah5);
-            arMax = new[] { arCurrent, ar30, ar60, ar90, arOver }.DefaultIfEmpty().Max();
+        agingPiutang = summary.AgingPiutang;
+        totalPiutang = summary.TotalPiutang;
+        jumlahDokPiutang = summary.JumlahDokPiutang;
+        arCurrent = summary.ArCurrent;
+        ar30 = summary.Ar30;
+        ar60 = summary.Ar60;
+        ar90 = summary.Ar90;
+        arOver = summary.ArOver;
+        arMax = summary.ArMax;
 
-            // Load Hutang Data
-            agingHutang = serviceAP.GetAgingSchedule() ?? new List<ApAgingView>();
-            jumlahDokHutang = agingHutang.Count;
-            jumlahDokValas = agingHutang.Count(x => x.Kurs > 1);
-            totalHutangRp = agingHutang.Sum(x => x.Sisa * KursEfektif(x));
+        agingHutang = summary.AgingHutang;
+        jumlahDokHutang = summary.JumlahDokHutang;
+        jumlahDokValas = summary.JumlahDokValas;
+        totalHutangRp = summary.TotalHutangRp;
+        apCurrent = summary.ApCurrent;
+        ap30 = summary.Ap30;
+        ap60 = summary.Ap60;
+        ap90 = summary.Ap90;
+        apOver = summary.ApOver;
+        apMax = summary.ApMax;
 
-            apCurrent = agingHutang.Sum(x => x.Jumlah1 * KursEfektif(x));
-            ap30 = agingHutang.Sum(x => x.Jumlah2 * KursEfektif(x));
-            ap60 = agingHutang.Sum(x => x.Jumlah3 * KursEfektif(x));
-            ap90 = agingHutang.Sum(x => x.Jumlah4 * KursEfektif(x));
-            apOver = agingHutang.Sum(x => x.Jumlah5 * KursEfektif(x));
-            apMax = new[] { apCurrent, ap30, ap60, ap90, apOver }.DefaultIfEmpty().Max();
-
-            lastLoadedAt = DateTime.Now;
-            isLoaded = true;
-        });
+        lastLoadedAt = summary.LastLoadedAt;
+        isLoaded = true;
 
         StateHasChanged();
     }
@@ -898,8 +893,17 @@ else
 
     private async Task LoadGetAsync()
     {
-        TransHeader = await serviceSales.GetTransKurirAsync();
-        var poTransh = serviceOrderSales.GetTransHAktif();
+        // Limit query to top 50 with parallel loading
+        var salesHeadersTask = serviceSales.GetTransKurirAsync(50);
+        var poTranshTask = serviceOrderSales.GetTransHAktifAsync(50);
+
+        await Task.WhenAll(salesHeadersTask, poTranshTask);
+
+        var salesHeaders = await salesHeadersTask;
+        var poTransh = await poTranshTask;
+
+        TransHeader = new List<OeTransH>(salesHeaders.Count + poTransh.Count);
+        TransHeader.AddRange(salesHeaders);
 
         foreach (var aktif in poTransh)
         {
@@ -914,53 +918,76 @@ else
                     Customer = aktif.Vendor,
                     NamaCust = aktif.NamaVendor,
                     Keterangan = aktif.Keterangan,
-                    Status = "PoOrder"  // Mark ini dari PoTransH
+                    Status = "PoOrder"
                 }
             );
         }
 
-        // Load detail untuk setiap transaksi dalam cache untuk summary
+        // Batch load details in parallel
         TransDetailCache.Clear();
+        var salesNoLpbs = salesHeaders.Select(x => x.NoLpb).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToList();
+        var poNoLpbs = poTransh.Select(x => x.NoLpb).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToList();
+
+        var salesDetailsTask = serviceSales.GetTransDetailsByNoLpbsAsync(salesNoLpbs);
+        var poDetailsTask = serviceOrderSales.GetTransDByNoLpbsAsync(poNoLpbs);
+
+        await Task.WhenAll(salesDetailsTask, poDetailsTask);
+
+        var salesDetailsList = await salesDetailsTask;
+        var poDetailsList = await poDetailsTask;
+
+        var salesDetailsGrouped = salesDetailsList
+            .Where(x => !string.IsNullOrEmpty(x.NoLpb))
+            .GroupBy(x => x.NoLpb)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var poDetailsGrouped = poDetailsList
+            .Where(x => !string.IsNullOrEmpty(x.NoLpb))
+            .GroupBy(x => x.NoLpb)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => new OeTrans
+                {
+                    ItemCode = x.ItemCode,
+                    NamaItem = x.NamaItem,
+                    NoLpb = x.NoLpb,
+                    Tanggal = x.Tanggal,
+                    Qty = x.Qty - x.QtyBo,
+                    Harga = x.Harga,
+                    Persen = x.Persen,
+                    Jumlah = (x.Qty - x.QtyBo) * x.Harga,
+                    Satuan = x.Satuan,
+                    Lokasi = x.Lokasi,
+                    Ongkos = 0,
+                    Ppn = 0
+                }).ToList()
+            );
+
         foreach (var trans in TransHeader)
         {
-            try
-            {
-                var isPoOrder = trans.Status == "PoOrder";
-                List<OeTrans> details = new();
+            if (string.IsNullOrEmpty(trans.NoLpb)) continue;
 
-                if (isPoOrder)
+            if (trans.Status == "PoOrder")
+            {
+                if (poDetailsGrouped.TryGetValue(trans.NoLpb, out var details))
                 {
-                    var poDetails = serviceOrderSales.GetTransD();
-                    details = poDetails
-                        .Where(x => x.NoLpb == trans.NoLpb)
-                        .Select(x => new OeTrans
-                        {
-                            ItemCode = x.ItemCode,
-                            NamaItem = x.NamaItem,
-                            NoLpb = x.NoLpb,
-                            Tanggal = x.Tanggal,
-                            Qty = x.Qty - x.QtyBo,
-                            Harga = x.Harga,
-                            Persen = x.Persen,
-                            Jumlah = (x.Qty - x.QtyBo) * x.Harga,
-                            Satuan = x.Satuan,
-                            Lokasi = x.Lokasi,
-                            Ongkos = 0,
-                            Ppn = 0
-                        })
-                        .ToList();
+                    TransDetailCache[trans.NoLpb] = details;
                 }
                 else
                 {
-                    details = serviceSales.Detail3Index(trans.NoLpb);
+                    TransDetailCache[trans.NoLpb] = new List<OeTrans>();
                 }
-
-                TransDetailCache[trans.NoLpb] = details;
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"Error loading details for {trans.NoLpb}: {ex.Message}");
-                TransDetailCache[trans.NoLpb] = new List<OeTrans>();
+                if (salesDetailsGrouped.TryGetValue(trans.NoLpb, out var details))
+                {
+                    TransDetailCache[trans.NoLpb] = details;
+                }
+                else
+                {
+                    TransDetailCache[trans.NoLpb] = new List<OeTrans>();
+                }
             }
         }
 
@@ -1019,77 +1046,50 @@ else
         {
             if (string.IsNullOrEmpty(xKdBank))
             {
-                Console.WriteLine("Error: NoLpb is empty");
                 return;
             }
 
-            Console.WriteLine($"[Detail] Loading detail for NoLpb: {xKdBank}");
+            if (TransDetailCache.TryGetValue(xKdBank, out var cachedDetails) && cachedDetails != null && cachedDetails.Count > 0)
+            {
+                TransDetail2 = cachedDetails;
+                DetailOpen3 = true;
+                StateHasChanged();
+                return;
+            }
 
-            // Find transaction header untuk determine tipe
             var transHeader = TransHeader.FirstOrDefault(x => x.NoLpb == xKdBank);
             var isPoOrder = transHeader?.Status == "PoOrder";
 
-            Console.WriteLine($"[Detail] Transaction type: {(isPoOrder ? "PoOrder" : "Sales")}");
-
-            // Load data in background task
-            var details = await Task.Run(() =>
+            if (isPoOrder)
             {
-                try
+                var poDetails = await serviceOrderSales.GetTransDByNoLpbsAsync(new[] { xKdBank });
+                TransDetail2 = poDetails.Select(x => new OeTrans
                 {
-                    if (isPoOrder)
-                    {
-                        // Ambil detail dari PoTransD (Order Sales)
-                        var poDetails = serviceOrderSales.GetTransD();
-                        var filtered = poDetails
-                            .Where(x => x.NoLpb == xKdBank)
-                            .Select(x => new OeTrans
-                            {
-                                ItemCode = x.ItemCode,
-                                NamaItem = x.NamaItem,
-                                NoLpb = x.NoLpb,
-                                Tanggal = x.Tanggal,
-                                Qty = x.Qty-x.QtyBo,
-                                Harga = x.Harga,
-                                Persen = x.Persen,
-                                Jumlah = (x.Qty-x.QtyBo) * x.Harga,
-                                Satuan = x.Satuan,
-                                Lokasi = x.Lokasi
-                            })
-                            .ToList();
-                        return filtered;
-                    }
-                    else
-                    {
-                        // Ambil detail dari OeTrans (Sales)
-                        return serviceSales.Detail3Index(xKdBank);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[Detail] Service error: {ex.Message}");
-                    return null;
-                }
-            });
-
-            if (details != null)
-            {
-                TransDetail2 = details;
-                Console.WriteLine($"[Detail] Loaded {details.Count} items");
+                    ItemCode = x.ItemCode,
+                    NamaItem = x.NamaItem,
+                    NoLpb = x.NoLpb,
+                    Tanggal = x.Tanggal,
+                    Qty = x.Qty - x.QtyBo,
+                    Harga = x.Harga,
+                    Persen = x.Persen,
+                    Jumlah = (x.Qty - x.QtyBo) * x.Harga,
+                    Satuan = x.Satuan,
+                    Lokasi = x.Lokasi
+                }).ToList();
             }
             else
             {
-                TransDetail2 = new List<OeTrans>();
-                Console.WriteLine("[Detail] Service returned null");
+                var salesDetails = await serviceSales.GetTransDetailsByNoLpbsAsync(new[] { xKdBank });
+                TransDetail2 = salesDetails ?? new List<OeTrans>();
             }
 
+            TransDetailCache[xKdBank] = TransDetail2;
             DetailOpen3 = true;
             StateHasChanged();
-            Console.WriteLine($"[Detail] Modal state changed. DetailOpen3={DetailOpen3}, Items count={TransDetail2.Count}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[Detail] Exception: {ex.Message}");
-            Console.WriteLine($"[Detail] Stack: {ex.StackTrace}");
             TransDetail2 = new List<OeTrans>();
             DetailOpen3 = false;
             StateHasChanged();

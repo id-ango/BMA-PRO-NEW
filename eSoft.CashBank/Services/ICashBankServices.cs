@@ -9,6 +9,9 @@ namespace eSoft.CashBank.Services
     public interface ICashBankServices
     {
         List<CbBank> GetBank();
+        Task<List<CbBank>> GetBankAsync();
+        List<CbBank> GetBankList(int? page = null, int? pageSize = null);
+        Task<List<CbBank>> GetBankListAsync(int? page = null, int? pageSize = null);
         CbBank GetBankId(int id);
         CbBank GetBankKd(string id);
         bool CekKdBank(string kodeBank);

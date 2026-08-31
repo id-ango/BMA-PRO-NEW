@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using eSoft.Penjualan.Data;
 using eSoft.Penjualan.Model;
 using eSoft.Penjualan.View;
@@ -169,6 +170,79 @@ namespace eSoft.Penjualan.Services
                         Keterangan = header.Keterangan,
                         AlamatKirim = header.AlamatKirim
                     }).ToList();
+        }
+
+        public List<OeTrans> GetTransDetailsByNoLpbs(IEnumerable<string> noLpbs)
+        {
+            if (noLpbs == null || !noLpbs.Any())
+                return new List<OeTrans>();
+
+            var list = noLpbs.ToList();
+            return (from header in _context.OeTransHs.AsNoTracking()
+                    join detail in _context.OeTransDs.AsNoTracking() on header.OeTransHId equals detail.OeTransHId
+                    where list.Contains(header.NoLpb)
+                    select new OeTrans
+                    {
+                        ItemCode = detail.ItemCode,
+                        NamaItem = detail.NamaItem,
+                        Harga = detail.Harga,
+                        Persen = detail.Persen,
+                        Discount = detail.Discount,
+                        Satuan = detail.Satuan,
+                        Ppn = header.Ppn,
+                        PpnPersen = header.PpnPersen,
+                        Ongkos = header.Ongkos,
+                        Qty = detail.Qty,
+                        Jumlah = detail.Jumlah,
+                        Lokasi = detail.Lokasi,
+                        NoLpb = header.NoLpb,
+                        Customer = header.Customer,
+                        NamaCust = header.NamaCust,
+                        Tanggal = header.Tanggal,
+                        Keterangan = header.Keterangan,
+                        AlamatKirim = header.AlamatKirim
+                    }).ToList();
+        }
+
+        public async Task<List<OeTrans>> GetTransDetailsByNoLpbsAsync(IEnumerable<string> noLpbs)
+        {
+            if (noLpbs == null || !noLpbs.Any())
+                return new List<OeTrans>();
+
+            var list = noLpbs.ToList();
+            return await (from header in _context.OeTransHs.AsNoTracking()
+                    join detail in _context.OeTransDs.AsNoTracking() on header.OeTransHId equals detail.OeTransHId
+                    where list.Contains(header.NoLpb)
+                    select new OeTrans
+                    {
+                        ItemCode = detail.ItemCode,
+                        NamaItem = detail.NamaItem,
+                        Harga = detail.Harga,
+                        Persen = detail.Persen,
+                        Discount = detail.Discount,
+                        Satuan = detail.Satuan,
+                        Ppn = header.Ppn,
+                        PpnPersen = header.PpnPersen,
+                        Ongkos = header.Ongkos,
+                        Qty = detail.Qty,
+                        Jumlah = detail.Jumlah,
+                        Lokasi = detail.Lokasi,
+                        NoLpb = header.NoLpb,
+                        Customer = header.Customer,
+                        NamaCust = header.NamaCust,
+                        Tanggal = header.Tanggal,
+                        Keterangan = header.Keterangan,
+                        AlamatKirim = header.AlamatKirim
+                    }).ToListAsync();
+        }
+
+        public async Task<Dictionary<string, List<OeTrans>>> GetTransDetailsBatchAsync(IEnumerable<string> noLpbs)
+        {
+            var details = await GetTransDetailsByNoLpbsAsync(noLpbs);
+            return details
+                .Where(x => !string.IsNullOrEmpty(x.NoLpb))
+                .GroupBy(x => x.NoLpb)
+                .ToDictionary(g => g.Key, g => g.ToList());
         }
 
         public List<OeTrans> Detail4(string xKdHeader, DateTime tgl1, DateTime tgl2)

@@ -102,7 +102,7 @@ namespace eSoft.Penjualan.Services
                 .ToList();
         }
 
-        public async Task<List<OeTransH>> GetTransKurirAsync()
+        public async Task<List<OeTransH>> GetTransKurirAsync(int? top = null)
         {
             // Filter transaksi 2 bulan terakhir ke belakang (tanpa batasan masa depan) yang belum ada kurir
             DateTime twoMonthsAgo = DateTime.Today.AddMonths(-2);
@@ -135,7 +135,49 @@ namespace eSoft.Penjualan.Services
                     Pajak = e.Pajak
                 });
 
+            if (top.HasValue && top.Value > 0)
+            {
+                return await query.Take(top.Value).ToListAsync();
+            }
+
             return await query.ToListAsync();
+        }
+
+        public List<OeTransH> GetTransKurir(int? top = null)
+        {
+            var query = _context.OeTransHs
+                .AsNoTracking()
+                .Where(x => string.IsNullOrEmpty(x.Kurir) && x.Pajak == false)
+                .OrderByDescending(x => x.Tanggal)
+                .Select(e => new OeTransH
+                {
+                    OeTransHId = e.OeTransHId,
+                    NoLpb = e.NoLpb,
+                    Customer = e.Customer,
+                    NamaCust = e.NamaCust,
+                    AlamatKirim = e.AlamatKirim,
+                    Tanggal = e.Tanggal,
+                    Keterangan = e.Keterangan,
+                    Salesman = e.Salesman,
+                    Jumlah = e.Jumlah,
+                    TtlJumlah = e.TtlJumlah,
+                    Ongkos = e.Ongkos,
+                    Ppn = e.Ppn,
+                    PpnPersen = e.PpnPersen,
+                    DPayment = e.DPayment,
+                    Tagihan = e.Tagihan,
+                    TotalQty = e.TotalQty,
+                    Kode = e.Kode,
+                    Cek = e.Cek,
+                    Pajak = e.Pajak
+                });
+
+            if (top.HasValue && top.Value > 0)
+            {
+                return query.Take(top.Value).ToList();
+            }
+
+            return query.ToList();
         }
 
         public void SimpanKurir(OeTransH transaksi)

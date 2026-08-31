@@ -66,6 +66,7 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => {
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddMemoryCache();
 // builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
 
 builder.Services.AddDbContext<DbContextBank>(options =>
@@ -133,6 +134,7 @@ builder.Services.AddTransient<IAssetServices, AssetServices>();
 builder.Services.AddTransient<IOrderSalesServices, OrderSalesServices>();
 builder.Services.AddTransient<IFinancialServices, FinancialServices>();
 builder.Services.AddTransient<ITestRunServices, TestRunServices>();
+builder.Services.AddScoped<IDashboardCacheService, DashboardCacheService>();
 
 
 var app = builder.Build();
