@@ -297,7 +297,12 @@ namespace eSoft.Penjualan.Services
             var result = new List<SalesTransactionWithDetailDto>(headers.Count);
             foreach (var header in headers)
             {
-                detailsBatch.TryGetValue(header.NoLpb, out var details);
+                List<OeTrans> details = null;
+                if (!string.IsNullOrEmpty(header.NoLpb))
+                {
+                    detailsBatch.TryGetValue(header.NoLpb, out details);
+                }
+
                 result.Add(new SalesTransactionWithDetailDto
                 {
                     Header = header,
