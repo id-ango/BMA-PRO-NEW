@@ -1,0 +1,55 @@
+@page "/ModuleAdministration/AuditLog"
+@attribute [Authorize(Roles = "Admin")]
+@using Accounting.Data
+@using Accounting.Services
+@inject AuditService AuditService
+
+<PageTitle>Audit Log</PageTitle>
+
+<div class="container">
+    <h1>Audit Log</h1>
+    <p>Aktivitas di luar jam kerja ditandai merah.</p>
+
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Waktu</th>
+                <th>User</th>
+                <th>IP Address</th>
+                <th>Aksi</th>
+                <th>Entity</th>
+                <th>Key</th>
+                <th>Status</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Logs)
+            {
+                var localTime = AuditService.ConvertToConfiguredTimeZone(item.OccurredUtc);
+                <tr class="@(item.OutsideWorkingHours ? "table-danger" : string.Empty)">
+                    <td>@localTime.ToString("dd-MM-yyyy HH:mm:ss")</td>
+                    <td>@(item.UserName ?? "Unknown")</td>
+                    <td>@(item.IpAddress ?? "Unknown")</td>
+                    <td>@item.Action</td>
+                    <td>@item.EntityName</td>
+                    <td>@item.EntityId</td>
+                    <td>@(item.Success ? "Success" : "Failed")</td>
+                    <td>@item.Details</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<AuditEntry> Logs = [];
+
+    protected override void OnInitialized()
+    {
+        Logs = AuditService.Query()
+            .OrderByDescending(item => item.OccurredUtc)
+            .Take(500)
+            .ToList();
+    }
+}

@@ -96,7 +96,7 @@
             </li>  <!--   Penjualan  -->
         </AuthorizeView>
 
-        <AuthorizeView Roles="Admin, Finance">
+        <AuthorizeView Roles="Admin, Finance, Warehouse">
             <li class="nav-item px-3">
                 <button type="button" class="@GetNavButtonClass("Pembelian")" @onclick='() => ToggleSection("Pembelian")'>
                     <span class="oi oi-basket nav-group-icon nav-group-icon-purchase" aria-hidden="true"></span> Pembelian

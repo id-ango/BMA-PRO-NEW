@@ -54,6 +54,11 @@ CultureInfo.DefaultThreadCurrentUICulture = indonesiaCulture;
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<AuditOptions>(builder.Configuration.GetSection("Audit"));
+builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<AuditSaveChangesInterceptor>();
+builder.Services.AddScoped<AuditCookieEvents>();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -66,6 +71,7 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => {
 })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.ConfigureApplicationCookie(options => options.EventsType = typeof(AuditCookieEvents));
 
 
 
@@ -73,40 +79,76 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 // builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
 
-builder.Services.AddDbContext<DbContextBank>(options =>
-    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextBank>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextLedger>(options =>
-       options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextLedger>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextPiutang>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting").CommandTimeout(180)));
+builder.Services.AddDbContext<DbContextPiutang>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting").CommandTimeout(180));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextHutang>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextHutang>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextPersediaan>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextPersediaan>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextBeli>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextBeli>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextJual>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextJual>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextOrder>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextOrder>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextCompany>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextCompany>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextAssets>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextAssets>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
-builder.Services.AddDbContext<DbContextFinancial>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
-builder.Services.AddDbContext<DbContextTestRun>(options =>
-      options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting")));
+builder.Services.AddDbContext<DbContextFinancial>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
+builder.Services.AddDbContext<DbContextTestRun>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
 builder.Services.AddTransient<ICashBankServices, CashBankServices>();
 builder.Services.AddTransient<ILedgerServices, LedgerServices>();
@@ -166,6 +208,7 @@ app.UseRouting();
  app.UseAuthentication();
  app.UseAuthorization();
 
+app.MapRazorPages();
 app.MapControllers();
 app.MapBlazorHub();
 //app.MapBlazorHub(configureOptions: options =>

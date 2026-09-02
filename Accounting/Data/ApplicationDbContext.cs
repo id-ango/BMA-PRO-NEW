@@ -5,6 +5,8 @@ namespace Accounting.Data
 {
     public class ApplicationDbContext : IdentityDbContext
     {
+        public DbSet<AuditEntry> AuditLogs => Set<AuditEntry>();
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
