@@ -26,8 +26,7 @@ using eSoft.Piutang.Services;
 using eSoft.Financial.Data;
 using eSoft.Financial.View;
 using eSoft.Financial.Services;
-using eSoft.TestRun.Data;
-using eSoft.TestRun.Services;
+
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -144,11 +143,7 @@ builder.Services.AddDbContext<DbContextFinancial>((sp, options) =>
     options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
     options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 });
-builder.Services.AddDbContext<DbContextTestRun>((sp, options) =>
-{
-    options.UseSqlServer(connectionString, b => b.MigrationsAssembly("Accounting"));
-    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
-});
+
 
 builder.Services.AddTransient<ICashBankServices, CashBankServices>();
 builder.Services.AddTransient<ILedgerServices, LedgerServices>();
@@ -179,7 +174,7 @@ builder.Services.AddTransient<IExcelServices, ExcelServices>();
 builder.Services.AddTransient<IAssetServices, AssetServices>();
 builder.Services.AddTransient<IOrderSalesServices, OrderSalesServices>();
 builder.Services.AddTransient<IFinancialServices, FinancialServices>();
-builder.Services.AddTransient<ITestRunServices, TestRunServices>();
+
 
 
 var app = builder.Build();
