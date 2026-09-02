@@ -23,7 +23,9 @@
 </button>
 @if (!string.IsNullOrWhiteSpace(stockStatus))
 {
-    <div class="alert alert-info mt-2">@stockStatus</div>
+    <div class="alert @(stockStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : stockStatus.StartsWith("Proses stock selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") mt-2" role="status">
+        <i class="fas @(stockStatus.StartsWith("Proses stock selesai", StringComparison.Ordinal) ? "fa-check-circle" : "fa-info-circle") me-2"></i>@stockStatus
+    </div>
 }
 <br/>
 <br />
@@ -35,6 +37,12 @@
     </span>
 
 </button>
+@if (!string.IsNullOrWhiteSpace(piutangStatus))
+{
+    <div class="alert @(piutangStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : piutangStatus.StartsWith("Proses sales piutang selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") mt-2" role="status">
+        <i class="fas @(piutangStatus.StartsWith("Proses sales piutang selesai", StringComparison.Ordinal) ? "fa-check-circle" : "fa-info-circle") me-2"></i>@piutangStatus
+    </div>
+}
 <br />
 <br />
 <br />
@@ -77,6 +85,12 @@
         </div>
 
     </EditForm>
+    @if (!string.IsNullOrWhiteSpace(rubahStatus))
+    {
+        <div class="alert @(rubahStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : rubahStatus.StartsWith("Perubahan kode item selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") mt-3" role="status">
+            <i class="fas @(rubahStatus.StartsWith("Perubahan kode item selesai", StringComparison.Ordinal) ? "fa-check-circle" : "fa-info-circle") me-2"></i>@rubahStatus
+        </div>
+    }
 </div>
 
 @if (SearchOpen)
@@ -146,7 +160,7 @@
             });
 
             await service.prosesStock(progress);
-            stockStatus = $"Selesai: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
+            stockStatus = $"Proses stock selesai pada {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Data stock sudah diperbarui.";
         }
         catch (Exception ex)
         {
@@ -169,7 +183,7 @@
         {
             isProcessPiutang = true;
            await service.ProsesSalesPiutang();
-           piutangStatus = $"Selesai: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
+           piutangStatus = $"Proses sales piutang selesai pada {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Data sudah diperbarui.";
         }
         catch (Exception ex)
         {
@@ -258,7 +272,7 @@
         try
         {
             service.ProsesRubahKodeItem(bank.ItemCode, bank.NamaLengkap);
-            rubahStatus = "Perubahan kode item berhasil.";
+            rubahStatus = "Perubahan kode item selesai. Seluruh transaksi terkait sudah diperbarui.";
 
             // Simpan item code yang baru diproses
             previousItemCode = bank.ItemCode;
