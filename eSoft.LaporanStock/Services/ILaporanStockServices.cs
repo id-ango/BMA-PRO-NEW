@@ -23,7 +23,7 @@ namespace eSoft.LaporanStock.Services
     public interface ILaporanStockServices
     {
         List<IcStockCardView> CetakMutasi(DateTime Tanggal1, DateTime Tanggal2, string kodeBank);
-        Task prosesStock();
+        Task prosesStock(IProgress<string> progress = null);
         Task ProsesSalesPiutang();
 
         void ProsesRubahKodeItem(string Barang, string UbahItem);

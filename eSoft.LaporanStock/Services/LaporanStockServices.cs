@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -429,8 +430,15 @@ namespace eSoft.LaporanStock.Services
             return Awalitem;
 
         }
-        public async Task prosesStock()
+        public async Task prosesStock(IProgress<string> progress = null)
         {
+            var stopwatch = Stopwatch.StartNew();
+            void ReportStatus(string message)
+            {
+                Debug.WriteLine($"[prosesStock] {message} | {stopwatch.Elapsed:hh\\:mm\\:ss}");
+            }
+
+            ReportStatus("Mulai proses stock");
 
             List<IcItem> MasterStock = _context.IcItems.ToList();
             List<IcAltItem> AltStock = _context.IcAltItems.ToList();
@@ -440,6 +448,7 @@ namespace eSoft.LaporanStock.Services
             List<IcStockCardView> Transaksi = new List<IcStockCardView>();
 
             List<PoTransH> OrderTrans = _contextOR.PoTransHs.Where(x => x.Kode == "71").ToList();
+            ReportStatus($"Master stock dimuat: {MasterStock.Count:N0}, lokasi: {AltStock.Count:N0}, order: {OrderTrans.Count:N0}");
 
             foreach (var order in OrderTrans)
             {
@@ -457,6 +466,7 @@ namespace eSoft.LaporanStock.Services
                     }
                 }
             }
+            ReportStatus("Selesai update HrgUsd/CurrencyCode dari order pembelian");
 
             MasterStock.ForEach(i => { i.Qty = 0; i.Cost = 0; });
             AltStock.ForEach(i => { i.Qty = 0; i.Cost = 0; });
@@ -465,6 +475,7 @@ namespace eSoft.LaporanStock.Services
             MasterStock.ForEach(i => i.HrgNetto = (i.SaldoAwal != 0 ? i.CostAwal / i.SaldoAwal : i.Harga));
 
             AltStock.ForEach(i => { i.Qty = i.SaldoAwal; i.Cost = i.CostAwal; });
+            ReportStatus("Selesai inisialisasi saldo awal master dan lokasi");
 
 
             TransJual = _contextOE.OeTransDs.OrderBy(x => x.Tanggal)
@@ -473,6 +484,7 @@ namespace eSoft.LaporanStock.Services
                .ToList();
             TransIC = _context.IcTransDs.OrderBy(x => x.Tanggal)
                .ToList();
+            ReportStatus($"Transaksi dimuat - Jual: {TransJual.Count:N0}, Beli: {TransBeli.Count:N0}, Adjust: {TransIC.Count:N0}");
 
             foreach (var trans in TransBeli)
             {
@@ -523,10 +535,13 @@ namespace eSoft.LaporanStock.Services
 
                 });
             }
+            ReportStatus($"Daftar transaksi gabungan siap: {Transaksi.Count:N0}");
 
 
 
-            foreach (var trans in Transaksi.OrderBy(x => x.Tanggal).ToList())
+            var transaksiUrut = Transaksi.OrderBy(x => x.Tanggal).ToList();
+            ReportStatus($"Mulai perhitungan stock: {transaksiUrut.Count:N0} transaksi");
+            foreach (var trans in transaksiUrut)
             {
                 IcItem item = MasterStock.Find(x => x.ItemCode == trans.ItemCode);
                 IcAltItem cekLokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == trans.Lokasi).FirstOrDefault();
@@ -637,15 +652,18 @@ namespace eSoft.LaporanStock.Services
                 }
                 //   _context.Update(item);
             }
+            ReportStatus("Selesai perhitungan stock");
 
 
             _context.UpdateRange(MasterStock);
             _context.UpdateRange(AltStock);
 
             _contextOE.UpdateRange(TransJual);
+            ReportStatus("Menyimpan perubahan ke database");
 
             await _context.SaveChangesAsync();
             await _contextOE.SaveChangesAsync();
+            ReportStatus("Proses stock selesai");
 
 
             // return Transaksi;

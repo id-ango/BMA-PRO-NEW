@@ -21,6 +21,10 @@
     </span>
 
 </button>
+@if (!string.IsNullOrWhiteSpace(stockStatus))
+{
+    <div class="alert alert-info mt-2">@stockStatus</div>
+}
 <br/>
 <br />
 <br />
@@ -118,6 +122,7 @@
     private string previousItemCode = ""; // Track item yang terakhir diproses
     private bool isProcessing = false;
     private bool isProcessPiutang = false;
+    private string stockStatus;
     private bool isProcessingRubah = false; // Loading state untuk proses rubah item
 
     protected override void OnInitialized()
@@ -129,22 +134,35 @@
     }
 
 
-    private async void prosesstock()
+    private async Task prosesstock()
     {
+        if (isProcessing) return;
+
+        var startedAt = DateTime.Now;
         try
         {
             isProcessing = true;
-           await service.prosesStock();
+            stockStatus = $"Mulai: {startedAt:dd/MM/yyyy HH:mm:ss}";
+            await InvokeAsync(StateHasChanged);
+
+            var progress = new Progress<string>(status =>
+            {
+                stockStatus = status;
+                _ = InvokeAsync(StateHasChanged);
+            });
+
+            await service.prosesStock(progress);
+            stockStatus = $"Selesai: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
         }
         catch (Exception ex)
         {
+            stockStatus = $"Gagal: {DateTime.Now:dd/MM/yyyy HH:mm:ss} - {ex.Message}";
             await JSRuntime.InvokeVoidAsync("alert", "Terjadi Kesalahan: " + ex.Message);
         }
         finally
         {
             isProcessing = false;
-            await JSRuntime.InvokeVoidAsync("alert", "Proses Stock Sudah Selesai");
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
