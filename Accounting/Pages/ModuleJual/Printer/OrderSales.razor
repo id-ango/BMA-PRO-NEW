@@ -124,10 +124,10 @@
                     <tr>
                         <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  border-left:1px solid #333; " align="left">@item.NamaItem</td>
                         <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@($"{@item.Qty.ToString("F0")} {@item.Satuan}") </td>
-                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@item.Harga.ToString("N")</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@item.Harga.ToString("N2")</td>
                         <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@((item.Persen/100).ToString("#,###.##%;;' '"))</td>
 
-                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;   border-right:1px solid #333;" align="right">@item.Jumlah.ToString("N")</td>
+                        <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;   border-right:1px solid #333;" align="right">@item.Jumlah.ToString("N2")</td>
                     </tr>
                 }
 
@@ -229,14 +229,14 @@
                         <table width="100%">
                             <tr>
                                 <td width="40%" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">Sub Total</td>
-                                <td width="60%" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.TtlJumlah.ToString("N")</td>
+                                <td width="60%" style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.TtlJumlah.ToString("N2")</td>
                             </tr>
                             @if (TransAll.Discount != 0)
                             {
                                 <tr>
 
                                     <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">Discount</td>
-                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.Discount.ToString("N")</td>
+                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.Discount.ToString("N2")</td>
                                 </tr>
                             }
                             @if (TransAll.Ppn != 0)
@@ -244,7 +244,7 @@
                                 <tr>
 
                                     <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">PPn</td>
-                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.Ppn.ToString("N")</td>
+                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.Ppn.ToString("N2")</td>
                                 </tr>
                             }
                             else
@@ -258,24 +258,24 @@
                             <tr>
 
                                 <td style="font-family: Verdana, Geneva, sans-serif; font-weight: 300; font-size: 11px; border-bottom: 1px solid #333; " align="right">O. Kirim</td>
-                                <td style="font-family: Verdana, Geneva, sans-serif; font-weight: 300; font-size: 11px; border-bottom: 1px solid #333; " align="right">@TransAll.Ongkos.ToString("N")</td>
+                                <td style="font-family: Verdana, Geneva, sans-serif; font-weight: 300; font-size: 11px; border-bottom: 1px solid #333; " align="right">@TransAll.Ongkos.ToString("N2")</td>
                             </tr>
                             <tr>
 
                                 <td style="font-family: Verdana, Geneva, sans-serif; font-weight: 300; font-size: 11px;  " align="right">Total</td>
-                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.Jumlah.ToString("N")</td>
+                                <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@TransAll.Jumlah.ToString("N2")</td>
                             </tr>
                             @if (UangMuka > 0 )
                             {
                                 <tr>
 
                                     <td style="font-family: Verdana, Geneva, sans-serif; font-weight: 300; font-size: 11px;border-bottom: 1px solid #333;  " align="right">Uang Muka</td>
-                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-bottom: 1px solid #333;  " align="right">@UangMuka.ToString("N")</td>
+                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px; border-bottom: 1px solid #333;  " align="right">@UangMuka.ToString("N2")</td>
                                 </tr>
                                 <tr>
 
                                     <td style="font-family: Verdana, Geneva, sans-serif; font-weight: 300; font-size: 11px;  " align="right">Sisa Tagihan</td>
-                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@((TransAll.Jumlah-UangMuka).ToString("N"))</td>
+                                    <td style="font-family:Verdana, Geneva, sans-serif; font-weight:300; font-size:11px;  " align="right">@((TransAll.Jumlah-UangMuka).ToString("N2"))</td>
                                 </tr>
                             }
                         </table>
