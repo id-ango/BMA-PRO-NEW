@@ -45,10 +45,10 @@
     <EditForm Model="@bank" OnValidSubmit="@HandleValidSubmit">
         <DataAnnotationsValidator />
         <ValidationSummary />
-        <div class="form-group">
-            <label>
-                Kode Item Awal
-                <InputSelect class="form-control" @bind-Value="bank.ItemCode" style="width:75%; display:inline" @oninput="OnChangeItem" disabled="@isProcessingRubah">
+        <div class="form-group mb-3">
+            <label class="form-label" for="sourceItem">Kode Item Awal</label>
+            <div class="input-group">
+                <InputSelect id="sourceItem" class="form-control" @bind-Value="bank.ItemCode" @oninput="OnChangeItem" disabled="@IsAnyProcessing">
                     <option value="">&nbsp;&nbsp;---Select Item Code---&nbsp;&nbsp;</option>
                     @foreach (var item in SrcCode)
                     {
@@ -56,21 +56,15 @@
                     }
 
                 </InputSelect>
-                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)" disabled="@isProcessingRubah">Cari</button>
-            </label>
+                <button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)" disabled="@IsAnyProcessing">Cari</button>
+            </div>
         </div>
-        <div class="form-group">
-            <label>
-                Diganti dengan Kode
-                <InputText class="form-control" @bind-Value="bank.NamaLengkap" disabled="@isProcessingRubah">                   
-                </InputText>
-
-            </label>
+        <div class="form-group mb-3">
+            <label class="form-label" for="targetItem">Diganti dengan Kode</label>
+            <InputText id="targetItem" class="form-control" @bind-Value="bank.NamaLengkap" disabled="@IsAnyProcessing" />
         </div>
-        <br />
-
-        <div class="float-md-right">
-            <button class="btn-success" type="submit" disabled="@isProcessingRubah" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="d-flex justify-content-end">
+            <button class="btn btn-warning" type="submit" disabled="@IsAnyProcessing">
                 <span>Proses Rubah Item</span>
                 @if (isProcessingRubah)
                 {
@@ -114,16 +108,16 @@
 @code {
 
     IcItem bank = new ();
-    private bool DialogOpen { get; set; }
-    public string Testing { get; set; }
     public List<IcItem> SrcCode { get; set; }
     public bool SearchOpen { get; set; }
-    private int dblclick = 1;
     private string previousItemCode = ""; // Track item yang terakhir diproses
     private bool isProcessing = false;
     private bool isProcessPiutang = false;
-    private string stockStatus;
+    private string stockStatus = "";
+    private string piutangStatus = "";
+    private string rubahStatus = "";
     private bool isProcessingRubah = false; // Loading state untuk proses rubah item
+    private bool IsAnyProcessing => isProcessing || isProcessPiutang || isProcessingRubah;
 
     protected override void OnInitialized()
     {
@@ -166,22 +160,26 @@
         }
     }
 
-     private async void prosesSalesPiutang()
+     private async Task prosesSalesPiutang()
     {
+        if (IsAnyProcessing) return;
+
+        piutangStatus = $"Mulai: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
         try
         {
             isProcessPiutang = true;
            await service.ProsesSalesPiutang();
+           piutangStatus = $"Selesai: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
         }
         catch (Exception ex)
         {
+            piutangStatus = $"Gagal: {DateTime.Now:dd/MM/yyyy HH:mm:ss} - {ex.Message}";
             await JSRuntime.InvokeVoidAsync("alert", "Terjadi Kesalahan: " + ex.Message);
         }
         finally
         {
             isProcessPiutang = false;
-            await JSRuntime.InvokeVoidAsync("alert", "Proses Sales Piutang Sudah Selesai");
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -205,10 +203,13 @@
         if (!string.IsNullOrEmpty(textSearch))
         {
             bank.ItemCode = textSearch;
-            var itemcode = (from e in SrcCode where e.ItemCode == bank.ItemCode select e).FirstOrDefault();
-            bank.NamaItem = itemcode.NamaItem;
-            bank.Satuan = itemcode.Satuan;
-            bank.Harga = itemcode.HrgJual;
+            var itemcode = SrcCode.FirstOrDefault(e => e.ItemCode == bank.ItemCode);
+            if (itemcode is not null)
+            {
+                bank.NamaItem = itemcode.NamaItem;
+                bank.Satuan = itemcode.Satuan;
+                bank.Harga = itemcode.HrgJual;
+            }
          
 
         }
@@ -220,56 +221,60 @@
     public void OnChangeItem(ChangeEventArgs args)
     {
 
-        var itemcode = (from e in SrcCode where e.ItemCode == args.Value.ToString() select e).FirstOrDefault();
+        var itemcode = SrcCode.FirstOrDefault(e => e.ItemCode == args.Value?.ToString());
+        if (itemcode is null) return;
+
         bank.NamaItem = itemcode.NamaItem;
         bank.Satuan = itemcode.Satuan;
         bank.Harga = itemcode.HrgJual;
-      
-      
 
     }
 
-    private async void HandleValidSubmit()
+    private async Task HandleValidSubmit()
     {
-        // Jika item yang diproses sama seperti sebelumnya dan dblclick belum 1, cegah
-        if (bank.ItemCode == previousItemCode && dblclick != 1)
+        if (IsAnyProcessing) return;
+
+        if (string.IsNullOrWhiteSpace(bank.ItemCode) || string.IsNullOrWhiteSpace(bank.NamaLengkap))
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Item ini sudah diproses. Silakan pilih item lain.");
+            rubahStatus = "Gagal: Kode item sumber dan kode pengganti wajib diisi.";
             return;
         }
 
-        // Jika item berbeda, reset dblclick
-        if (bank.ItemCode != previousItemCode)
+        if (string.Equals(bank.ItemCode.Trim(), bank.NamaLengkap.Trim(), StringComparison.OrdinalIgnoreCase))
         {
-            dblclick = 1;
+            rubahStatus = "Gagal: Kode item pengganti harus berbeda dari kode item sumber.";
+            return;
         }
 
-        if (dblclick != 1) return;
+        if (bank.ItemCode == previousItemCode)
+        {
+            rubahStatus = "Gagal: Item ini sudah diproses. Silakan pilih item lain.";
+            return;
+        }
 
-        dblclick++;
         isProcessingRubah = true;
+        rubahStatus = "Memproses perubahan kode item...";
 
         try
         {
             service.ProsesRubahKodeItem(bank.ItemCode, bank.NamaLengkap);
-            await JSRuntime.InvokeVoidAsync("alert", "Proses Rubah Item Berhasil");
+            rubahStatus = "Perubahan kode item berhasil.";
 
             // Simpan item code yang baru diproses
             previousItemCode = bank.ItemCode;
 
             // Clear form untuk input item baru
             bank = new IcItem();
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Error: " + ex.Message);
-            dblclick = 1; // Reset jika terjadi error
+            rubahStatus = "Gagal: " + ex.Message;
         }
         finally
         {
             isProcessingRubah = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 

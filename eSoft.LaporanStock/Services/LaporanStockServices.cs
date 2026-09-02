@@ -448,15 +448,22 @@ namespace eSoft.LaporanStock.Services
             List<IcStockCardView> Transaksi = new List<IcStockCardView>();
 
             List<PoTransH> OrderTrans = _contextOR.PoTransHs.Where(x => x.Kode == "71").ToList();
+            var suppliers = _contextAP.ApSuppls
+                .Where(x => !string.IsNullOrEmpty(x.Kurs))
+                .GroupBy(x => x.Supplier)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Kurs).FirstOrDefault());
+            var orderIds = OrderTrans.Select(x => x.PoTransHId).ToList();
+            var orderDetails = _contextOR.PoTransDs
+                .Where(x => orderIds.Contains(x.PoTransHId))
+                .ToLookup(x => x.PoTransHId);
             ReportStatus($"Master stock dimuat: {MasterStock.Count:N0}, lokasi: {AltStock.Count:N0}, order: {OrderTrans.Count:N0}");
 
             foreach (var order in OrderTrans)
             {
-                order.Currency = GetSupplierKode(order.Vendor).Kurs;
-                if (!string.IsNullOrEmpty(order.Currency))
+                if (suppliers.TryGetValue(order.Vendor, out var kurs) && !string.IsNullOrEmpty(kurs))
                 {
-                    List<PoTransD> transd = _contextOR.PoTransDs.Where(x => x.PoTransHId == order.PoTransHId).ToList();
-                    foreach (var transaksi in transd)
+                    order.Currency = kurs;
+                    foreach (var transaksi in orderDetails[order.PoTransHId])
                     {
                         if (transaksi.Harga > 0)
                         {
