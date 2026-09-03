@@ -76,7 +76,8 @@ builder.Services.ConfigureApplicationCookie(options => options.EventsType = type
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-// builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
+builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
+builder.Services.AddScoped<AuditContext>();
 
 builder.Services.AddDbContext<DbContextBank>((sp, options) =>
 {
@@ -205,6 +206,9 @@ app.UseRouting();
 
 app.MapRazorPages();
 app.MapControllers();
+app.MapGet("/audit/client-ip", (HttpContext context) =>
+    Results.Text(context.Connection.RemoteIpAddress?.ToString() ?? string.Empty))
+    .RequireAuthorization();
 app.MapBlazorHub();
 //app.MapBlazorHub(configureOptions: options =>
 //{

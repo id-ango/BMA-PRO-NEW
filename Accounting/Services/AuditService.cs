@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Accounting.Data;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -11,12 +12,21 @@ public sealed class AuditService
 {
     private readonly ApplicationDbContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly AuthenticationStateProvider _authenticationStateProvider;
+    private readonly AuditContext _auditContext;
     private readonly AuditOptions _options;
 
-    public AuditService(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor, IOptions<AuditOptions> options)
+    public AuditService(
+        ApplicationDbContext context,
+        IHttpContextAccessor httpContextAccessor,
+        AuthenticationStateProvider authenticationStateProvider,
+        AuditContext auditContext,
+        IOptions<AuditOptions> options)
     {
         _context = context;
         _httpContextAccessor = httpContextAccessor;
+        _authenticationStateProvider = authenticationStateProvider;
+        _auditContext = auditContext;
         _options = options.Value;
     }
 
@@ -27,12 +37,17 @@ public sealed class AuditService
         var localNow = ConvertToConfiguredTimeZone(now);
         var user = principal ?? httpContext?.User;
 
+        if (principal is null && (user?.Identity?.IsAuthenticated != true))
+        {
+            user = (await _authenticationStateProvider.GetAuthenticationStateAsync()).User;
+        }
+
         _context.AuditLogs.Add(new AuditEntry
         {
             OccurredUtc = now,
             UserId = user?.FindFirstValue(ClaimTypes.NameIdentifier),
             UserName = user?.Identity?.Name,
-            IpAddress = httpContext?.Connection.RemoteIpAddress?.ToString(),
+            IpAddress = _auditContext.IpAddress ?? httpContext?.Connection.RemoteIpAddress?.ToString(),
             Action = action,
             EntityName = entityName,
             EntityId = entityId,

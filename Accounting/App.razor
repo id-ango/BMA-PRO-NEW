@@ -1,4 +1,7 @@
-﻿<CascadingAuthenticationState>
+﻿@inject IJSRuntime JS
+@inject Accounting.Services.AuditContext AuditContext
+
+<CascadingAuthenticationState>
     <ErrorBoundary>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
@@ -14,4 +17,15 @@
     </Router>
     </ErrorBoundary>
 </CascadingAuthenticationState>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var ipAddress = await JS.InvokeAsync<string>("getAuditIpAddress");
+            AuditContext.SetIpAddress(ipAddress);
+        }
+    }
+}
 
