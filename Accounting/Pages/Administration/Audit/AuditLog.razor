@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "Admin")]
 @using Accounting.Data
 @using Accounting.Services
+@using Microsoft.AspNetCore.Components.Rendering
 @inject AuditService AuditService
 
 <PageTitle>Audit Log</PageTitle>
@@ -9,6 +10,46 @@
 <div class="container">
     <h1>Audit Log</h1>
     <p>Aktivitas di luar jam kerja ditandai merah.</p>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <label class="form-label" for="fromDate">Dari tanggal</label>
+            <input id="fromDate" class="form-control" type="date" value="@FromDate" @onchange="OnFromDateChanged" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="toDate">Sampai tanggal</label>
+            <input id="toDate" class="form-control" type="date" value="@ToDate" @onchange="OnToDateChanged" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="userName">Username</label>
+            <div class="input-group">
+                <input id="userName" class="form-control" placeholder="Cari username..." @bind="UserName" @bind:event="oninput" />
+                @if (!string.IsNullOrWhiteSpace(UserName))
+                {
+                    <button type="button" class="btn btn-outline-secondary" title="Hapus pencarian username" @onclick="ClearUserName">×</button>
+                }
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="action">Action</label>
+            <select id="action" class="form-select" @bind="SelectedAction">
+                <option value="">Semua action</option>
+                @foreach (var action in Actions)
+                {
+                    <option value="@action">@action</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 d-flex align-items-center gap-3">
+            <button type="button" class="btn btn-primary" @onclick="ApplyFilter">Search</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="ResetFilter">Reset</button>
+            <div class="form-check">
+                <input id="groupByAction" class="form-check-input" type="checkbox" @bind="GroupByAction" />
+                <label class="form-check-label" for="groupByAction">Kelompokkan berdasarkan action</label>
+            </div>
+            <span class="text-muted">@Logs.Count data</span>
+        </div>
+    </div>
 
     <table class="table table-striped table-hover">
         <thead>
@@ -24,19 +65,25 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Logs)
+            @if (GroupByAction)
             {
-                var localTime = AuditService.ConvertToConfiguredTimeZone(item.OccurredUtc);
-                <tr class="@(item.OutsideWorkingHours ? "table-danger" : string.Empty)">
-                    <td>@localTime.ToString("dd-MM-yyyy HH:mm:ss")</td>
-                    <td>@(item.UserName ?? "Unknown")</td>
-                    <td>@(item.IpAddress ?? "Unknown")</td>
-                    <td>@item.Action</td>
-                    <td>@item.EntityName</td>
-                    <td>@item.EntityId</td>
-                    <td>@(item.Success ? "Success" : "Failed")</td>
-                    <td>@item.Details</td>
-                </tr>
+                @foreach (var actionGroup in Logs.GroupBy(item => item.Action).OrderBy(group => group.Key))
+                {
+                    <tr class="table-secondary">
+                        <th colspan="8">Action: @actionGroup.Key (@actionGroup.Count())</th>
+                    </tr>
+                    @foreach (var item in actionGroup)
+                    {
+                        @RenderAuditRow(item)
+                    }
+                }
+            }
+            else
+            {
+                @foreach (var item in Logs)
+                {
+                    @RenderAuditRow(item)
+                }
             }
         </tbody>
     </table>
@@ -44,12 +91,89 @@
 
 @code {
     private List<AuditEntry> Logs = [];
+    private List<string> Actions = [];
+    private string? FromDate;
+    private string? ToDate;
+    private string? UserName;
+    private string? SelectedAction;
+    private bool GroupByAction;
 
     protected override void OnInitialized()
     {
-        Logs = AuditService.Query()
+        Actions = AuditService.Query()
+            .Select(item => item.Action)
+            .Distinct()
+            .OrderBy(action => action)
+            .ToList();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var fromLocal = ParseDate(FromDate);
+        var toLocal = ParseDate(ToDate)?.AddDays(1);
+
+        Logs = AuditService.Query(fromLocal, toLocal, UserName, SelectedAction)
             .OrderByDescending(item => item.OccurredUtc)
             .Take(500)
             .ToList();
+    }
+
+    private void ResetFilter()
+    {
+        FromDate = null;
+        ToDate = null;
+        UserName = null;
+        SelectedAction = null;
+        ApplyFilter();
+    }
+
+    private void OnFromDateChanged(ChangeEventArgs args)
+    {
+        FromDate = args.Value?.ToString();
+    }
+
+    private void OnToDateChanged(ChangeEventArgs args)
+    {
+        ToDate = args.Value?.ToString();
+    }
+
+    private static DateTime? ParseDate(string? value)
+    {
+        return DateTime.TryParse(value, out var date)
+            ? date.Date
+            : null;
+    }
+
+    private void ClearUserName()
+    {
+        UserName = null;
+        ApplyFilter();
+    }
+
+    private RenderFragment RenderAuditRow(AuditEntry item) => builder =>
+    {
+        var localTime = AuditService.ConvertToConfiguredTimeZone(item.OccurredUtc);
+        builder.OpenElement(0, "tr");
+        if (item.OutsideWorkingHours)
+        {
+            builder.AddAttribute(1, "class", "table-danger");
+        }
+        AddCell(builder, 2, localTime.ToString("dd-MM-yyyy HH:mm:ss"));
+        AddCell(builder, 3, item.UserName ?? "Unknown");
+        AddCell(builder, 4, item.IpAddress ?? "Unknown");
+        AddCell(builder, 5, item.Action);
+        AddCell(builder, 6, item.EntityName);
+        AddCell(builder, 7, item.EntityId);
+        AddCell(builder, 8, item.Success ? "Success" : "Failed");
+        AddCell(builder, 9, item.Details);
+        builder.CloseElement();
+    };
+
+    private static void AddCell(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, int sequence, string? value)
+    {
+        builder.OpenElement(sequence, "td");
+        builder.AddContent(sequence + 1, value);
+        builder.CloseElement();
     }
 }

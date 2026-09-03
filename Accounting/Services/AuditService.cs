@@ -61,10 +61,47 @@ public sealed class AuditService
 
     public IQueryable<AuditEntry> Query() => _context.AuditLogs.AsNoTracking();
 
+    public IQueryable<AuditEntry> Query(
+        DateTime? fromLocal,
+        DateTime? toLocal,
+        string? userName,
+        string? action)
+    {
+        var query = Query();
+
+        if (fromLocal.HasValue)
+        {
+            query = query.Where(item => item.OccurredUtc >= ConvertConfiguredTimeToUtc(fromLocal.Value));
+        }
+
+        if (toLocal.HasValue)
+        {
+            query = query.Where(item => item.OccurredUtc < ConvertConfiguredTimeToUtc(toLocal.Value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(userName))
+        {
+            query = query.Where(item => item.UserName != null && item.UserName.Contains(userName));
+        }
+
+        if (!string.IsNullOrWhiteSpace(action))
+        {
+            query = query.Where(item => item.Action == action);
+        }
+
+        return query;
+    }
+
     public DateTime ConvertToConfiguredTimeZone(DateTime utc)
     {
         var timeZone = TimeZoneInfo.FindSystemTimeZoneById(_options.TimeZone);
         return TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), timeZone);
+    }
+
+    public DateTime ConvertConfiguredTimeToUtc(DateTime localTime)
+    {
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(_options.TimeZone);
+        return TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localTime, DateTimeKind.Unspecified), timeZone);
     }
 
     public bool IsOutsideWorkingHours(DateTime localTime)
