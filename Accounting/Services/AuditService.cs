@@ -92,6 +92,16 @@ public sealed class AuditService
         return query;
     }
 
+    public async Task<int> DeleteAsync(DateTime fromLocal, DateTime toLocal, CancellationToken cancellationToken = default)
+    {
+        var fromUtc = ConvertConfiguredTimeToUtc(fromLocal.Date);
+        var toUtc = ConvertConfiguredTimeToUtc(toLocal.Date.AddDays(1));
+
+        return await _context.AuditLogs
+            .Where(item => item.OccurredUtc >= fromUtc && item.OccurredUtc < toUtc)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
     public DateTime ConvertToConfiguredTimeZone(DateTime utc)
     {
         var timeZone = TimeZoneInfo.FindSystemTimeZoneById(_options.TimeZone);
