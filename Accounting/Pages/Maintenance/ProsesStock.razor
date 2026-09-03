@@ -10,6 +10,7 @@
 
 @inject ILaporanStockServices service;
 @inject IInventoryServices serviceIC;
+@inject AuditContext AuditContext
 @inject IJSRuntime JSRuntime
 
 <h3>Proses Stock</h3>
@@ -149,6 +150,7 @@
         var startedAt = DateTime.Now;
         try
         {
+            using var auditScope = AuditContext.BeginSuppressAudit();
             isProcessing = true;
             stockStatus = $"Mulai: {startedAt:dd/MM/yyyy HH:mm:ss}";
             await InvokeAsync(StateHasChanged);
@@ -181,6 +183,7 @@
         piutangStatus = $"Mulai: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
         try
         {
+            using var auditScope = AuditContext.BeginSuppressAudit();
             isProcessPiutang = true;
            await service.ProsesSalesPiutang();
            piutangStatus = $"Proses sales piutang selesai pada {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Data sudah diperbarui.";
@@ -271,6 +274,7 @@
 
         try
         {
+            using var auditScope = AuditContext.BeginSuppressAudit();
             service.ProsesRubahKodeItem(bank.ItemCode, bank.NamaLengkap);
             rubahStatus = "Perubahan kode item selesai. Seluruh transaksi terkait sudah diperbarui.";
 

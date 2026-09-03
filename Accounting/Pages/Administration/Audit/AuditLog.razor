@@ -100,11 +100,10 @@
 
     protected override void OnInitialized()
     {
-        Actions = AuditService.Query()
-            .Select(item => item.Action)
-            .Distinct()
-            .OrderBy(action => action)
-            .ToList();
+        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        FromDate = today;
+        ToDate = today;
+        Actions = ["Create", "Update", "Delete", "Login", "Logout"];
         ApplyFilter();
     }
 
@@ -121,8 +120,9 @@
 
     private void ResetFilter()
     {
-        FromDate = null;
-        ToDate = null;
+        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        FromDate = today;
+        ToDate = today;
         UserName = null;
         SelectedAction = null;
         ApplyFilter();

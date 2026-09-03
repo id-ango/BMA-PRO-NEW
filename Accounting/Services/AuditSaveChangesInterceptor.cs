@@ -7,10 +7,12 @@ namespace Accounting.Services;
 public sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
 {
     private readonly AuditService _auditService;
+    private readonly AuditContext _auditContext;
 
-    public AuditSaveChangesInterceptor(AuditService auditService)
+    public AuditSaveChangesInterceptor(AuditService auditService, AuditContext auditContext)
     {
         _auditService = auditService;
+        _auditContext = auditContext;
     }
 
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -18,7 +20,7 @@ public sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is not null)
+        if (!_auditContext.SuppressAudit && eventData.Context is not null)
         {
             foreach (var entry in eventData.Context.ChangeTracker.Entries()
                          .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
