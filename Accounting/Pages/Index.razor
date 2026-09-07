@@ -52,9 +52,29 @@
                     </h5>
                     <p class="card-text">Laporan stock dan persediaan.</p>
                     <div class="btn-group-wrap">
-                        <a href="/ModulePersediaan/LaporanCurrentStock" class="btn btn-primary btn-sm">Laporan Stock</a>
-                        <a href="/ModulePersediaan/LaporanPersediaan" class="btn btn-primary btn-sm">Laporan Persediaan</a>
+                        <button type="button" class="btn btn-primary btn-sm" disabled="@isReportLoading"
+                                @onclick='() => OpenReportAsync("/ModulePersediaan/LaporanCurrentStock", "Laporan Stock")'>
+                            @if (loadingReportName == "Laporan Stock")
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Laporan Stock
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" disabled="@isReportLoading"
+                                @onclick='() => OpenReportAsync("/ModulePersediaan/LaporanPersediaan", "Laporan Persediaan")'>
+                            @if (loadingReportName == "Laporan Persediaan")
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Laporan Persediaan
+                        </button>
                     </div>
+                    @if (isReportLoading)
+                    {
+                        <small class="text-muted d-block mt-2" role="status">
+                            Membuka @loadingReportName, mohon tunggu...
+                        </small>
+                    }
                 </div>
             </div>
         </div>
@@ -764,6 +784,8 @@ else
     private DateTime? lastLoadedAt;
     private bool showTransactionDetail = false;
     private bool isLoadingTransactions = false;
+    private bool isReportLoading = false;
+    private string loadingReportName = string.Empty;
 
     private List<CbBank> bankList = new();
     private decimal totalSaldoBank;
@@ -794,6 +816,18 @@ else
     {
         currentUri = navigationmanager.Uri;
         await LoadCekAsync();
+    }
+
+    private async Task OpenReportAsync(string url, string reportName)
+    {
+        if (isReportLoading)
+            return;
+
+        isReportLoading = true;
+        loadingReportName = reportName;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        navigationmanager.NavigateTo(url);
     }
 
     private async Task LoadCekAsync()

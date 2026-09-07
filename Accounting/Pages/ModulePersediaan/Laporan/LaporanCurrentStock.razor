@@ -33,13 +33,22 @@
     &emsp;
 </div>
 
-<div class="report-table" data-print-mode="@printMode">
-    <div class="report-title">@Title</div>
+@if (_isLoadingReport)
+{
+    <div class="text-center p-4" role="status" aria-live="polite">
+        <div class="spinner-border text-primary" aria-hidden="true"></div>
+        <div class="mt-2">Laporan stock sedang diproses, mohon tunggu...</div>
+    </div>
+}
+else
+{
+    <div class="report-table" data-print-mode="@printMode">
+        <div class="report-title">@Title</div>
 
-    @if (DisplayItems != null && DisplayItems.Count > 0)
-    {
-        <div class="data-table-container">
-            <table class="data-table">
+        @if (DisplayItems != null && DisplayItems.Count > 0)
+        {
+            <div class="data-table-container">
+                <table class="data-table">
                 <thead>
                     <tr class="header-row">
                         <th class="col-no">No.</th>
@@ -106,15 +115,16 @@
                         <td colspan="10">&nbsp;</td>
                     </tr>
                 </tbody>
-            </table>
-        </div>
-    }
-</div>
+                </table>
+            </div>
+        }
+    </div>
 
-<div style="margin-top: 20px;">
-    <p id="print-date" class="print-date">Tanggal cetak: @DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss")</p>
-    <p>&nbsp;</p>
-</div>
+    <div style="margin-top: 20px;">
+        <p id="print-date" class="print-date">Tanggal cetak: @DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss")</p>
+        <p>&nbsp;</p>
+    </div>
+}
 
 @if (dispCicilan)
 {
@@ -175,11 +185,21 @@
 
     // OPTIMIZATION: Control render cycles
     private bool _shouldRender = true;
+    private bool _isLoadingReport = true;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        base.OnInitialized();
-        loadStock();
+        await Task.Yield();
+
+        try
+        {
+            await Task.Run(loadStock);
+        }
+        finally
+        {
+            _isLoadingReport = false;
+            _shouldRender = true;
+        }
     }
 
     /// <summary>
@@ -207,8 +227,6 @@
         BuildDisplayItems();
 
         _shouldRender = true;
-        StateHasChanged();
-        _shouldRender = false;
     }
 
     /// <summary>
