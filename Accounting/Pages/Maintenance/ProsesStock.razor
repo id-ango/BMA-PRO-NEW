@@ -15,11 +15,12 @@
 
 <h3>Proses Stock</h3>
 
-<button class="btn-success" @onclick="prosesstock" style="display: flex; justify-content:space-between;">
+<button type="button" class="btn btn-success" @onclick="prosesstock" disabled="@IsAnyProcessing" style="display: flex; justify-content:space-between;">
     <span>Proses Stock</span>
-    <span style="display: @(isProcessing ? "inline" : "none");margin-left:5px; ">
-        <i class="fas fa-spinner fa-spin"></i>
-    </span>
+    @if (isProcessing)
+    {
+        <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+    }
 
 </button>
 @if (!string.IsNullOrWhiteSpace(stockStatus))
@@ -31,11 +32,12 @@
 <br/>
 <br />
 <br />
-<button class="btn-success" @onclick="prosesSalesPiutang" style="display: flex; justify-content:space-between;">
+<button type="button" class="btn btn-success" @onclick="prosesSalesPiutang" disabled="@IsAnyProcessing" style="display: flex; justify-content:space-between;">
     <span>Proses Sales Piutang </span>
-    <span style="display: @(isProcessPiutang ? "inline" : "none");margin-left:5px; ">
-        <i class="fas fa-spinner fa-spin"></i>
-    </span>
+    @if (isProcessPiutang)
+    {
+        <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+    }
 
 </button>
 @if (!string.IsNullOrWhiteSpace(piutangStatus))
@@ -161,7 +163,8 @@
                 _ = InvokeAsync(StateHasChanged);
             });
 
-            await service.prosesStock(progress);
+            await Task.Yield();
+            await Task.Run(() => service.prosesStock(progress));
             stockStatus = $"Proses stock selesai pada {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Data stock sudah diperbarui.";
         }
         catch (Exception ex)
@@ -180,12 +183,14 @@
     {
         if (IsAnyProcessing) return;
 
-        piutangStatus = $"Mulai: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
+         piutangStatus = $"Mulai: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
         try
         {
             using var auditScope = AuditContext.BeginSuppressAudit();
             isProcessPiutang = true;
-           await service.ProsesSalesPiutang();
+           await InvokeAsync(StateHasChanged);
+           await Task.Yield();
+           await Task.Run(() => service.ProsesSalesPiutang());
            piutangStatus = $"Proses sales piutang selesai pada {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Data sudah diperbarui.";
         }
         catch (Exception ex)
