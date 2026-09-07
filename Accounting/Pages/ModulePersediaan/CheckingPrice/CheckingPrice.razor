@@ -729,6 +729,9 @@
         preview.Cell(2, 1).Value = "Keterangan";
         preview.Cell(2, 2).FormulaA1 = $"={dataSheet}!B11";
         preview.Range(2, 2, 2, 6).Merge();
+        preview.Cell(3, 1).Value = "Tanggal";
+        preview.Cell(3, 2).Value = DateTime.Now.ToString("dd-MM-yyyy");
+        preview.Range(3, 2, 3, 6).Merge();
 
         preview.Cell(4, 1).Value = "Item Code";
         preview.Cell(4, 2).Value = "Nama Item";
@@ -767,17 +770,61 @@
         preview.Cell(previewSummaryRow + 6, 1).Value = "Gross Profit";
         preview.Cell(previewSummaryRow + 6, 2).FormulaA1 = $"={dataSheet}!B{summaryRow + 9}&\" %\"";
 
-        preview.Range(4, 1, 4, 6).Style.Font.Bold = true;
-        preview.Range(1, 1, previewSummaryRow + 6, 6).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        preview.TabColor = XLColor.FromArgb(31, 78, 121);
+        preview.Range(1, 1, previewSummaryRow + 6, 6).Style.Font.FontName = "Calibri";
+        preview.Range(1, 1, previewSummaryRow + 6, 6).Style.Font.FontSize = 11;
+        preview.Range(1, 1, previewSummaryRow + 6, 6).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        preview.Range(1, 1, previewSummaryRow + 6, 6).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
         preview.Range(1, 1, previewSummaryRow + 6, 6).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
         preview.Range(1, 1, 1, 6).Style.Fill.BackgroundColor = XLColor.FromArgb(31, 78, 121);
         preview.Range(1, 1, 1, 6).Style.Font.FontColor = XLColor.White;
+        preview.Range(1, 1, 1, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        preview.Range(1, 1, 1, 6).Style.Border.BottomBorder = XLBorderStyleValues.Medium;
+        preview.Range(2, 1, 3, 1).Style.Font.Bold = true;
+        preview.Range(2, 1, 3, 1).Style.Fill.BackgroundColor = XLColor.FromArgb(221, 235, 247);
+        preview.Range(2, 2, 3, 6).Style.Fill.BackgroundColor = XLColor.FromArgb(242, 246, 250);
+        preview.Range(2, 2, 3, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+        preview.Range(4, 1, 4, 6).Style.Font.Bold = true;
         preview.Range(4, 1, 4, 6).Style.Fill.BackgroundColor = XLColor.FromArgb(31, 78, 121);
         preview.Range(4, 1, 4, 6).Style.Font.FontColor = XLColor.White;
+        preview.Range(4, 1, 4, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        preview.Range(4, 1, 4, 6).Style.Border.BottomBorder = XLBorderStyleValues.Medium;
+        preview.Range(5, 3, Math.Max(previewRow - 1, 5), 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        preview.Range(5, 4, Math.Max(previewRow - 1, 5), 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        preview.Range(5, 6, Math.Max(previewRow - 1, 5), 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        for (var tableRow = 5; tableRow < previewRow; tableRow++)
+        {
+            if (tableRow % 2 == 0)
+            {
+                preview.Range(tableRow, 1, tableRow, 6).Style.Fill.BackgroundColor = XLColor.FromArgb(242, 246, 250);
+            }
+        }
         preview.Range(5, 6, Math.Max(previewRow - 1, 5), 6).Style.NumberFormat.Format = "#,##0.00";
         preview.Range(previewSummaryRow, 2, previewSummaryRow + 4, 2).Style.NumberFormat.Format = "#,##0.00";
+        preview.Range(previewSummaryRow, 1, previewSummaryRow + 6, 2).Style.Border.TopBorder = XLBorderStyleValues.Thin;
         preview.Range(previewSummaryRow, 1, previewSummaryRow + 6, 1).Style.Font.Bold = true;
-        preview.Columns().AdjustToContents();
+        preview.Range(previewSummaryRow, 1, previewSummaryRow + 6, 1).Style.Fill.BackgroundColor = XLColor.FromArgb(221, 235, 247);
+        preview.Range(previewSummaryRow + 2, 1, previewSummaryRow + 2, 2).Style.Font.Bold = true;
+        preview.Range(previewSummaryRow + 2, 1, previewSummaryRow + 2, 2).Style.Fill.BackgroundColor = XLColor.FromArgb(226, 239, 218);
+        preview.Range(previewSummaryRow + 4, 1, previewSummaryRow + 6, 2).Style.Font.Bold = true;
+        preview.Range(previewSummaryRow + 4, 1, previewSummaryRow + 6, 2).Style.Fill.BackgroundColor = XLColor.FromArgb(255, 242, 204);
+        preview.Range(previewSummaryRow, 2, previewSummaryRow + 6, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        preview.Column(1).Width = 18;
+        preview.Column(2).Width = 30;
+        preview.Column(3).Width = 10;
+        preview.Column(4).Width = 14;
+        preview.Column(5).Width = 22;
+        preview.Column(6).Width = 18;
+        preview.Row(1).Height = 28;
+        preview.Row(4).Height = 24;
+        preview.PageSetup.PageOrientation = XLPageOrientation.Portrait;
+        preview.PageSetup.PaperSize = XLPaperSize.A4Paper;
+        preview.PageSetup.Margins.Top = 0.5;
+        preview.PageSetup.Margins.Bottom = 0.5;
+        preview.PageSetup.Margins.Left = 0.5;
+        preview.PageSetup.Margins.Right = 0.5;
+        preview.PageSetup.CenterHorizontally = true;
+        preview.PageSetup.FitToPages(1, 0);
 
         using var ms = new MemoryStream();
         workbook.SaveAs(ms);
