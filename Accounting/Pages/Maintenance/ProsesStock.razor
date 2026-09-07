@@ -13,6 +13,31 @@
 @inject AuditContext AuditContext
 @inject IJSRuntime JSRuntime
 
+<style>
+    .processing-status {
+        background: linear-gradient(90deg, #cff4fc, #8edff0, #cff4fc);
+        background-size: 200% 100%;
+        border-color: #6edff6;
+        animation: processing-gradient 1.8s linear infinite;
+    }
+
+    @@keyframes processing-gradient {
+        0% {
+            background-position: 100% 0;
+        }
+
+        100% {
+            background-position: -100% 0;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .processing-status {
+            animation: none;
+        }
+    }
+</style>
+
 <h3>Proses Stock</h3>
 
 <button type="button" class="btn btn-success" @onclick="prosesstock" disabled="@IsAnyProcessing" style="display: flex; justify-content:space-between;">
@@ -25,7 +50,7 @@
 </button>
 @if (!string.IsNullOrWhiteSpace(stockStatus))
 {
-    <div class="alert @(stockStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : stockStatus.StartsWith("Proses stock selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") mt-2" role="status">
+    <div class="alert @(stockStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : stockStatus.StartsWith("Proses stock selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") @(isProcessing ? "processing-status" : "") mt-2" role="status" aria-busy="@isProcessing">
         <i class="fas @(stockStatus.StartsWith("Proses stock selesai", StringComparison.Ordinal) ? "fa-check-circle" : "fa-info-circle") me-2"></i>@stockStatus
     </div>
 }
@@ -42,7 +67,7 @@
 </button>
 @if (!string.IsNullOrWhiteSpace(piutangStatus))
 {
-    <div class="alert @(piutangStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : piutangStatus.StartsWith("Proses sales piutang selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") mt-2" role="status">
+    <div class="alert @(piutangStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : piutangStatus.StartsWith("Proses sales piutang selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") @(isProcessPiutang ? "processing-status" : "") mt-2" role="status" aria-busy="@isProcessPiutang">
         <i class="fas @(piutangStatus.StartsWith("Proses sales piutang selesai", StringComparison.Ordinal) ? "fa-check-circle" : "fa-info-circle") me-2"></i>@piutangStatus
     </div>
 }
@@ -90,7 +115,7 @@
     </EditForm>
     @if (!string.IsNullOrWhiteSpace(rubahStatus))
     {
-        <div class="alert @(rubahStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : rubahStatus.StartsWith("Perubahan kode item selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") mt-3" role="status">
+        <div class="alert @(rubahStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : rubahStatus.StartsWith("Perubahan kode item selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") @(isProcessingRubah ? "processing-status" : "") mt-3" role="status" aria-busy="@isProcessingRubah">
             <i class="fas @(rubahStatus.StartsWith("Perubahan kode item selesai", StringComparison.Ordinal) ? "fa-check-circle" : "fa-info-circle") me-2"></i>@rubahStatus
         </div>
     }
