@@ -625,7 +625,8 @@
     private async Task DownloadExcelTransactionAsync()
     {
         using var workbook = new XLWorkbook();
-        var worksheet = workbook.Worksheets.Add("Checking Price");
+        var worksheet = workbook.Worksheets.Add("Data & Perhitungan");
+        var preview = workbook.Worksheets.Add("Preview Cetak");
 
         worksheet.Cell(1, 1).Value = "CHECKING PRICE - TRANSAKSI";
         worksheet.Range(1, 1, 1, 8).Merge();
@@ -648,6 +649,8 @@
         worksheet.Cell(9, 2).Value = Transh.NilaiExpd;
         worksheet.Cell(10, 1).Value = "Harga Jual (termasuk PPN)";
         worksheet.Cell(10, 2).Value = Transh.HargaJual;
+        worksheet.Cell(11, 1).Value = "Keterangan";
+        worksheet.Cell(11, 2).Value = Transh.Keterangan;
 
         const int detailHeaderRow = 12;
         worksheet.Cell(detailHeaderRow, 1).Value = "No";
@@ -717,6 +720,64 @@
         worksheet.Range(detailHeaderRow + 1, 6, lastDetailRow, 12).Style.NumberFormat.Format = "#,##0.00";
         worksheet.Range(summaryRow + 1, 2, summaryRow + 9, 2).Style.NumberFormat.Format = "#,##0.00";
         worksheet.Columns().AdjustToContents();
+
+        var dataSheet = "'Data & Perhitungan'";
+        preview.Cell(1, 1).Value = "CHECKING PRICE";
+        preview.Range(1, 1, 1, 6).Merge();
+        preview.Cell(1, 1).Style.Font.Bold = true;
+        preview.Cell(1, 1).Style.Font.FontSize = 16;
+        preview.Cell(2, 1).Value = "Keterangan";
+        preview.Cell(2, 2).FormulaA1 = $"={dataSheet}!B11";
+        preview.Range(2, 2, 2, 6).Merge();
+
+        preview.Cell(4, 1).Value = "Item Code";
+        preview.Cell(4, 2).Value = "Nama Item";
+        preview.Cell(4, 3).Value = "Qty";
+        preview.Cell(4, 4).Value = "Satuan";
+        preview.Cell(4, 5).Value = "Valas";
+        preview.Cell(4, 6).Value = "Harga Pokok";
+
+        var previewRow = 5;
+        var dataRow = firstDetailRow;
+        foreach (var item in Transh.IcPriceDs ?? new List<IcPriceDView>())
+        {
+            preview.Cell(previewRow, 1).FormulaA1 = $"={dataSheet}!B{dataRow}";
+            preview.Cell(previewRow, 2).FormulaA1 = $"={dataSheet}!C{dataRow}";
+            preview.Cell(previewRow, 3).FormulaA1 = $"={dataSheet}!D{dataRow}";
+            preview.Cell(previewRow, 4).Value = item.Satuan;
+            preview.Cell(previewRow, 5).FormulaA1 = $"={dataSheet}!E{dataRow}&\" \"&TEXT({dataSheet}!F{dataRow},\"#,##0.00\")";
+            preview.Cell(previewRow, 6).FormulaA1 = $"={dataSheet}!H{dataRow}";
+            previewRow++;
+            dataRow++;
+        }
+
+        var previewSummaryRow = previewRow + 1;
+        preview.Cell(previewSummaryRow, 1).Value = "Total HPP";
+        preview.Cell(previewSummaryRow, 2).FormulaA1 = $"={dataSheet}!B{summaryRow + 1}";
+        preview.Cell(previewSummaryRow + 1, 1).Value = "Total Biaya (PPN Masukan + PPh + Forwarder)";
+        preview.Cell(previewSummaryRow + 1, 2).FormulaA1 = $"={dataSheet}!B{summaryRow + 2}+{dataSheet}!B{summaryRow + 3}+{dataSheet}!B{summaryRow + 4}";
+        preview.Cell(previewSummaryRow + 2, 1).Value = "Total Cost";
+        preview.Cell(previewSummaryRow + 2, 2).FormulaA1 = $"={dataSheet}!B{summaryRow + 5}";
+        preview.Cell(previewSummaryRow + 3, 1).Value = "Harga Jual Sebelum PPN";
+        preview.Cell(previewSummaryRow + 3, 2).FormulaA1 = $"={dataSheet}!B{summaryRow + 6}";
+        preview.Cell(previewSummaryRow + 4, 1).Value = "Keuntungan";
+        preview.Cell(previewSummaryRow + 4, 2).FormulaA1 = $"={dataSheet}!B{summaryRow + 7}";
+        preview.Cell(previewSummaryRow + 5, 1).Value = "Markup";
+        preview.Cell(previewSummaryRow + 5, 2).FormulaA1 = $"={dataSheet}!B{summaryRow + 8}&\" %\"";
+        preview.Cell(previewSummaryRow + 6, 1).Value = "Gross Profit";
+        preview.Cell(previewSummaryRow + 6, 2).FormulaA1 = $"={dataSheet}!B{summaryRow + 9}&\" %\"";
+
+        preview.Range(4, 1, 4, 6).Style.Font.Bold = true;
+        preview.Range(1, 1, previewSummaryRow + 6, 6).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        preview.Range(1, 1, previewSummaryRow + 6, 6).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+        preview.Range(1, 1, 1, 6).Style.Fill.BackgroundColor = XLColor.FromArgb(31, 78, 121);
+        preview.Range(1, 1, 1, 6).Style.Font.FontColor = XLColor.White;
+        preview.Range(4, 1, 4, 6).Style.Fill.BackgroundColor = XLColor.FromArgb(31, 78, 121);
+        preview.Range(4, 1, 4, 6).Style.Font.FontColor = XLColor.White;
+        preview.Range(5, 6, Math.Max(previewRow - 1, 5), 6).Style.NumberFormat.Format = "#,##0.00";
+        preview.Range(previewSummaryRow, 2, previewSummaryRow + 4, 2).Style.NumberFormat.Format = "#,##0.00";
+        preview.Range(previewSummaryRow, 1, previewSummaryRow + 6, 1).Style.Font.Bold = true;
+        preview.Columns().AdjustToContents();
 
         using var ms = new MemoryStream();
         workbook.SaveAs(ms);
