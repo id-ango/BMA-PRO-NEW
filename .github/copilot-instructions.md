@@ -16,3 +16,7 @@
 
 ## Export Formatting Guidelines
 - When user requests Excel formatting changes, apply them to the export used by LaporanCurrentStock if explicitly specified, not to other report exports.
+- For the Excel export 'Harga Jual Import' in CheckingPrice, the calculation uses the unit price per item and does not multiply by Qty; the goal is to analyze all items based on markup, not to calculate the total transaction based on quantity.
+
+## Pricing Guidelines
+- For the CheckingPrice module, consider PPN Masukan and PPh as costs since they are not credited; the input Selling Price includes PPN, and profit is calculated from the Selling Price before PPN. Total Cost includes HPP, PPN Masukan, and Forwarder.

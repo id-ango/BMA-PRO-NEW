@@ -265,7 +265,9 @@
         Detail.NamaItem = itemcode.NamaItem;
         Detail.Satuan = itemcode.Satuan;
         Detail.CurrencyCode = itemcode.CurrencyCode;
-        Detail.HargaBeli = itemcode.HrgUsd;
+        Detail.HargaBeli = string.IsNullOrWhiteSpace(itemcode.CurrencyCode)
+            ? itemcode.HrgNetto
+            : itemcode.HrgUsd;
         ApplyCurrencyToKurs();
         StateHasChanged();
     }
