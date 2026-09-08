@@ -1102,6 +1102,9 @@ namespace eSoft.Persediaan.Services
             var items = _context.IcItems
                 .AsNoTracking()
                 .OrderBy(x => x.NamaItem)
+                .ToList()
+                .GroupBy(x => x.ItemCode, StringComparer.OrdinalIgnoreCase)
+                .Select(x => x.First())
                 .ToList();
 
             var locations = _context.Iclokasis

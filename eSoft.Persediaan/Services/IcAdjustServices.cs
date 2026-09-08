@@ -25,10 +25,16 @@ namespace eSoft.Persediaan.Services
             if (opname == null || opname.Lines == null || opname.Lines.Count == 0)
                 return null;
 
-            var itemCodes = opname.Lines.Select(x => x.ItemCode).Distinct().ToList();
+            var itemCodes = opname.Lines
+                .Select(x => x.ItemCode)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
             var items = _context.IcItems
                 .Where(x => itemCodes.Contains(x.ItemCode))
-                .ToDictionary(x => x.ItemCode, StringComparer.OrdinalIgnoreCase);
+                .AsEnumerable()
+                .GroupBy(x => x.ItemCode, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
 
             var trans = new IcTransHView
             {
