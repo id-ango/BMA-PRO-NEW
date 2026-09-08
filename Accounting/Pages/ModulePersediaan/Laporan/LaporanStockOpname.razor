@@ -263,6 +263,7 @@
             worksheet.Range(rowNumber, 1, rowNumber, lastColumn).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             rowNumber += 2;
 
+            var headerRow = rowNumber;
             worksheet.Cell(rowNumber, 1).Value = "Item";
             worksheet.Cell(rowNumber, 2).Value = "Nama Item";
             worksheet.Cell(rowNumber, 3).Value = "Satuan";
@@ -315,7 +316,36 @@
 
             worksheet.Range(1, 1, rowNumber - 1, lastColumn).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             worksheet.Range(1, 1, rowNumber - 1, lastColumn).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            var usedRange = worksheet.Range(1, 1, rowNumber - 1, lastColumn);
+            usedRange.Style.Alignment.WrapText = true;
+            usedRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+            var systemColor = XLColor.FromHtml("#DDEBF7");
+            var systemTotalRange = worksheet.Range(headerRow, 4, rowNumber - 1, 4);
+            systemTotalRange.Style.Fill.BackgroundColor = systemColor;
+            systemTotalRange.Style.Font.FontColor = XLColor.Black;
+
+            column = 5;
+            foreach (var location in Locations)
+            {
+                var systemRange = worksheet.Range(headerRow, column, rowNumber - 1, column);
+                var physicalRange = worksheet.Range(headerRow, column + 1, rowNumber - 1, column + 1);
+                systemRange.Style.Fill.BackgroundColor = systemColor;
+                physicalRange.Style.Fill.BackgroundColor = XLColor.White;
+                systemRange.Style.Font.FontColor = XLColor.Black;
+                physicalRange.Style.Font.FontColor = XLColor.Black;
+                column += 2;
+            }
+
             worksheet.Columns().AdjustToContents();
+            worksheet.Column(1).Width = 16;
+            worksheet.Column(2).Width = 28;
+            worksheet.Column(3).Width = 12;
+            worksheet.Column(4).Width = 14;
+            for (var locationColumn = 5; locationColumn <= lastColumn; locationColumn++)
+            {
+                worksheet.Column(locationColumn).Width = 14;
+            }
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
