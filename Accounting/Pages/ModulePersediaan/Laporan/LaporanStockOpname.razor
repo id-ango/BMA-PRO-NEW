@@ -1,12 +1,15 @@
 @page "/ModulePersediaan/LaporanStockOpname"
+@layout PrintLayout
 @using eSoft.Persediaan.Services
 @using eSoft.Persediaan.View
+@using ClosedXML.Excel
 
 @inject IInventoryServices InventoryService
 @inject IIcAdjustServices AdjustmentService
+@inject IJSRuntime JSRuntime
 
 <div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
         <h3>Stock Opname per Lokasi</h3>
         <a class="btn btn-outline-secondary" href="/ModulePersediaan/LaporanCurrentStock">Kembali</a>
     </div>
@@ -20,7 +23,7 @@
     }
     else
     {
-        <div class="card mb-3">
+        <div class="card mb-3 no-print">
             <div class="card-body">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
@@ -32,7 +35,19 @@
                         <InputText class="form-control" @bind-Value="Keterangan" disabled="@IsSaving" />
                     </div>
                     <div class="col-md-3 text-md-end">
-                        <button class="btn btn-primary" @onclick="SimpanStockOpname" disabled="@(IsSaving || Rows.Count == 0)">
+                        <button class="btn btn-outline-secondary me-1" @onclick="PrintStockOpname" disabled="@(IsSaving || IsExporting)">Cetak</button>
+                        <button class="btn btn-outline-success me-1" @onclick="ExportToExcel" disabled="@(IsSaving || IsExporting)">
+                            @if (IsExporting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                                <span>Membuat Excel...</span>
+                            }
+                            else
+                            {
+                                <span>Excel</span>
+                            }
+                        </button>
+                        <button class="btn btn-primary" @onclick="SimpanStockOpname" disabled="@(IsSaving || IsExporting || Rows.Count == 0)">
                             @if (IsSaving)
                             {
                                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
@@ -87,23 +102,32 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var row in Rows)
+                        @foreach (var division in Rows
+                            .GroupBy(x => new { x.Divisi, x.NamaDivisi })
+                            .OrderBy(x => x.Key.NamaDivisi))
                         {
-                            <tr>
-                                <td>@row.ItemCode</td>
-                                <td>@row.NamaItem</td>
-                                <td>@row.Satuan</td>
-                                <td class="text-end fw-bold">@row.Qty.ToString("N2")</td>
-                                @foreach (var location in Locations)
-                                {
-                                    var key = CellKey(row.ItemCode, location.Lokasi);
-                                    var systemQty = row.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
-                                    <td class="text-end">@systemQty.ToString("N2")</td>
-                                    <td style="min-width: 110px">
-                                        <InputNumber TValue="decimal?" class="form-control form-control-sm text-end" @bind-Value="PhysicalQuantities[key]" disabled="@IsSaving" />
-                                    </td>
-                                }
+                            <tr class="division-row">
+                                <td colspan="@(4 + Locations.Count * 2)">@division.Key.NamaDivisi</td>
                             </tr>
+                            @foreach (var row in division.OrderBy(x => x.NamaItem))
+                            {
+                                <tr>
+                                    <td>@row.ItemCode</td>
+                                    <td>@row.NamaItem</td>
+                                    <td>@row.Satuan</td>
+                                    <td class="text-end fw-bold">@row.Qty.ToString("N2")</td>
+                                    @foreach (var location in Locations)
+                                    {
+                                        var key = CellKey(row.ItemCode, location.Lokasi);
+                                        var systemQty = row.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
+                                        <td class="text-end">@systemQty.ToString("N2")</td>
+                                        <td style="min-width: 110px">
+                                            <span class="print-only">&nbsp;</span>
+                                            <InputNumber TValue="decimal?" class="form-control form-control-sm text-end no-print" @bind-Value="PhysicalQuantities[key]" disabled="@IsSaving" />
+                                        </td>
+                                    }
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
@@ -122,6 +146,7 @@
     private string ErrorMessage { get; set; }
     private bool IsLoading { get; set; } = true;
     private bool IsSaving { get; set; }
+    private bool IsExporting { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -211,5 +236,145 @@
         }
     }
 
+    private async Task PrintStockOpname()
+    {
+        await Task.Delay(100);
+        await JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    private async Task ExportToExcel()
+    {
+        IsExporting = true;
+        Message = null;
+        ErrorMessage = null;
+        await Task.Yield();
+
+        try
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Stock Opname");
+            var lastColumn = 4 + Locations.Count * 2;
+            var rowNumber = 1;
+
+            worksheet.Cell(rowNumber, 1).Value = "STOCK OPNAME PER LOKASI";
+            worksheet.Range(rowNumber, 1, rowNumber, lastColumn).Merge();
+            worksheet.Range(rowNumber, 1, rowNumber, lastColumn).Style.Font.Bold = true;
+            worksheet.Range(rowNumber, 1, rowNumber, lastColumn).Style.Font.FontSize = 14;
+            worksheet.Range(rowNumber, 1, rowNumber, lastColumn).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            rowNumber += 2;
+
+            worksheet.Cell(rowNumber, 1).Value = "Item";
+            worksheet.Cell(rowNumber, 2).Value = "Nama Item";
+            worksheet.Cell(rowNumber, 3).Value = "Satuan";
+            worksheet.Cell(rowNumber, 4).Value = "Total Sistem";
+            var column = 5;
+            foreach (var location in Locations)
+            {
+                worksheet.Cell(rowNumber, column).Value = $"{location.NamaLokasi} ({location.Lokasi}) Sistem";
+                worksheet.Cell(rowNumber, column + 1).Value = $"{location.NamaLokasi} ({location.Lokasi}) Fisik";
+                column += 2;
+            }
+
+            var headerRange = worksheet.Range(rowNumber, 1, rowNumber, lastColumn);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.DarkGray;
+            headerRange.Style.Font.FontColor = XLColor.White;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            rowNumber++;
+
+            foreach (var division in Rows
+                .GroupBy(x => new { x.Divisi, x.NamaDivisi })
+                .OrderBy(x => x.Key.NamaDivisi))
+            {
+                worksheet.Cell(rowNumber, 1).Value = division.Key.NamaDivisi;
+                worksheet.Range(rowNumber, 1, rowNumber, lastColumn).Merge();
+                var divisionRange = worksheet.Range(rowNumber, 1, rowNumber, lastColumn);
+                divisionRange.Style.Font.Bold = true;
+                divisionRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+                rowNumber++;
+
+                foreach (var item in division.OrderBy(x => x.NamaItem))
+                {
+                    worksheet.Cell(rowNumber, 1).Value = item.ItemCode;
+                    worksheet.Cell(rowNumber, 2).Value = item.NamaItem;
+                    worksheet.Cell(rowNumber, 3).Value = item.Satuan;
+                    worksheet.Cell(rowNumber, 4).Value = item.Qty;
+                    column = 5;
+
+                    foreach (var location in Locations)
+                    {
+                        var systemQty = item.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
+                        worksheet.Cell(rowNumber, column).Value = systemQty;
+                        worksheet.Cell(rowNumber, column + 1).Value = string.Empty;
+                        column += 2;
+                    }
+
+                    rowNumber++;
+                }
+            }
+
+            worksheet.Range(1, 1, rowNumber - 1, lastColumn).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            worksheet.Range(1, 1, rowNumber - 1, lastColumn).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+            using var streamReference = new DotNetStreamReference(stream);
+            await JSRuntime.InvokeVoidAsync(
+                "downloadFileFromStream",
+                $"StockOpname_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
+                streamReference);
+            Message = "File Excel stock opname berhasil dibuat dan diunduh.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Export Excel gagal: {ex.Message}";
+        }
+        finally
+        {
+            IsExporting = false;
+        }
+    }
+
     private static string CellKey(string itemCode, string lokasi) => $"{itemCode}::{lokasi}";
 }
+
+<style>
+    .division-row td {
+        background-color: #e9ecef;
+        font-weight: 700;
+    }
+
+    .print-only {
+        display: none;
+    }
+
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .print-only {
+            display: block;
+            min-height: 24px;
+            border-bottom: 1px solid #000;
+        }
+
+        .container-fluid {
+            padding: 0 !important;
+        }
+
+        .table-responsive {
+            overflow: visible !important;
+        }
+
+        table {
+            font-size: 9pt;
+        }
+
+        .division-row {
+            break-after: avoid;
+        }
+    }
+</style>

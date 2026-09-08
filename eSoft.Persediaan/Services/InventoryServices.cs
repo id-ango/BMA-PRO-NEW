@@ -1112,6 +1112,10 @@ namespace eSoft.Persediaan.Services
                 .AsNoTracking()
                 .OrderBy(x => x.Lokasi)
                 .ToList();
+            var divisions = _context.IcDivs
+                .AsNoTracking()
+                .GroupBy(x => x.Divisi, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.First().NamaDiv, StringComparer.OrdinalIgnoreCase);
 
             var stockByItemLocation = _context.IcAltItems
                 .AsNoTracking()
@@ -1130,6 +1134,10 @@ namespace eSoft.Persediaan.Services
                 ItemCode = item.ItemCode,
                 NamaItem = item.NamaItem,
                 Satuan = item.Satuan,
+                Divisi = item.Divisi,
+                NamaDivisi = divisions.TryGetValue(item.Divisi, out var divisionName)
+                    ? divisionName
+                    : item.Divisi,
                 Qty = stockByItem.TryGetValue(item.ItemCode, out var totalQty) ? totalQty : 0,
                 Locations = locations.Select(location => new IcLocationQtyView
                 {

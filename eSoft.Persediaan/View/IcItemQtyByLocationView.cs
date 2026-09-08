@@ -14,6 +14,8 @@ namespace eSoft.Persediaan.View
        
         public string NamaItem { get; set; }
         public string Satuan { get; set; }
+        public string Divisi { get; set; }
+        public string NamaDivisi { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         [DisplayFormat(DataFormatString = "#,###.##")]
