@@ -1114,6 +1114,7 @@ namespace eSoft.Persediaan.Services
                 .ToList();
             var divisions = _context.IcDivs
                 .AsNoTracking()
+                .ToList()
                 .GroupBy(x => x.Divisi, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(x => x.Key, x => x.First().NamaDiv, StringComparer.OrdinalIgnoreCase);
 
