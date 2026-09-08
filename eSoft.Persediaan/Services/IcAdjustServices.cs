@@ -20,6 +20,48 @@ namespace eSoft.Persediaan.Services
             _context = context;
         }
 
+        public IcTransH CreateStockOpname(IcStockOpnameView opname)
+        {
+            if (opname == null || opname.Lines == null || opname.Lines.Count == 0)
+                return null;
+
+            var itemCodes = opname.Lines.Select(x => x.ItemCode).Distinct().ToList();
+            var items = _context.IcItems
+                .Where(x => itemCodes.Contains(x.ItemCode))
+                .ToDictionary(x => x.ItemCode, StringComparer.OrdinalIgnoreCase);
+
+            var trans = new IcTransHView
+            {
+                Tanggal = opname.Tanggal,
+                Keterangan = string.IsNullOrWhiteSpace(opname.Keterangan)
+                    ? "Stock opname per lokasi"
+                    : opname.Keterangan,
+                IcTransDs = new List<IcTransDView>()
+            };
+
+            foreach (var line in opname.Lines)
+            {
+                if (line.QtyFisik == line.QtySistem || string.IsNullOrWhiteSpace(line.Lokasi))
+                    continue;
+
+                if (!items.TryGetValue(line.ItemCode, out var item))
+                    throw new InvalidOperationException($"Item {line.ItemCode} tidak ditemukan.");
+
+                trans.IcTransDs.Add(new IcTransDView
+                {
+                    ItemCode = item.ItemCode,
+                    NamaItem = item.NamaItem,
+                    Satuan = item.Satuan,
+                    Lokasi = line.Lokasi,
+                    QtyShp = line.QtyFisik - line.QtySistem,
+                    Harga = item.HrgNetto,
+                    Jumlah = (line.QtyFisik - line.QtySistem) * item.HrgNetto
+                });
+            }
+
+            return trans.IcTransDs.Count == 0 ? null : AddTransH(trans);
+        }
+
         
 
 

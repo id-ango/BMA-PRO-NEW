@@ -61,6 +61,7 @@ namespace eSoft.Persediaan.Services
         List<IcStockCardView> GetCurrentStock();
 
         List<IcItemQtyByLocationView> GetAllIcItemQtyByLocation();
+        List<IcItemQtyByLocationView> GetStockOpnameItemsByLocation();
 
         bool RubahDivisiItem(int xKdBank, string cDivisi);
     }

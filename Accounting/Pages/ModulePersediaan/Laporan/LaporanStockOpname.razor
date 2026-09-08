@@ -1,0 +1,215 @@
+@page "/ModulePersediaan/LaporanStockOpname"
+@using eSoft.Persediaan.Services
+@using eSoft.Persediaan.View
+
+@inject IInventoryServices InventoryService
+@inject IIcAdjustServices AdjustmentService
+
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Stock Opname per Lokasi</h3>
+        <a class="btn btn-outline-secondary" href="/ModulePersediaan/LaporanCurrentStock">Kembali</a>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="text-center p-4" role="status" aria-live="polite">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <div class="mt-2">Data stock opname sedang diproses, mohon tunggu...</div>
+        </div>
+    }
+    else
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Tanggal</label>
+                        <InputDate class="form-control" @bind-Value="Tanggal" disabled="@IsSaving" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Keterangan</label>
+                        <InputText class="form-control" @bind-Value="Keterangan" disabled="@IsSaving" />
+                    </div>
+                    <div class="col-md-3 text-md-end">
+                        <button class="btn btn-primary" @onclick="SimpanStockOpname" disabled="@(IsSaving || Rows.Count == 0)">
+                            @if (IsSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                                <span>Menyimpan...</span>
+                            }
+                            else
+                            {
+                                <span>Buat Transaksi Adjustment</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+                <div class="form-text mt-2">Isi jumlah fisik pada setiap item-lokasi yang diperiksa. Kolom kosong akan diproses sebagai 0.</div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="alert alert-success" role="status">@Message</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@ErrorMessage</div>
+        }
+
+        @if (Rows.Count == 0)
+        {
+            <div class="alert alert-info">Tidak ada data item atau lokasi.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Item</th>
+                            <th>Nama Item</th>
+                            <th>Satuan</th>
+                            <th class="text-end">Total Sistem</th>
+                            @foreach (var location in Locations)
+                            {
+                                <th class="text-center" colspan="2">@location.NamaLokasi (@location.Lokasi)</th>
+                            }
+                        </tr>
+                        <tr>
+                            <th colspan="4"></th>
+                            @foreach (var location in Locations)
+                            {
+                                <th class="text-end">Sistem</th>
+                                <th class="text-end">Fisik</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Rows)
+                        {
+                            <tr>
+                                <td>@row.ItemCode</td>
+                                <td>@row.NamaItem</td>
+                                <td>@row.Satuan</td>
+                                <td class="text-end fw-bold">@row.Qty.ToString("N2")</td>
+                                @foreach (var location in Locations)
+                                {
+                                    var key = CellKey(row.ItemCode, location.Lokasi);
+                                    var systemQty = row.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
+                                    <td class="text-end">@systemQty.ToString("N2")</td>
+                                    <td style="min-width: 110px">
+                                        <InputNumber TValue="decimal?" class="form-control form-control-sm text-end" @bind-Value="PhysicalQuantities[key]" disabled="@IsSaving" />
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<IcItemQtyByLocationView> Rows { get; set; } = new();
+    private List<IcLocationQtyView> Locations { get; set; } = new();
+    private Dictionary<string, decimal?> PhysicalQuantities { get; set; } = new();
+    private DateTime Tanggal { get; set; } = DateTime.Today;
+    private string Keterangan { get; set; } = "Stock opname per lokasi";
+    private string Message { get; set; }
+    private string ErrorMessage { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Yield();
+
+        try
+        {
+            Rows = InventoryService.GetStockOpnameItemsByLocation();
+            Locations = Rows.SelectMany(x => x.Locations)
+                .GroupBy(x => x.Lokasi)
+                .Select(x => x.First())
+                .OrderBy(x => x.Lokasi)
+                .ToList();
+
+            foreach (var row in Rows)
+            {
+                foreach (var location in Locations)
+                {
+                    var qty = row.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
+                    PhysicalQuantities[CellKey(row.ItemCode, location.Lokasi)] = qty == 0 ? null : qty;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Data stock tidak dapat dimuat: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SimpanStockOpname()
+    {
+        Message = null;
+        ErrorMessage = null;
+        IsSaving = true;
+        await Task.Yield();
+
+        try
+        {
+            var opname = new IcStockOpnameView
+            {
+                Tanggal = Tanggal,
+                Keterangan = Keterangan,
+                Lines = Rows.SelectMany(row => Locations.Select(location =>
+                {
+                    var key = CellKey(row.ItemCode, location.Lokasi);
+                    var systemQty = row.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
+                    return new IcStockOpnameLineView
+                    {
+                        ItemCode = row.ItemCode,
+                        Lokasi = location.Lokasi,
+                        QtySistem = systemQty,
+                        QtyFisik = PhysicalQuantities[key] ?? 0
+                    };
+                })).ToList()
+            };
+
+            var transaction = AdjustmentService.CreateStockOpname(opname);
+            if (transaction == null)
+            {
+                Message = "Tidak ada selisih stock. Tidak ada transaksi yang dibuat.";
+            }
+            else
+            {
+                Message = $"Transaksi adjustment {transaction.NoFaktur} berhasil dibuat dengan {transaction.IcTransDs.Count} baris.";
+                Rows = InventoryService.GetStockOpnameItemsByLocation();
+                foreach (var row in Rows)
+                {
+                    foreach (var location in Locations)
+                    {
+                        var qty = row.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
+                        PhysicalQuantities[CellKey(row.ItemCode, location.Lokasi)] = qty == 0 ? null : qty;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Transaksi stock opname gagal dibuat: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private static string CellKey(string itemCode, string lokasi) => $"{itemCode}::{lokasi}";
+}

@@ -19,6 +19,7 @@ namespace eSoft.Persediaan.Services
         List<IcTransH> Get3TransH();
         List<IcTransD> GetTransD();
         IcTransH AddTransH(IcTransHView codeview);
+        IcTransH CreateStockOpname(IcStockOpnameView opname);
         Task<bool> EditTransH(IcTransHView codeview);
         Task<bool> DelTransH(int codeview);
     }

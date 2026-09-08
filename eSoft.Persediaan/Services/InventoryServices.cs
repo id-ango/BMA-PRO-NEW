@@ -1097,6 +1097,47 @@ namespace eSoft.Persediaan.Services
         }
         #endregion
 
+        public List<IcItemQtyByLocationView> GetStockOpnameItemsByLocation()
+        {
+            var items = _context.IcItems
+                .AsNoTracking()
+                .OrderBy(x => x.NamaItem)
+                .ToList();
+
+            var locations = _context.Iclokasis
+                .AsNoTracking()
+                .OrderBy(x => x.Lokasi)
+                .ToList();
+
+            var stockByItemLocation = _context.IcAltItems
+                .AsNoTracking()
+                .GroupBy(x => new { x.ItemCode, x.Lokasi })
+                .ToDictionary(
+                    x => (x.Key.ItemCode, x.Key.Lokasi),
+                    x => x.Sum(y => y.Qty));
+
+            var stockByItem = _context.IcAltItems
+                .AsNoTracking()
+                .GroupBy(x => x.ItemCode)
+                .ToDictionary(x => x.Key, x => x.Sum(y => y.Qty));
+
+            return items.Select(item => new IcItemQtyByLocationView
+            {
+                ItemCode = item.ItemCode,
+                NamaItem = item.NamaItem,
+                Satuan = item.Satuan,
+                Qty = stockByItem.TryGetValue(item.ItemCode, out var totalQty) ? totalQty : 0,
+                Locations = locations.Select(location => new IcLocationQtyView
+                {
+                    Lokasi = location.Lokasi,
+                    NamaLokasi = location.NamaLokasi,
+                    Qty = stockByItemLocation.TryGetValue((item.ItemCode, location.Lokasi), out var qty)
+                        ? qty
+                        : 0
+                }).ToList()
+            }).ToList();
+        }
+
         #region ubahdivisiitem
 
         public bool RubahDivisiItem(int xKdBank, string cDivisi)
