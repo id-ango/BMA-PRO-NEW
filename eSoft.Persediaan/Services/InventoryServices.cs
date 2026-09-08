@@ -1101,6 +1101,7 @@ namespace eSoft.Persediaan.Services
         {
             var items = _context.IcItems
                 .AsNoTracking()
+                .Where(x => !x.Disabled)
                 .OrderBy(x => x.NamaItem)
                 .ToList()
                 .GroupBy(x => x.ItemCode, StringComparer.OrdinalIgnoreCase)
