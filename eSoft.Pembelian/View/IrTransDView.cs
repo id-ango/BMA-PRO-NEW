@@ -22,7 +22,7 @@ namespace eSoft.Pembelian.View
         public string ItemCode { get; set; }
         public string NamaItem { get; set; }
         public string Satuan { get; set; }
-        [Required]
+        
         public string Lokasi { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal Harga { get; set; }
