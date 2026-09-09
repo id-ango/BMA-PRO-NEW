@@ -140,11 +140,12 @@
     padding: 12px !important;
 }
 
-.division-header td {
-    padding: 12px 8px;
-    border-top: 2px solid #b0bec5;
-    border-bottom: 2px solid #b0bec5;
-}
+    .division-header td {
+        padding: 12px 8px;
+        border-top: 2px solid #b0bec5;
+        border-bottom: 2px solid #b0bec5;
+        text-align: center;
+    }
 
 /* Selected for Printing */
 .to-print {
