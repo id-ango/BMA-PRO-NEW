@@ -1125,11 +1125,6 @@ namespace eSoft.Persediaan.Services
                     x => (x.Key.ItemCode, x.Key.Lokasi),
                     x => x.Sum(y => y.Qty));
 
-            var stockByItem = _context.IcAltItems
-                .AsNoTracking()
-                .GroupBy(x => x.ItemCode)
-                .ToDictionary(x => x.Key, x => x.Sum(y => y.Qty));
-
             return items.Select(item => new IcItemQtyByLocationView
             {
                 ItemCode = item.ItemCode,
@@ -1139,7 +1134,7 @@ namespace eSoft.Persediaan.Services
                 NamaDivisi = divisions.TryGetValue(item.Divisi, out var divisionName)
                     ? divisionName
                     : item.Divisi,
-                Qty = stockByItem.TryGetValue(item.ItemCode, out var totalQty) ? totalQty : 0,
+                Qty = item.Qty,
                 Locations = locations.Select(location => new IcLocationQtyView
                 {
                     Lokasi = location.Lokasi,
