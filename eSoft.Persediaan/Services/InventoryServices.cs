@@ -1121,17 +1121,29 @@ namespace eSoft.Persediaan.Services
                 });
             }
             locations = locations.OrderBy(x => x.Lokasi).ToList();
+            var altItems = _context.IcAltItems
+                .AsNoTracking()
+                .ToList();
+            if (altItems.Any(x => string.IsNullOrWhiteSpace(x.Lokasi)) &&
+                !locations.Any(x => string.IsNullOrWhiteSpace(x.Lokasi)))
+            {
+                locations.Add(new IcLokasi
+                {
+                    Lokasi = string.Empty,
+                    NamaLokasi = "Lokasi Belum Diisi"
+                });
+            }
+            locations = locations.OrderBy(x => string.IsNullOrWhiteSpace(x.Lokasi) ? "" : x.Lokasi).ToList();
             var divisions = _context.IcDivs
                 .AsNoTracking()
                 .ToList()
                 .GroupBy(x => x.Divisi, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(x => x.Key, x => x.First().NamaDiv, StringComparer.OrdinalIgnoreCase);
 
-            var stockByItemLocation = _context.IcAltItems
-                .AsNoTracking()
-                .GroupBy(x => new { x.ItemCode, x.Lokasi })
+            var stockByItemLocation = altItems
+                .GroupBy(x => (ItemCode: NormalizeStockOpnameKey(x.ItemCode), Lokasi: NormalizeStockOpnameKey(x.Lokasi)))
                 .ToDictionary(
-                    x => (x.Key.ItemCode, x.Key.Lokasi),
+                    x => x.Key,
                     x => x.Sum(y => y.Qty));
 
             return items.Select(item => new IcItemQtyByLocationView
@@ -1148,7 +1160,7 @@ namespace eSoft.Persediaan.Services
                 {
                     Lokasi = location.Lokasi,
                     NamaLokasi = location.NamaLokasi,
-                    Qty = (stockByItemLocation.TryGetValue((item.ItemCode, location.Lokasi), out var qty)
+                    Qty = (stockByItemLocation.TryGetValue((NormalizeStockOpnameKey(item.ItemCode), NormalizeStockOpnameKey(location.Lokasi)), out var qty)
                         ? qty
                         : 0) + (string.Equals(location.Lokasi, "P1", StringComparison.OrdinalIgnoreCase)
                             ? item.SaldoAwal
@@ -1156,6 +1168,9 @@ namespace eSoft.Persediaan.Services
                 }).ToList()
             }).ToList();
         }
+
+        private static string NormalizeStockOpnameKey(string value) =>
+            string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToUpperInvariant();
 
         #region ubahdivisiitem
 

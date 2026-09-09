@@ -89,7 +89,7 @@
                             <th class="text-end">Total Sistem</th>
                             @foreach (var location in Locations)
                             {
-                                <th class="text-center" colspan="2">@location.NamaLokasi (@location.Lokasi)</th>
+                                <th class="text-center" colspan="2">@LocationLabel(location)</th>
                             }
                         </tr>
                         <tr>
@@ -271,8 +271,8 @@
             var column = 5;
             foreach (var location in Locations)
             {
-                worksheet.Cell(rowNumber, column).Value = $"{location.NamaLokasi} ({location.Lokasi}) Sistem";
-                worksheet.Cell(rowNumber, column + 1).Value = $"{location.NamaLokasi} ({location.Lokasi}) Fisik";
+                worksheet.Cell(rowNumber, column).Value = $"{LocationLabel(location)} Sistem";
+                worksheet.Cell(rowNumber, column + 1).Value = $"{LocationLabel(location)} Fisik";
                 column += 2;
             }
 
@@ -368,6 +368,11 @@
     }
 
     private static string CellKey(string itemCode, string lokasi) => $"{itemCode}::{lokasi}";
+
+    private static string LocationLabel(IcLocationQtyView location) =>
+        string.IsNullOrWhiteSpace(location.Lokasi)
+            ? location.NamaLokasi
+            : $"{location.NamaLokasi} ({location.Lokasi})";
 }
 
 <style>

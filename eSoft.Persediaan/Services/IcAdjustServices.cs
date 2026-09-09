@@ -47,7 +47,7 @@ namespace eSoft.Persediaan.Services
 
             foreach (var line in opname.Lines)
             {
-                if (line.QtyFisik == line.QtySistem || string.IsNullOrWhiteSpace(line.Lokasi))
+                if (line.QtyFisik == line.QtySistem)
                     continue;
 
                 if (!items.TryGetValue(line.ItemCode, out var item))
