@@ -1112,6 +1112,15 @@ namespace eSoft.Persediaan.Services
                 .AsNoTracking()
                 .OrderBy(x => x.Lokasi)
                 .ToList();
+            if (!locations.Any(x => string.Equals(x.Lokasi, "P1", StringComparison.OrdinalIgnoreCase)))
+            {
+                locations.Add(new IcLokasi
+                {
+                    Lokasi = "P1",
+                    NamaLokasi = "Virtual / Default"
+                });
+            }
+            locations = locations.OrderBy(x => x.Lokasi).ToList();
             var divisions = _context.IcDivs
                 .AsNoTracking()
                 .ToList()
@@ -1139,9 +1148,11 @@ namespace eSoft.Persediaan.Services
                 {
                     Lokasi = location.Lokasi,
                     NamaLokasi = location.NamaLokasi,
-                    Qty = stockByItemLocation.TryGetValue((item.ItemCode, location.Lokasi), out var qty)
+                    Qty = (stockByItemLocation.TryGetValue((item.ItemCode, location.Lokasi), out var qty)
                         ? qty
-                        : 0
+                        : 0) + (string.Equals(location.Lokasi, "P1", StringComparison.OrdinalIgnoreCase)
+                            ? item.SaldoAwal
+                            : 0)
                 }).ToList()
             }).ToList();
         }
