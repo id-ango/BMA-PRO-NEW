@@ -438,6 +438,12 @@ namespace eSoft.LaporanStock.Services
                 Debug.WriteLine($"[prosesStock] {message} | {stopwatch.Elapsed:hh\\:mm\\:ss}");
             }
 
+            static string NormalizeLokasi(string lokasi)
+                => string.IsNullOrWhiteSpace(lokasi) ? null : lokasi.Trim();
+
+            static bool SameLokasi(string lokasi1, string lokasi2)
+                => string.Equals(NormalizeLokasi(lokasi1), NormalizeLokasi(lokasi2), StringComparison.OrdinalIgnoreCase);
+
             ReportStatus("Mulai proses stock");
 
             List<IcItem> MasterStock = _context.IcItems.ToList();
@@ -503,7 +509,7 @@ namespace eSoft.LaporanStock.Services
                     Dokumen = trans.NoLpb,
                     Qty = trans.Qty,
                     Jumlah = trans.JumDpp,
-                    Lokasi = trans.Lokasi,
+                    Lokasi = NormalizeLokasi(trans.Lokasi),
                     IcCardId = trans.IrTransDId
 
                 });
@@ -519,8 +525,8 @@ namespace eSoft.LaporanStock.Services
                     Dokumen = trans.NoFaktur,
                     Qty = trans.QtyShp,
                     Jumlah = trans.Jumlah,
-                    Lokasi = trans.Lokasi,
-                    Lokasi2 = trans.Lokasi2,
+                    Lokasi = NormalizeLokasi(trans.Lokasi),
+                    Lokasi2 = NormalizeLokasi(trans.Lokasi2),
                     IcCardId = trans.IcTransDId
 
                 });
@@ -537,7 +543,7 @@ namespace eSoft.LaporanStock.Services
                     Qty = trans.Qty,
                     HrgJual = trans.Harga,
                     Jumlah = trans.Jumlah,
-                    Lokasi = trans.Lokasi,
+                    Lokasi = NormalizeLokasi(trans.Lokasi),
                     IcCardId = trans.OeTransDId
 
                 });
@@ -551,24 +557,28 @@ namespace eSoft.LaporanStock.Services
             foreach (var trans in transaksiUrut)
             {
                 IcItem item = MasterStock.Find(x => x.ItemCode == trans.ItemCode);
-                IcAltItem cekLokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == trans.Lokasi).FirstOrDefault();
+                trans.Lokasi = NormalizeLokasi(trans.Lokasi);
+                trans.Lokasi2 = NormalizeLokasi(trans.Lokasi2);
+
+                IcAltItem cekLokasi1 = AltStock.FirstOrDefault(x =>
+                    x.ItemCode == item.ItemCode && SameLokasi(x.Lokasi, trans.Lokasi));
                 if (cekLokasi1 == null)
                 {
-                    AltStock.Add(new IcAltItem()
+                    cekLokasi1 = new IcAltItem()
                     {
                         ItemCode = item.ItemCode.ToUpper(),
                         NamaItem = item.NamaItem,
                         Satuan = item.Satuan,
                         Lokasi = trans.Lokasi,
                         Qty = 0
-                    });
-
-
+                    };
+                    AltStock.Add(cekLokasi1);
                 }
                 if (trans.Lokasi2 != null)
                 {
-                    IcAltItem cekLokasi2 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == trans.Lokasi2).FirstOrDefault();
-                    if (cekLokasi1 == null)
+                    IcAltItem cekLokasi2 = AltStock.FirstOrDefault(x =>
+                        x.ItemCode == item.ItemCode && SameLokasi(x.Lokasi, trans.Lokasi2));
+                    if (cekLokasi2 == null)
                     {
                         AltStock.Add(new IcAltItem()
                         {
@@ -594,29 +604,29 @@ namespace eSoft.LaporanStock.Services
                             MasterStock.Find(x => x.ItemCode == trans.ItemCode).Cost += trans.Jumlah;
                             MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty += trans.Qty;
                             MasterStock.Find(x => x.ItemCode == trans.ItemCode).HrgNetto = (MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty != 0 ? (MasterStock.Find(x => x.ItemCode == trans.ItemCode).Cost / MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty) : item.Harga);
-                            AltStock.Find(x => x.ItemCode == trans.ItemCode && x.Lokasi == trans.Lokasi).Qty += trans.Qty;
+                             AltStock.First(x => x.ItemCode == trans.ItemCode && SameLokasi(x.Lokasi, trans.Lokasi)).Qty += trans.Qty;
                             break;
 
                         case "82":
                             MasterStock.Find(x => x.ItemCode == trans.ItemCode).Cost += trans.Jumlah;
                             MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty += trans.Qty;
                             MasterStock.Find(x => x.ItemCode == trans.ItemCode).HrgNetto = (MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty != 0 ? (MasterStock.Find(x => x.ItemCode == trans.ItemCode).Cost / MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty) : MasterStock.Find(x => x.ItemCode == trans.ItemCode).Harga);
-                            AltStock.Find(x => x.ItemCode == trans.ItemCode && x.Lokasi == trans.Lokasi).Qty += trans.Qty;
+                             AltStock.First(x => x.ItemCode == trans.ItemCode && SameLokasi(x.Lokasi, trans.Lokasi)).Qty += trans.Qty;
                             break;
 
                         case "83":
                             MasterStock.Find(x => x.ItemCode == trans.ItemCode).Cost -= trans.Jumlah;
                             MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty -= trans.Qty;
                             MasterStock.Find(x => x.ItemCode == trans.ItemCode).HrgNetto = (MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty != 0 ? (MasterStock.Find(x => x.ItemCode == trans.ItemCode).Cost / MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty) : MasterStock.Find(x => x.ItemCode == trans.ItemCode).Harga);
-                            AltStock.Find(x => x.ItemCode == trans.ItemCode && x.Lokasi == trans.Lokasi).Qty -= trans.Qty;
+                             AltStock.First(x => x.ItemCode == trans.ItemCode && SameLokasi(x.Lokasi, trans.Lokasi)).Qty -= trans.Qty;
                             break;
 
                         case "90":
                             //   MasterStock.Find(x => x.ItemCode == trans.ItemCode).Cost += trans.Jumlah;
                             //  MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty += trans.Qty;
                             //  MasterStock.Find(x => x.ItemCode == trans.ItemCode).HrgNetto = (MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty != 0 ? (MasterStock.Find(x => x.ItemCode == trans.ItemCode).Cost / MasterStock.Find(x => x.ItemCode == trans.ItemCode).Qty) : item.Harga);
-                            AltStock.Find(x => x.ItemCode == trans.ItemCode && x.Lokasi == trans.Lokasi).Qty -= trans.Qty;
-                            AltStock.Find(x => x.ItemCode == trans.ItemCode && x.Lokasi == trans.Lokasi2).Qty += trans.Qty;
+                             AltStock.First(x => x.ItemCode == trans.ItemCode && SameLokasi(x.Lokasi, trans.Lokasi)).Qty -= trans.Qty;
+                             AltStock.First(x => x.ItemCode == trans.ItemCode && SameLokasi(x.Lokasi, trans.Lokasi2)).Qty += trans.Qty;
                             break;
 
                         case "94":
@@ -635,7 +645,7 @@ namespace eSoft.LaporanStock.Services
                             TransJual.Find(x => x.OeTransDId == trans.IcCardId).Cost = trans.Jumlah;
                             TransJual.Find(x => x.OeTransDId == trans.IcCardId).HrgCost = trans.Harga;
 
-                            AltStock.Find(x => x.ItemCode == trans.ItemCode && x.Lokasi == trans.Lokasi).Qty -= trans.Qty;
+                             AltStock.First(x => x.ItemCode == trans.ItemCode && SameLokasi(x.Lokasi, trans.Lokasi)).Qty -= trans.Qty;
                             break;
 
                         case "95":
@@ -651,7 +661,7 @@ namespace eSoft.LaporanStock.Services
                             TransJual.Find(x => x.OeTransDId == trans.IcCardId).Cost = trans.Jumlah;
                             TransJual.Find(x => x.OeTransDId == trans.IcCardId).HrgCost = trans.Harga;
 
-                            AltStock.Find(x => x.ItemCode == trans.ItemCode && x.Lokasi == trans.Lokasi).Qty += trans.Qty;
+                             AltStock.First(x => x.ItemCode == trans.ItemCode && SameLokasi(x.Lokasi, trans.Lokasi)).Qty += trans.Qty;
                             break;
                     }
                     //   }

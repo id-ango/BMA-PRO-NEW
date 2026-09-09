@@ -132,6 +132,7 @@ namespace eSoft.Persediaan.Services
 
             foreach (var item in trans.IcTransDs)
             {
+                var lokasi = string.IsNullOrWhiteSpace(item.Lokasi) ? null : item.Lokasi.Trim();
                 transH.IcTransDs.Add(new IcTransD()
                 {
                     ItemCode = item.ItemCode,
@@ -141,7 +142,7 @@ namespace eSoft.Persediaan.Services
                     Jumlah = item.Jumlah,
                     QtyShp = item.QtyShp,
                     Kode = "81",
-                    Lokasi = item.Lokasi,
+                    Lokasi = lokasi,
                     NoFaktur = transH.NoFaktur,
                     Tanggal = trans.Tanggal
                 });
@@ -151,10 +152,13 @@ namespace eSoft.Persediaan.Services
                 {
                     if (item.QtyShp != 0)
                     {
-                        var altKey = $"{item.ItemCode}::{item.Lokasi}";
+                        var altKey = $"{item.ItemCode}::{lokasi ?? "<EMPTY>"}";
                         if (!altItemDictAdd.TryGetValue(altKey, out IcAltItem cekLokasi1))
                         {
-                            cekLokasi1 = _context.IcAltItems.Where(x => x.ItemCode == item.ItemCode && x.Lokasi == item.Lokasi).FirstOrDefault();
+                            cekLokasi1 = _context.IcAltItems
+                                .Where(x => x.ItemCode == item.ItemCode)
+                                .AsEnumerable()
+                                .FirstOrDefault(x => SameLocation(x.Lokasi, lokasi));
                             if (cekLokasi1 != null) altItemDictAdd[altKey] = cekLokasi1;
                         }
 
@@ -165,7 +169,7 @@ namespace eSoft.Persediaan.Services
                                 ItemCode = cekItem.ItemCode.ToUpper(),
                                 NamaItem = cekItem.NamaItem,
                                 Satuan = cekItem.Satuan,
-                                Lokasi = item.Lokasi,
+                                Lokasi = lokasi,
                                 Qty = item.QtyShp
                             };
                             _context.IcAltItems.Add(Produk);
@@ -196,6 +200,14 @@ namespace eSoft.Persediaan.Services
             return TempTrans;
 
 
+        }
+
+        private static bool SameLocation(string first, string second)
+        {
+            if (string.IsNullOrWhiteSpace(first) && string.IsNullOrWhiteSpace(second))
+                return true;
+
+            return string.Equals(first?.Trim(), second?.Trim(), StringComparison.OrdinalIgnoreCase);
         }
 
         public async Task<bool> EditTransH(IcTransHView trans)
