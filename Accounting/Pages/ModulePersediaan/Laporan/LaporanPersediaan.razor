@@ -231,7 +231,7 @@
         if (Tampilan == 1 && TransItem.Count > 0)
             return;
 
-        TransItem = serviceIC.GetIcItem(false);
+        TransItem = serviceIC.GetIcItem(true);
         Tampilan = 1;
         _lastTampilan = 1;
         _shouldRender = true;
