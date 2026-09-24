@@ -733,13 +733,12 @@ namespace eSoft.Hutang.Services
         public async Task  ProsesHutang()
         {
 
-            List<ApSuppl> Suppliers = _context.ApSuppls.ToList();
-            List<ApHutang> Hutangs = _context.ApHutangs.ToList();
+            List<ApSuppl> Suppliers = await _context.ApSuppls.ToListAsync();
+            List<ApHutang> Hutangs = await _context.ApHutangs.ToListAsync();
+            var supplierByCode = Suppliers.ToDictionary(x => x.Supplier);
+            var hutangByDocument = Hutangs.ToDictionary(x => x.Dokumen);
 
             List<ApTransH> TransHutang = new List<ApTransH>();
-
-
-            Suppliers.ForEach(i => { i.Hutang = 0; });
 
 
             Suppliers.ForEach(i => { i.Hutang = i.SldAwal; });
@@ -747,7 +746,7 @@ namespace eSoft.Hutang.Services
             {
                 if (hutang.Kode == "IR" || hutang.Kode == "IN")
                 {
-                    Suppliers.Find(x => x.Supplier == hutang.Supplier).Hutang += hutang.Jumlah;
+                    supplierByCode[hutang.Supplier].Hutang += hutang.Jumlah;
                 }
             }
 
@@ -756,13 +755,20 @@ namespace eSoft.Hutang.Services
             foreach (var hutang in Hutangs)
             {
 
-                Suppliers.Find(x => x.Supplier == hutang.Supplier).Hutang -= (hutang.KodeTran == "23" ? -1 * hutang.SldSisa : hutang.SldBayar);
+                supplierByCode[hutang.Supplier].Hutang -= (hutang.KodeTran == "23" ? -1 * hutang.SldSisa : hutang.SldBayar);
 
             }
 
            
 
-            TransHutang = _context.ApTransHs.OrderBy(x => x.Tanggal).Include(x => x.ApTransDs).Where(x => x.Kode != "21").ToList();
+            TransHutang = await _context.ApTransHs
+                .Where(x => x.Kode != "21")
+                .ToListAsync();
+            var transDetailsByHeader = (await _context.ApTransDs
+                .AsNoTracking()
+                .Where(x => x.ApTransH.Kode != "21")
+                .ToListAsync())
+                .ToLookup(x => x.ApTransHId);
 
 
             foreach (var trans in TransHutang)
@@ -771,7 +777,7 @@ namespace eSoft.Hutang.Services
                 decimal mPayee = 0;
                 decimal mDiskon = 0;
 
-                var transdetail = trans.ApTransDs;
+                var transdetail = transDetailsByHeader[trans.ApTransHId];
 
                 if (transdetail != null)
                 {
@@ -779,12 +785,13 @@ namespace eSoft.Hutang.Services
                     {
                         // if (transdetails.KodeTran != "14")
                         // {
-                        Hutangs.Find(x => x.Dokumen == transdetails.Lpb).Bayar += (transdetails.Bayar + transdetails.Discount);
-                        Hutangs.Find(x => x.Dokumen == transdetails.Lpb).Discount += transdetails.Discount;
+                        var hutang = hutangByDocument[transdetails.Lpb];
+                        hutang.Bayar += (transdetails.Bayar + transdetails.Discount);
+                        hutang.Discount += transdetails.Discount;
                         // }
 
 
-                        Hutangs.Find(x => x.Dokumen == transdetails.Lpb).Sisa -= (transdetails.Bayar + transdetails.Discount);
+                        hutang.Sisa -= (transdetails.Bayar + transdetails.Discount);
                         mPayee += transdetails.Bayar;
                         mDiskon += transdetails.Discount;
 
@@ -794,16 +801,17 @@ namespace eSoft.Hutang.Services
                 trans.Unapplied = trans.Jumlah - mPayee;
                 trans.Discount = mDiskon;
 
-                Hutangs.Find(x => x.Dokumen == trans.Bukti).Jumlah = (trans.Kode == "13" ? -1 * trans.Jumlah : -1 * trans.Hutang);
+                var hutangBukti = hutangByDocument[trans.Bukti];
+                hutangBukti.Jumlah = (trans.Kode == "13" ? -1 * trans.Jumlah : -1 * trans.Hutang);
 
-                Hutangs.Find(x => x.Dokumen == trans.Bukti).UnApplied = -1 * trans.Unapplied;
+                hutangBukti.UnApplied = -1 * trans.Unapplied;
 
                 if (trans.Kode != "23")
                 {
-                    Hutangs.Find(x => x.Dokumen == trans.Bukti).Bayar = -1 * trans.Jumlah;
-                    Hutangs.Find(x => x.Dokumen == trans.Bukti).Sisa = -1 * trans.Unapplied;
-                    Hutangs.Find(x => x.Dokumen == trans.Bukti).Discount = -1 * trans.Discount;
-                    Suppliers.Find(x => x.Supplier == trans.Supplier).Hutang -= (trans.Kode == "23" ? -1 * (trans.Jumlah) : (trans.Hutang + trans.Unapplied));
+                    hutangBukti.Bayar = -1 * trans.Jumlah;
+                    hutangBukti.Sisa = -1 * trans.Unapplied;
+                    hutangBukti.Discount = -1 * trans.Discount;
+                    supplierByCode[trans.Supplier].Hutang -= (trans.Kode == "23" ? -1 * (trans.Jumlah) : (trans.Hutang + trans.Unapplied));
                 }
 
 
@@ -813,12 +821,7 @@ namespace eSoft.Hutang.Services
 
 
 
-            _context.UpdateRange(Suppliers);
-            _context.UpdateRange(Hutangs);
-
-
-
-           await  _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
 
             // return Transaksi;

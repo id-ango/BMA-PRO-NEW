@@ -9,38 +9,80 @@
 @inject IReceivableServices service;
 @inject IJSRuntime JSRuntime
 
+<style>
+    .processing-status {
+        background: linear-gradient(90deg, #cff4fc, #8edff0, #cff4fc);
+        background-size: 200% 100%;
+        border-color: #6edff6;
+        animation: processing-gradient 1.8s linear infinite;
+    }
+
+    @@keyframes processing-gradient {
+        0% {
+            background-position: 100% 0;
+        }
+
+        100% {
+            background-position: -100% 0;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .processing-status {
+            animation: none;
+        }
+    }
+</style>
 
 <h3>Proses Receivable</h3>
 
-<button class="btn-success" @onclick="prosespiutang" style="display: flex; justify-content:space-between;">
-    <span>Proses</span>
-    <span style="display: @(isProcessing ? "inline" : "none");margin-left:5px; ">
-        <i class="fas fa-spinner fa-spin"></i>
-    </span>
+<button type="button" class="btn btn-success" @onclick="prosespiutang" disabled="@isProcessing" style="display: flex; justify-content:space-between;">
+    <span>Proses Receivable</span>
+    @if (isProcessing)
+    {
+        <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+    }
 
 </button>
 
+@if (!string.IsNullOrWhiteSpace(processStatus))
+{
+    <div class="alert @(processStatus.StartsWith("Gagal", StringComparison.Ordinal) ? "alert-danger" : processStatus.StartsWith("Proses receivable selesai", StringComparison.Ordinal) ? "alert-success" : "alert-info") @(isProcessing ? "processing-status" : "") mt-2" role="status" aria-busy="@isProcessing">
+        <i class="fas @(processStatus.StartsWith("Proses receivable selesai", StringComparison.Ordinal) ? "fa-check-circle" : "fa-info-circle") me-2"></i>@processStatus
+    </div>
+}
+
 @code {
     private bool isProcessing = false;
+    private string processStatus = "";
 
-    private async void prosespiutang()
+    private async Task prosespiutang()
     {
+        if (isProcessing) return;
+
+        var startedAt = DateTime.Now;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        isProcessing = true;
+        processStatus = $"Mulai: {startedAt:dd/MM/yyyy HH:mm:ss}. Proses receivable sedang berjalan...";
+        await InvokeAsync(StateHasChanged);
+
         try
         {
-            isProcessing = true;
-           
-            await service.ProsesPiutang();
-            // throw new Exception("INi adalah kesalahan yang dibuat scara sengaja");
-        } 
+            await Task.Yield();
+            await Task.Run(() => service.ProsesPiutang());
+            stopwatch.Stop();
+            processStatus = $"Proses receivable selesai pada {DateTime.Now:dd/MM/yyyy HH:mm:ss}. Durasi: {stopwatch.Elapsed:hh\\:mm\\:ss}. Data sudah diperbarui.";
+        }
         catch (Exception ex)
         {
+            stopwatch.Stop();
+            processStatus = $"Gagal: {DateTime.Now:dd/MM/yyyy HH:mm:ss} setelah {stopwatch.Elapsed:hh\\:mm\\:ss} - {ex.Message}";
             await JSRuntime.InvokeVoidAsync("alert", "Terjadi Kesalahan: " + ex.Message);
         }
         finally
         {
             isProcessing = false;
-            await JSRuntime.InvokeVoidAsync("alert", "Proses Sudah Selesai");
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
 
     }

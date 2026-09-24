@@ -823,13 +823,12 @@ namespace eSoft.Piutang.Services
         public async Task ProsesPiutang()
         {
 
-            List<ArCust> Customers = _context.ArCusts.ToList();
-            List<ArPiutng> Piutangs = _context.ArPiutngs.ToList();
+            List<ArCust> Customers = await _context.ArCusts.ToListAsync();
+            List<ArPiutng> Piutangs = await _context.ArPiutngs.ToListAsync();
+            var customerByCode = Customers.ToDictionary(x => x.Customer);
+            var piutangByDocument = Piutangs.ToDictionary(x => x.Dokumen);
 
             List<ArTransH> TransPiutang = new List<ArTransH>();
-
-
-            Customers.ForEach(i => { i.Piutang = 0; });
 
 
             Customers.ForEach(i => { i.Piutang = i.SldAwal; });
@@ -837,7 +836,7 @@ namespace eSoft.Piutang.Services
             {
                 if (piutang.Kode == "OE" || piutang.Kode == "IN")
                 {
-                    var customer = Customers.Find(x => x.Customer == piutang.Customer);
+                    customerByCode.TryGetValue(piutang.Customer, out var customer);
 
                     if(customer is not null)
                     {
@@ -854,12 +853,19 @@ namespace eSoft.Piutang.Services
             foreach (var piutang in Piutangs)
             {
 
-                Customers.Find(x => x.Customer == piutang.Customer).Piutang -= (piutang.KodeTran == "13" ? -1 * piutang.SldSisa : piutang.SldBayar);
+                customerByCode[piutang.Customer].Piutang -= (piutang.KodeTran == "13" ? -1 * piutang.SldSisa : piutang.SldBayar);
 
             }
 
 
-            TransPiutang = _context.ArTransHs.OrderBy(x => x.Tanggal).Include(x => x.ArTransDs).Where(x => x.Kode != "11").ToList();
+            TransPiutang = await _context.ArTransHs
+                .Where(x => x.Kode != "11")
+                .ToListAsync();
+            var transDetailsByHeader = (await _context.ArTransDs
+                .AsNoTracking()
+                .Where(x => x.ArTransH.Kode != "11")
+                .ToListAsync())
+                .ToLookup(x => x.ArTransHId);
 
 
             foreach (var trans in TransPiutang)
@@ -868,13 +874,13 @@ namespace eSoft.Piutang.Services
                 decimal mPayee = 0;
                 decimal mDiskon = 0;
 
-                var transdetail = trans.ArTransDs;
+                var transdetail = transDetailsByHeader[trans.ArTransHId];
 
                 if (transdetail != null)
                 {
                     foreach (var transdetails in transdetail)
                     {
-                        var piutang = Piutangs.Find(x => x.Dokumen == transdetails.Lpb);
+                        var piutang = piutangByDocument[transdetails.Lpb];
 
                         // if (transdetails.KodeTran != "14")
                         // {
@@ -896,7 +902,7 @@ namespace eSoft.Piutang.Services
                 trans.Unapplied = trans.Jumlah - mPayee;
                 trans.Discount = mDiskon;
 
-                var piutangBukti = Piutangs.Find(x => x.Dokumen == trans.Bukti);
+                var piutangBukti = piutangByDocument[trans.Bukti];
 
                 piutangBukti.Jumlah = (trans.Kode == "13" ? -1 * trans.Jumlah : -1 * trans.Piutang);
                 piutangBukti.UnApplied = -1 * trans.Unapplied;
@@ -907,18 +913,13 @@ namespace eSoft.Piutang.Services
                     piutangBukti.Bayar = -1 * trans.Jumlah;
                     piutangBukti.Sisa = -1 * trans.Unapplied;
                     piutangBukti.Discount = -1 * trans.Discount;
-                    Customers.Find(x => x.Customer == trans.Customer).Piutang -= (trans.Kode == "13" ? -1 * (trans.Jumlah) : (trans.Piutang + trans.Unapplied));
+                    customerByCode[trans.Customer].Piutang -= (trans.Kode == "13" ? -1 * (trans.Jumlah) : (trans.Piutang + trans.Unapplied));
                 }
 
 
 
 
             }
-
-
-
-            _context.UpdateRange(Customers);
-            _context.UpdateRange(Piutangs);
 
 
 
