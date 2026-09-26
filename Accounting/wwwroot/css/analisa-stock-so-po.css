@@ -10,6 +10,24 @@
 .analysis-progress .progress { height: .55rem; }
 
 @media print {
+    @page { margin: 12mm; }
+
+    .app-sidebar,
+    .app-header,
+    .app-content-intro {
+        display: none !important;
+    }
+
+    .app-shell,
+    .app-main,
+    .app-content-shell {
+        display: block !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
     .dont-print { display: none !important; }
     .analysis-page { padding: 0; }
     .analysis-summary h1 { font-size: 1.35rem; }
