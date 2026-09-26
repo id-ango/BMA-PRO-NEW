@@ -4,12 +4,13 @@
 @using eSoft.LaporanStock.View
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.JSInterop
+@using ClosedXML.Excel
 @inject ILaporanStockServices StockReportService
 @inject IJSRuntime JS
 
 <link rel="stylesheet" href="css/analisa-stock-so-po.css" />
 
-<div class="container-fluid analysis-page @(IsPrintingSummary ? "printing-summary" : "")">
+<div class="container-fluid analysis-page @(IsPrinting ? $"printing-{PrintMode}" : "")">
     <div class="dont-print">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
@@ -45,8 +46,18 @@
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-danger w-100" disabled="@(Report is null || IsLoading)" @onclick="PrintSummary">
-                            Cetak / Simpan PDF
+                        <button class="btn btn-danger w-100" disabled="@(Report is null || IsLoading || IsPrinting)" @onclick="PrintSummary">
+                            PDF Ringkasan
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-danger w-100" disabled="@(Report is null || IsLoading || IsPrinting)" @onclick="PrintFullReport">
+                            PDF Lengkap
+                        </button>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-success w-100" disabled="@(Report is null || IsLoading || IsExporting)" @onclick="ExportToExcel" title="Download Excel lengkap">
+                            Excel
                         </button>
                     </div>
                 </div>
@@ -185,6 +196,59 @@
             </div>
 
             <div class="print-summary-only mt-3">
+                @if (PrintMode == "full")
+                {
+                    <section class="print-cover">
+                        <h1>Report Stock Analysis</h1>
+                        <h2>Analisa Stock, Sales Order, Purchase Order &amp; Rekomendasi Pengadaan</h2>
+                        <p>Per tanggal @Report.AsOfDate.ToString("dd-MM-yyyy")</p>
+                        <p class="text-muted">Dicetak pada @DateTime.Now.ToString("dd-MM-yyyy HH:mm")</p>
+                    </section>
+
+                    <section class="print-section">
+                        <h2>Ringkasan Eksekutif</h2>
+                        <p>@Report.ExecutiveSummary</p>
+                        <table class="table table-sm report-parameter-table">
+                            <tbody>
+                                <tr><th>Histori penjualan</th><td>@Report.SalesHistoryMonths bulan</td><th>Coverage</th><td>@Report.CoverageMonths bulan</td></tr>
+                                <tr><th>Lead time supplier</th><td>@Report.LeadTimeMonths bulan</td><th>Safety stock</th><td>@Report.SafetyStockMonths bulan</td></tr>
+                                <tr><th>Batas aging</th><td>@Report.AgingThresholdDays hari</td><th>Nilai PO rekomendasi</th><td>@Report.TotalRecommendedPoValue.ToString("N0")</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="row g-2 print-kpi-grid">
+                            <div class="col"><strong>Nilai Stock</strong><br />@Report.TotalStockValue.ToString("N0")</div>
+                            <div class="col"><strong>Dead Stock</strong><br />@Report.DeadStockValue.ToString("N0")</div>
+                            <div class="col"><strong>Slow Moving</strong><br />@Report.SlowMovingValue.ToString("N0")</div>
+                            <div class="col"><strong>Sisa SO</strong><br />@Report.TotalSoRemainingValue.ToString("N0")</div>
+                            <div class="col"><strong>PO Outstanding</strong><br />@Report.TotalPoRemainingValue.ToString("N0")</div>
+                        </div>
+                    </section>
+
+                    <section class="print-section print-detail-section">
+                        <h2>Detail Lengkap Analisa Persediaan</h2>
+                        <table class="table table-sm print-detail-table">
+                            <thead><tr><th>Item</th><th>Jenis</th><th class="text-end">Stock</th><th class="text-end">Nilai</th><th>Keluar Terakhir</th><th class="text-end">Umur</th><th class="text-end">SO</th><th class="text-end">PO</th><th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2</th><th class="text-end">Rekom PO</th><th>Status</th></tr></thead>
+                            <tbody>
+                                @foreach (var row in Report.Rows)
+                                {
+                                    <tr>
+                                        <td>@row.ItemCode<br /><small>@row.NamaItem</small></td><td>@row.JenisItem</td><td class="text-end">@row.StockQty.ToString("N0")</td><td class="text-end">@row.StockValue.ToString("N0")</td><td>@(row.LastOutDate?.ToString("dd-MM-yyyy") ?? "Belum pernah")</td><td class="text-end">@(row.DaysSinceLastOut?.ToString() ?? "-")</td><td class="text-end">@row.SoRemainingQty.ToString("N0")</td><td class="text-end">@row.PoRemainingQty.ToString("N0")</td><td class="text-end">@row.SalesQty12Months.ToString("N0")</td><td class="text-end">@row.AverageMonthlySales.ToString("N1")</td><td class="text-end">@row.RecommendedPoQty.ToString("N0")</td><td>@row.Status</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <section class="print-section">
+                        <h2>Dasar Analisa &amp; Alasan Rekomendasi PO</h2>
+                        @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue))
+                        {
+                            <div class="recommendation-note"><strong>@row.ItemCode - @row.NamaItem: @row.RecommendedPoQty.ToString("N0") unit</strong><br />@row.DemandAnalysisReason</div>
+                        }
+                    </section>
+                }
+                else
+                {
                 <h3>Top 10 Nilai Stock</h3>
                 <table class="table table-sm">
                     <thead><tr><th>Item</th><th>Jenis</th><th class="text-end">Qty</th><th class="text-end">Nilai</th><th>Status</th></tr></thead>
@@ -220,6 +284,7 @@
                 {
                     <p>Tidak ada item yang direkomendasikan untuk PO berdasarkan parameter dan histori penjualan yang dipilih.</p>
                 }
+                }
             </div>
         </div>
     }
@@ -236,7 +301,9 @@
     private string StatusFilter = "Semua";
     private string TypeFilter = "Semua";
     private bool IsLoading;
-    private bool IsPrintingSummary;
+    private bool IsPrinting;
+    private bool IsExporting;
+    private string PrintMode = "summary";
     private string CompletionMessage;
     private string ProcessMessage;
 
@@ -281,15 +348,129 @@
         }
     }
 
-    private async Task PrintSummary()
+    private Task PrintSummary() => PrintReport("summary");
+
+    private Task PrintFullReport() => PrintReport("full");
+
+    private async Task PrintReport(string mode)
     {
-        IsPrintingSummary = true;
+        PrintMode = mode;
+        IsPrinting = true;
         await InvokeAsync(StateHasChanged);
         await Task.Delay(200);
         await JS.InvokeVoidAsync("window.print");
         await Task.Delay(300);
-        IsPrintingSummary = false;
+        IsPrinting = false;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ExportToExcel()
+    {
+        if (Report is null)
+            return;
+
+        IsExporting = true;
+        CompletionMessage = null;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        try
+        {
+            using var workbook = new XLWorkbook();
+            var summary = workbook.Worksheets.Add("Summary");
+            summary.Cell(1, 1).Value = "Report Stock Analysis";
+            summary.Cell(1, 1).Style.Font.Bold = true;
+            summary.Cell(1, 1).Style.Font.FontSize = 16;
+            summary.Range(1, 1, 1, 4).Merge();
+            summary.Cell(2, 1).Value = "Analisa Stock, SO, PO & Rekomendasi Pengadaan";
+            summary.Range(2, 1, 2, 4).Merge();
+            summary.Cell(4, 1).Value = "Tanggal Analisa";
+            summary.Cell(4, 2).Value = Report.AsOfDate;
+            summary.Cell(5, 1).Value = "Executive Summary";
+            summary.Cell(5, 2).Value = Report.ExecutiveSummary;
+            summary.Range(5, 2, 5, 4).Merge();
+            summary.Cell(7, 1).Value = "Parameter";
+            summary.Cell(7, 2).Value = "Nilai";
+            var parameterRows = new[]
+            {
+                ("Histori penjualan (bulan)", Report.SalesHistoryMonths.ToString()),
+                ("Coverage (bulan)", Report.CoverageMonths.ToString()),
+                ("Lead time (bulan)", Report.LeadTimeMonths.ToString()),
+                ("Safety stock (bulan)", Report.SafetyStockMonths.ToString()),
+                ("Batas aging (hari)", Report.AgingThresholdDays.ToString()),
+                ("Total nilai stock", Report.TotalStockValue.ToString("N0")),
+                ("Nilai dead stock", Report.DeadStockValue.ToString("N0")),
+                ("Nilai PO rekomendasi", Report.TotalRecommendedPoValue.ToString("N0"))
+            };
+            var summaryRow = 8;
+            foreach (var parameter in parameterRows)
+            {
+                summary.Cell(summaryRow, 1).Value = parameter.Item1;
+                summary.Cell(summaryRow, 2).Value = parameter.Item2;
+                summaryRow++;
+            }
+            summary.Range(7, 1, summaryRow - 1, 2).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            summary.Range(7, 1, 7, 2).Style.Font.Bold = true;
+            summary.Range(7, 1, 7, 2).Style.Fill.BackgroundColor = XLColor.DarkBlue;
+            summary.Range(7, 1, 7, 2).Style.Font.FontColor = XLColor.White;
+
+            var detail = workbook.Worksheets.Add("Detail Analysis");
+            var headers = new[] { "Item Code", "Nama Item", "Jenis", "Satuan", "Stock", "Nilai Stock", "Terakhir Keluar", "Umur Hari", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata-rata/Bln", "Coverage Qty", "Rekom PO", "Nilai Rekom PO", "Status", "Rekomendasi", "Alasan Analisa" };
+            for (var column = 0; column < headers.Length; column++)
+                detail.Cell(1, column + 1).Value = headers[column];
+
+            var detailRow = 2;
+            foreach (var row in Report.Rows)
+            {
+                detail.Cell(detailRow, 1).Value = row.ItemCode;
+                detail.Cell(detailRow, 2).Value = row.NamaItem;
+                detail.Cell(detailRow, 3).Value = row.JenisItem;
+                detail.Cell(detailRow, 4).Value = row.Satuan;
+                detail.Cell(detailRow, 5).Value = row.StockQty;
+                detail.Cell(detailRow, 6).Value = row.StockValue;
+                if (row.LastOutDate.HasValue) detail.Cell(detailRow, 7).Value = row.LastOutDate.Value;
+                detail.Cell(detailRow, 8).Value = row.DaysSinceLastOut ?? 0;
+                detail.Cell(detailRow, 9).Value = row.SoRemainingQty;
+                detail.Cell(detailRow, 10).Value = row.PoRemainingQty;
+                detail.Cell(detailRow, 11).Value = row.SalesQty12Months;
+                detail.Cell(detailRow, 12).Value = row.AverageMonthlySales;
+                detail.Cell(detailRow, 13).Value = row.DemandCoverageQty;
+                detail.Cell(detailRow, 14).Value = row.RecommendedPoQty;
+                detail.Cell(detailRow, 15).Value = row.RecommendedPoValue;
+                detail.Cell(detailRow, 16).Value = row.Status;
+                detail.Cell(detailRow, 17).Value = row.Recommendation;
+                detail.Cell(detailRow, 18).Value = row.DemandAnalysisReason;
+                detailRow++;
+            }
+
+            var headerStyle = detail.Range(1, 1, 1, headers.Length);
+            headerStyle.Style.Font.Bold = true;
+            headerStyle.Style.Fill.BackgroundColor = XLColor.DarkBlue;
+            headerStyle.Style.Font.FontColor = XLColor.White;
+            headerStyle.Style.Alignment.WrapText = true;
+            detail.Range(1, 1, Math.Max(detailRow - 1, 1), headers.Length).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            detail.Range(1, 1, Math.Max(detailRow - 1, 1), headers.Length).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            detail.Column(2).Width = 28;
+            detail.Column(17).Width = 42;
+            detail.Column(18).Width = 70;
+            detail.SheetView.FreezeRows(1);
+            summary.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+            using var streamRef = new DotNetStreamReference(stream);
+            await JS.InvokeVoidAsync("downloadFileFromStream", $"Report_Stock_Analysis_{Report.AsOfDate:yyyyMMdd}.xlsx", streamRef);
+            CompletionMessage = "Excel lengkap berhasil dibuat dan siap diunduh.";
+        }
+        catch (Exception ex)
+        {
+            CompletionMessage = $"Export Excel gagal: {ex.Message}";
+        }
+        finally
+        {
+            IsExporting = false;
+        }
     }
 
     private void ClearSearch() => SearchText = string.Empty;

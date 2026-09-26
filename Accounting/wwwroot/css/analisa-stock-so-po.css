@@ -8,9 +8,20 @@
 .print-summary-only { display: none; }
 .analysis-progress { border-left: 4px solid #0d6efd; background: #f1f6ff; padding: .75rem 1rem; }
 .analysis-progress .progress { height: .55rem; }
+.print-cover { min-height: 180mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; page-break-after: always; }
+.print-cover h1 { font-size: 2.4rem; margin-bottom: 1rem; }
+.print-cover h2 { font-size: 1.25rem; font-weight: 400; }
+.print-section { margin-bottom: 1rem; }
+.print-section h2 { font-size: 1.1rem; border-bottom: 2px solid #1d4ed8; padding-bottom: .25rem; }
+.report-parameter-table th { width: 20%; background: #f1f5f9; }
+.print-kpi-grid > .col { border: 1px solid #adb5bd; padding: .45rem; text-align: center; font-size: .75rem; }
+.print-detail-table { font-size: .65rem; }
+.print-detail-table th, .print-detail-table td { padding: .2rem; }
+.print-detail-section { page-break-before: always; }
+.recommendation-note { border-bottom: 1px solid #cbd5e1; padding: .3rem 0; font-size: .75rem; }
 
 @media print {
-    @page { margin: 12mm; }
+    @page { size: landscape; margin: 12mm; }
 
     .app-sidebar,
     .app-header,
@@ -38,4 +49,8 @@
     .kpi-card strong { font-size: .95rem; }
     .print-summary-only h3 { font-size: 1rem; margin-top: 1rem; }
     .print-summary-only table { font-size: .78rem; }
+    .printing-full .print-cover { min-height: 170mm; }
+    .printing-full .print-detail-table { page-break-inside: auto; }
+    .printing-full .print-detail-table tr { page-break-inside: avoid; page-break-after: auto; }
+    .printing-full .print-detail-table thead { display: table-header-group; }
 }
