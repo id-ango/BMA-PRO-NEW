@@ -1,0 +1,23 @@
+.analysis-page { padding: 1rem 0; }
+.analysis-summary h1 { font-size: 1.6rem; margin-bottom: .25rem; }
+.kpi-card { border-top: 3px solid #0d6efd; }
+.kpi-card small { display: block; color: #6c757d; }
+.kpi-card strong { display: block; font-size: 1.1rem; margin-top: .35rem; }
+.analysis-table { font-size: .86rem; }
+.analysis-table td:last-child { min-width: 220px; }
+.print-summary-only { display: none; }
+.analysis-progress { border-left: 4px solid #0d6efd; background: #f1f6ff; padding: .75rem 1rem; }
+.analysis-progress .progress { height: .55rem; }
+
+@media print {
+    .dont-print { display: none !important; }
+    .analysis-page { padding: 0; }
+    .analysis-summary h1 { font-size: 1.35rem; }
+    .analysis-summary .executive-summary { font-size: .9rem; }
+    .analysis-table { display: none; }
+    .print-summary-only { display: block; }
+    .kpi-card { border: 1px solid #adb5bd; }
+    .kpi-card strong { font-size: .95rem; }
+    .print-summary-only h3 { font-size: 1rem; margin-top: 1rem; }
+    .print-summary-only table { font-size: .78rem; }
+}

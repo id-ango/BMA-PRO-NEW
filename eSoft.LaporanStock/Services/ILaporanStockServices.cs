@@ -14,6 +14,7 @@ using eSoft.Pembelian.Model;
 using eSoft.Pembelian.View;
 using eSoft.Piutang.Model;
 using eSoft.Piutang.View;
+using eSoft.LaporanStock.View;
 
 using Microsoft.EntityFrameworkCore;
 using static eSoft.LaporanStock.Services.LaporanStockServices;
@@ -38,6 +39,7 @@ namespace eSoft.LaporanStock.Services
         List<OePerTahun> DivisiPertahun(int tahun, List<string> kodeDiv);
        byte[] CustomerPerDivision(List<string> kodeDiv);
         List<IcRekapStock> RekapStock(DateTime Tanggal1, DateTime Tanggal2);
+        Task<InventoryAnalysisReport> GetInventoryAnalysisAsync(DateTime asOfDate, int agingThresholdDays = 180, IProgress<string> progress = null);
         Task<List<ResultLunasView>> GetPenjualanLunasAsync(DateTime tanggalLunas1, DateTime tanggalLunas2);
     }
 }

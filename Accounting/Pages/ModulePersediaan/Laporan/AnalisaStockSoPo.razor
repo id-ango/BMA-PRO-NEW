@@ -1,0 +1,260 @@
+@page "/ModulePersediaan/AnalisaStockSoPo"
+@attribute [Authorize(Roles = "Admin, Finance, Warehouse")]
+@using eSoft.LaporanStock.Services
+@using eSoft.LaporanStock.View
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@inject ILaporanStockServices StockReportService
+@inject IJSRuntime JS
+
+<link rel="stylesheet" href="css/analisa-stock-so-po.css" />
+
+<div class="container-fluid analysis-page @(IsPrintingSummary ? "printing-summary" : "")">
+    <div class="dont-print">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2>Analisa Stock, SO &amp; PO</h2>
+                <p class="text-muted mb-0">Analisa umur persediaan, nilai stock, permintaan SO, dan PO outstanding.</p>
+            </div>
+            <a class="btn btn-outline-secondary" href="/">Kembali</a>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Tanggal analisa</label>
+                        <InputDate class="form-control" @bind-Value="AsOfDate" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Batas aging (hari)</label>
+                        <InputNumber class="form-control" @bind-Value="AgingThresholdDays" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Jenis item</label>
+                        <select class="form-select" @bind="TypeFilter">
+                            <option value="Semua">Semua</option>
+                            <option value="Sparepart">Sparepart</option>
+                            <option value="Umum">Umum</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" disabled="@IsLoading" @onclick="LoadReport">
+                            @if (IsLoading) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
+                            @(IsLoading ? "Memproses..." : "Muat Analisa")
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-danger w-100" disabled="@(Report is null || IsLoading)" @onclick="PrintSummary">
+                            Cetak / Simpan PDF
+                        </button>
+                    </div>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(CompletionMessage))
+                {
+                    <div class="alert alert-success mt-3 mb-0">@CompletionMessage</div>
+                }
+                @if (IsLoading && !string.IsNullOrWhiteSpace(ProcessMessage))
+                {
+                    <div class="analysis-progress mt-3" role="status" aria-live="polite">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="spinner-grow spinner-grow-sm text-primary" aria-hidden="true"></span>
+                            <strong>@ProcessMessage</strong>
+                        </div>
+                        <div class="progress mt-2" aria-label="Progress analisa">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+                        </div>
+                        <small class="text-muted">Jangan tutup halaman sampai proses selesai.</small>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (Report is null && !IsLoading)
+    {
+        <div class="alert alert-info">Tentukan parameter lalu klik <strong>Muat Analisa</strong>. Sparepart tetap disertakan dan ditampilkan dengan klasifikasi tersendiri.</div>
+    }
+    else if (IsLoading)
+    {
+        <div class="text-center p-5" role="status" aria-live="polite">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <div class="mt-2"><strong>@(string.IsNullOrWhiteSpace(ProcessMessage) ? "Analisa sedang dimulai..." : ProcessMessage)</strong></div>
+            <div class="text-muted small mt-1">Sistem sedang membaca data dan menghitung ringkasan. Mohon tunggu.</div>
+        </div>
+    }
+    else
+    {
+        <div class="analysis-summary">
+            <h1>Ringkasan Analisa Persediaan, SO dan PO</h1>
+            <p class="text-muted">Per tanggal @Report.AsOfDate.ToString("dd-MM-yyyy") | Aging: @Report.AgingThresholdDays hari</p>
+            <div class="row g-2 mb-3">
+                <div class="col-md-2"><div class="card kpi-card h-100"><div class="card-body"><small>Nilai Stock</small><strong>@Report.TotalStockValue.ToString("N0")</strong></div></div></div>
+                <div class="col-md-2"><div class="card kpi-card h-100"><div class="card-body"><small>Dead Stock</small><strong>@Report.DeadStockValue.ToString("N0")</strong></div></div></div>
+                <div class="col-md-2"><div class="card kpi-card h-100"><div class="card-body"><small>Slow Moving</small><strong>@Report.SlowMovingValue.ToString("N0")</strong></div></div></div>
+                <div class="col-md-2"><div class="card kpi-card h-100"><div class="card-body"><small>Sisa SO</small><strong>@Report.TotalSoRemainingValue.ToString("N0")</strong></div></div></div>
+                <div class="col-md-2"><div class="card kpi-card h-100"><div class="card-body"><small>PO Outstanding</small><strong>@Report.TotalPoRemainingValue.ToString("N0")</strong></div></div></div>
+            </div>
+            <div class="alert alert-secondary executive-summary"><strong>Executive Summary:</strong> @Report.ExecutiveSummary</div>
+
+            <div class="dont-print row g-2 mb-3">
+                <div class="col-md-5">
+                    <label class="form-label mb-1">Cari item</label>
+                    <div class="input-group">
+                        <input class="form-control" @bind="SearchText" @bind:event="oninput" placeholder="Kode atau nama item..." />
+                        @if (!string.IsNullOrWhiteSpace(SearchText))
+                        {
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ClearSearch" title="Hapus pencarian">×</button>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1">Status</label>
+                    <select class="form-select" @bind="StatusFilter">
+                        <option value="Semua">Semua</option>
+                        <option value="Dead Stock">Dead Stock</option>
+                        <option value="Sparepart utilisasi rendah">Sparepart utilisasi rendah</option>
+                        <option value="Prioritas SO">Prioritas SO</option>
+                        <option value="Risiko Over Stock">Risiko Over Stock</option>
+                        <option value="Slow Moving">Slow Moving</option>
+                        <option value="Normal">Normal</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1">Jenis</label>
+                    <select class="form-select" @bind="TypeFilter">
+                        <option value="Semua">Semua</option>
+                        <option value="Sparepart">Sparepart</option>
+                        <option value="Umum">Umum</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <span class="text-muted pb-2">@FilteredRows.Count() item</span>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover align-middle analysis-table">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Item</th><th>Jenis</th><th class="text-end">Stock</th><th class="text-end">Nilai Stock</th>
+                            <th>Last Out</th><th class="text-end">Umur</th><th class="text-end">Sisa SO</th><th class="text-end">Sisa PO</th>
+                            <th>Status</th><th>Rekomendasi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in FilteredRows)
+                        {
+                            <tr>
+                                <td><strong>@row.ItemCode</strong><br /><small>@row.NamaItem</small></td>
+                                <td><span class="badge @(row.IsSparePart ? "bg-info text-dark" : "bg-secondary")">@row.JenisItem</span></td>
+                                <td class="text-end">@row.StockQty.ToString("N2") @row.Satuan</td>
+                                <td class="text-end">@row.StockValue.ToString("N0")</td>
+                                <td>@(row.LastOutDate?.ToString("dd-MM-yyyy") ?? "Belum pernah")</td>
+                                <td class="text-end">@(row.DaysSinceLastOut?.ToString() ?? "-")</td>
+                                <td class="text-end">@row.SoRemainingQty.ToString("N2")</td>
+                                <td class="text-end">@row.PoRemainingQty.ToString("N2")</td>
+                                <td><span class="badge @GetStatusClass(row.Status)">@row.Status</span></td>
+                                <td><small>@row.Recommendation</small></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="print-summary-only mt-3">
+                <h3>Top 10 Nilai Stock</h3>
+                <table class="table table-sm">
+                    <thead><tr><th>Item</th><th>Jenis</th><th class="text-end">Qty</th><th class="text-end">Nilai</th><th>Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var row in Report.TopValueRows)
+                        {
+                            <tr><td>@row.ItemCode - @row.NamaItem</td><td>@row.JenisItem</td><td class="text-end">@row.StockQty.ToString("N2")</td><td class="text-end">@row.StockValue.ToString("N0")</td><td>@row.Status</td></tr>
+                        }
+                    </tbody>
+                </table>
+                <h3>Rekomendasi Manajemen</h3>
+                <p>@GetManagementRecommendation()</p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private InventoryAnalysisReport Report;
+    private DateTime AsOfDate = DateTime.Today;
+    private int AgingThresholdDays = 180;
+    private string SearchText = string.Empty;
+    private string StatusFilter = "Semua";
+    private string TypeFilter = "Semua";
+    private bool IsLoading;
+    private bool IsPrintingSummary;
+    private string CompletionMessage;
+    private string ProcessMessage;
+
+    private IEnumerable<InventoryAnalysisRow> FilteredRows => (Report?.Rows ?? Enumerable.Empty<InventoryAnalysisRow>())
+        .Where(x => TypeFilter == "Semua" || x.JenisItem == TypeFilter)
+        .Where(x => StatusFilter == "Semua" || x.Status == StatusFilter)
+        .Where(x => string.IsNullOrWhiteSpace(SearchText) ||
+                    (x.ItemCode?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (x.NamaItem?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private async Task LoadReport()
+    {
+        IsLoading = true;
+        CompletionMessage = null;
+        ProcessMessage = "Menyiapkan analisa stock, SO, dan PO...";
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        try
+        {
+            var progress = new Progress<string>(message =>
+            {
+                ProcessMessage = message;
+                _ = InvokeAsync(StateHasChanged);
+            });
+            Report = await StockReportService.GetInventoryAnalysisAsync(AsOfDate, Math.Max(AgingThresholdDays, 1), progress);
+            CompletionMessage = $"Analisa selesai. {Report.Rows.Count:N0} item berhasil diringkas.";
+        }
+        catch (Exception ex)
+        {
+            CompletionMessage = $"Analisa gagal diproses: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+            ProcessMessage = null;
+        }
+    }
+
+    private async Task PrintSummary()
+    {
+        IsPrintingSummary = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(200);
+        await JS.InvokeVoidAsync("window.print");
+        await Task.Delay(300);
+        IsPrintingSummary = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearSearch() => SearchText = string.Empty;
+
+    private string GetStatusClass(string status) => status switch
+    {
+        "Dead Stock" or "Sparepart utilisasi rendah" => "bg-danger",
+        "Prioritas SO" => "bg-warning text-dark",
+        "Risiko Over Stock" => "bg-dark",
+        "Slow Moving" => "bg-info text-dark",
+        _ => "bg-success"
+    };
+
+    private string GetManagementRecommendation()
+    {
+        if (Report.DeadStockValue > Report.TotalStockValue * 0.25m)
+            return "Nilai persediaan yang tidak bergerak cukup dominan. Manajemen disarankan memprioritaskan evaluasi dead stock bernilai tinggi dan meninjau pembelian item sejenis.";
+        if (Report.TotalSoRemainingValue > Report.TotalStockValue)
+            return "Kebutuhan SO melebihi nilai stock yang tersedia. Prioritaskan pemenuhan SO dan pastikan PO outstanding memiliki jadwal kedatangan yang jelas.";
+        return "Persediaan perlu dipantau berdasarkan umur, nilai, dan keterkaitannya dengan SO/PO. Sparepart dengan utilisasi rendah sebaiknya divalidasi terhadap kebutuhan maintenance sebelum dilakukan clearance.";
+    }
+}

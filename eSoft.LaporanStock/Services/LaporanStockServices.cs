@@ -26,6 +26,7 @@ using Microsoft.EntityFrameworkCore;
 
 using System.Security.Cryptography;
 using eSoft.Hutang.Model;
+using eSoft.LaporanStock.View;
 using ClosedXML.Excel;
 using System.IO;
 using System.IO.Packaging;
@@ -2019,6 +2020,92 @@ namespace eSoft.LaporanStock.Services
         }
 
         #endregion
+
+        public async Task<InventoryAnalysisReport> GetInventoryAnalysisAsync(DateTime asOfDate, int agingThresholdDays = 180, IProgress<string> progress = null)
+        {
+            progress?.Report("Membaca master item dan saldo stock...");
+            await Task.Yield();
+            var items = _context.IcItems
+                .AsNoTracking()
+                .Where(x => !x.Disabled)
+                .ToList();
+
+            progress?.Report("Menganalisis transaksi keluar dan mencari tanggal terakhir stock keluar...");
+            await Task.Yield();
+            var outgoingDates = _contextOE.OeTransDs
+                .AsNoTracking()
+                .Where(x => x.Tanggal <= asOfDate && x.Kode == "94")
+                .GroupBy(x => x.ItemCode)
+                .Select(x => new { ItemCode = x.Key, LastOutDate = x.Max(y => y.Tanggal) })
+                .ToDictionary(x => x.ItemCode, x => (DateTime?)x.LastOutDate);
+
+            progress?.Report("Menghitung sisa kebutuhan Sales Order (SO) aktif...");
+            await Task.Yield();
+            var soRemaining = _contextOR.PoTransDs
+                .AsNoTracking()
+                .Where(x => x.Kode == "76" && x.Tanggal <= asOfDate &&
+                    _contextOR.PoTransHs.Any(h => h.PoTransHId == x.PoTransHId && h.Cek == "1"))
+                .GroupBy(x => x.ItemCode)
+                .Select(x => new { ItemCode = x.Key, Qty = x.Sum(y => y.Qty - y.QtyBo) })
+                .ToDictionary(x => x.ItemCode, x => Math.Max(x.Qty, 0));
+
+            progress?.Report("Menghitung sisa Purchase Order (PO) aktif...");
+            await Task.Yield();
+            var poRemaining = _contextOR.PoTransDs
+                .AsNoTracking()
+                .Where(x => x.Kode == "71" && x.Tanggal <= asOfDate &&
+                    _contextOR.PoTransHs.Any(h => h.PoTransHId == x.PoTransHId && h.Cek == "1"))
+                .GroupBy(x => x.ItemCode)
+                .Select(x => new { ItemCode = x.Key, Qty = x.Sum(y => y.Qty - y.QtyBo) })
+                .ToDictionary(x => x.ItemCode, x => Math.Max(x.Qty, 0));
+
+            progress?.Report("Menggabungkan stock, SO, dan PO serta menghitung nilai dan umur item...");
+            await Task.Yield();
+            var report = new InventoryAnalysisReport
+            {
+                AsOfDate = asOfDate,
+                AgingThresholdDays = agingThresholdDays
+            };
+
+            foreach (var item in items)
+            {
+                outgoingDates.TryGetValue(item.ItemCode, out var lastOutDate);
+                soRemaining.TryGetValue(item.ItemCode, out var soQty);
+                poRemaining.TryGetValue(item.ItemCode, out var poQty);
+
+                var row = new InventoryAnalysisRow
+                {
+                    ItemCode = item.ItemCode,
+                    NamaItem = item.NamaItem,
+                    Satuan = item.Satuan,
+                    Divisi = item.Divisi,
+                    Category = item.Category,
+                    JenisItem = InventoryAnalysisClassification.Classify(item.Category, item.Divisi, item.AcctSet, item.NamaItem),
+                    StockQty = Math.Max(item.Qty, 0),
+                    UnitCost = item.HrgNetto > 0
+                        ? item.HrgNetto
+                        : (item.Harga > 0 ? item.Harga : (item.Qty > 0 ? item.Cost / item.Qty : 0)),
+                    LastOutDate = lastOutDate,
+                    DaysSinceLastOut = lastOutDate.HasValue ? Math.Max((asOfDate.Date - lastOutDate.Value.Date).Days, 0) : null,
+                    AgingThresholdDays = agingThresholdDays,
+                    SoRemainingQty = soQty,
+                    PoRemainingQty = poQty
+                };
+
+                row.Status = InventoryAnalysisClassification.GetStatus(row, agingThresholdDays);
+                row.Recommendation = InventoryAnalysisClassification.GetRecommendation(row.Status, row.IsSparePart);
+                report.Rows.Add(row);
+            }
+
+            report.Rows = report.Rows
+                .Where(x => x.StockQty > 0 || x.SoRemainingQty > 0 || x.PoRemainingQty > 0)
+                .OrderByDescending(x => x.StockValue)
+                .ThenBy(x => x.ItemCode)
+                .ToList();
+
+            progress?.Report($"Analisa selesai: {report.Rows.Count:N0} item relevan ditemukan.");
+            return report;
+        }
 
         #region CustomerperDivision
         public class CustomerDivisionReport
