@@ -2021,7 +2021,7 @@ namespace eSoft.LaporanStock.Services
 
         #endregion
 
-        public async Task<InventoryAnalysisReport> GetInventoryAnalysisAsync(DateTime asOfDate, int agingThresholdDays = 180, IProgress<string> progress = null)
+        public async Task<InventoryAnalysisReport> GetInventoryAnalysisAsync(DateTime asOfDate, int agingThresholdDays = 180, int coverageMonths = 3, int leadTimeMonths = 2, int safetyStockMonths = 1, IProgress<string> progress = null)
         {
             progress?.Report("Membaca master item dan saldo stock...");
             await Task.Yield();
@@ -2038,6 +2038,16 @@ namespace eSoft.LaporanStock.Services
                 .GroupBy(x => x.ItemCode)
                 .Select(x => new { ItemCode = x.Key, LastOutDate = x.Max(y => y.Tanggal) })
                 .ToDictionary(x => x.ItemCode, x => (DateTime?)x.LastOutDate);
+
+            progress?.Report("Menghitung histori penjualan 12 bulan dan rata-rata bulanan...");
+            await Task.Yield();
+            var salesStartDate = asOfDate.Date.AddMonths(-12);
+            var salesHistory = _contextOE.OeTransDs
+                .AsNoTracking()
+                .Where(x => x.Tanggal.Date >= salesStartDate && x.Tanggal.Date <= asOfDate.Date && x.Kode == "94")
+                .GroupBy(x => x.ItemCode)
+                .Select(x => new { ItemCode = x.Key, Qty = x.Sum(y => y.Qty) })
+                .ToDictionary(x => x.ItemCode, x => Math.Max(x.Qty, 0));
 
             progress?.Report("Menghitung sisa kebutuhan Sales Order (SO) aktif...");
             await Task.Yield();
@@ -2064,14 +2074,26 @@ namespace eSoft.LaporanStock.Services
             var report = new InventoryAnalysisReport
             {
                 AsOfDate = asOfDate,
-                AgingThresholdDays = agingThresholdDays
+                AgingThresholdDays = agingThresholdDays,
+                SalesHistoryMonths = 12,
+                CoverageMonths = Math.Max(coverageMonths, 1),
+                LeadTimeMonths = Math.Max(leadTimeMonths, 0),
+                SafetyStockMonths = Math.Max(safetyStockMonths, 0)
             };
+
+            var effectiveCoverageMonths = Math.Max(report.CoverageMonths, report.LeadTimeMonths + report.SafetyStockMonths);
 
             foreach (var item in items)
             {
                 outgoingDates.TryGetValue(item.ItemCode, out var lastOutDate);
                 soRemaining.TryGetValue(item.ItemCode, out var soQty);
                 poRemaining.TryGetValue(item.ItemCode, out var poQty);
+                salesHistory.TryGetValue(item.ItemCode, out var salesQty);
+
+                var averageMonthlySales = salesQty / report.SalesHistoryMonths;
+                var demandCoverageQty = averageMonthlySales * effectiveCoverageMonths;
+                var targetQty = demandCoverageQty + soQty;
+                var recommendedPoQty = Math.Max(targetQty - Math.Max(item.Qty, 0) - poQty, 0);
 
                 var row = new InventoryAnalysisRow
                 {
@@ -2089,11 +2111,19 @@ namespace eSoft.LaporanStock.Services
                     DaysSinceLastOut = lastOutDate.HasValue ? Math.Max((asOfDate.Date - lastOutDate.Value.Date).Days, 0) : null,
                     AgingThresholdDays = agingThresholdDays,
                     SoRemainingQty = soQty,
-                    PoRemainingQty = poQty
+                    PoRemainingQty = poQty,
+                    SalesQty12Months = salesQty,
+                    AverageMonthlySales = averageMonthlySales,
+                    DemandCoverageQty = demandCoverageQty,
+                    RecommendedPoQty = recommendedPoQty
                 };
 
                 row.Status = InventoryAnalysisClassification.GetStatus(row, agingThresholdDays);
+                if (row.RecommendedPoQty > 0 && (row.Status == "Normal" || row.Status == "PO Tanpa Kebutuhan SO" || row.Status == "Tidak ada stock"))
+                    row.Status = "Rekomendasi PO";
+
                 row.Recommendation = InventoryAnalysisClassification.GetRecommendation(row.Status, row.IsSparePart);
+                row.DemandAnalysisReason = BuildDemandAnalysisReason(row, effectiveCoverageMonths, report.SalesHistoryMonths);
                 report.Rows.Add(row);
             }
 
@@ -2105,6 +2135,17 @@ namespace eSoft.LaporanStock.Services
 
             progress?.Report($"Analisa selesai: {report.Rows.Count:N0} item relevan ditemukan.");
             return report;
+        }
+
+        private static string BuildDemandAnalysisReason(InventoryAnalysisRow row, int effectiveCoverageMonths, int historyMonths)
+        {
+            if (row.IsSparePart && row.SalesQty12Months <= 0 && row.SoRemainingQty <= 0)
+                return "Tidak ada penjualan dalam periode analisa. Karena item diklasifikasikan sebagai sparepart, kebutuhan maintenance perlu divalidasi sebelum membuat PO.";
+
+            if (row.HasPurchaseRecommendation)
+                return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; target coverage {effectiveCoverageMonths} bulan: {row.DemandCoverageQty:N2}; ditambah sisa SO: {row.SoRemainingQty:N2}; tersedia dari stock dan PO: {(row.StockQty + row.PoRemainingQty):N2}; kekurangan: {row.RecommendedPoQty:N2}.";
+
+            return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; kebutuhan coverage {effectiveCoverageMonths} bulan dan sisa SO masih tertutup oleh stock {row.StockQty:N2} serta PO outstanding {row.PoRemainingQty:N2}.";
         }
 
         #region CustomerperDivision

@@ -10,6 +10,10 @@
 - When comparing projects, always verify the actual files from the requested path and do not rely on results from the navigator/workspace that may point to different repositories; note that D:\Project\BMA-PT uses .NET 10 and its Program.cs is different.
 - For long processes in the UI, display a clear and informative completion message inline to the user, rather than just a spinner or error alert. Prefer disabling the action and using a visible Bootstrap spinner during long processes; loading indicators in Blazor must yield control before long synchronous service work.
 
+## Inventory Analysis Guidelines
+- When classifying inventory analysis status, do not label an item as Risiko Over Stock solely because PO quantity exceeds current stock; consider current stock age/last-out movement and a defined demand or coverage threshold. A recent last-out date such as 38 days should not be treated as dead/overstock without additional evidence.
+- Inventory analysis may recommend PO quantities based on demand, but it must never create or submit a PO automatically; PO creation remains a separate manual analyst action.
+
 ## Service Refactoring Guidelines
 - When refactoring `OrderPurchaseServices`, preserve original intent: `AddTransH` passes header currency (`trans.Currency`) to item price updates; `EditTransH` originally also passed `trans.Currency`, so helpers should allow an explicit currency override.
 - Validate that refactored service logic is identical to the original before accepting changes. Continue to perform side-by-side equivalence checks when refactoring and explicitly flag any behavioral differences.
@@ -18,5 +22,3 @@
 - When user requests Excel formatting changes, apply them to the export used by LaporanCurrentStock if explicitly specified, not to other report exports.
 - For the Excel export 'Harga Jual Import' in CheckingPrice, the calculation uses the unit price per item and does not multiply by Qty; the goal is to analyze all items based on markup, not to calculate the total transaction based on quantity.
 
-## Pricing Guidelines
-- For the CheckingPrice module, consider PPN Masukan and PPh as costs since they are not credited; the input Selling Price includes PPN, and profit is calculated from the Selling Price before PPN. Total Cost includes HPP, PPN Masukan, and Forwarder.

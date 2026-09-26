@@ -8,6 +8,10 @@ namespace eSoft.LaporanStock.View
     {
         public DateTime AsOfDate { get; set; }
         public int AgingThresholdDays { get; set; } = 180;
+        public int SalesHistoryMonths { get; set; } = 12;
+        public int CoverageMonths { get; set; } = 3;
+        public int LeadTimeMonths { get; set; } = 2;
+        public int SafetyStockMonths { get; set; } = 1;
         public List<InventoryAnalysisRow> Rows { get; set; } = new();
 
         public decimal TotalStockValue => Rows.Sum(x => x.StockValue);
@@ -15,6 +19,7 @@ namespace eSoft.LaporanStock.View
         public decimal SlowMovingValue => Rows.Where(x => x.IsSlowMoving).Sum(x => x.StockValue);
         public decimal TotalSoRemainingValue => Rows.Sum(x => x.SoRemainingValue);
         public decimal TotalPoRemainingValue => Rows.Sum(x => x.PoRemainingValue);
+        public decimal TotalRecommendedPoValue => Rows.Sum(x => x.RecommendedPoValue);
         public decimal TotalStockQty => Rows.Sum(x => x.StockQty);
         public int DeadStockCount => Rows.Count(x => x.IsDeadStock);
         public int HighRiskCount => Rows.Count(x => x.Status == "Risiko Tinggi");
@@ -40,7 +45,8 @@ namespace eSoft.LaporanStock.View
                 return $"Per tanggal {AsOfDate:dd-MM-yyyy}, total nilai persediaan tercatat sebesar {TotalStockValue:N0}. " +
                        $"Sebanyak {DeadStockCount:N0} item dikategorikan sebagai persediaan dengan pergerakan rendah atau tidak bergerak " +
                        $"lebih dari {AgingThresholdDays} hari, dengan nilai {DeadStockValue:N0} ({deadPercentage:N1}%). " +
-                       $"Sisa kebutuhan SO tercatat {Rows.Sum(x => x.SoRemainingQty):N2}, sedangkan PO yang masih outstanding sebesar {Rows.Sum(x => x.PoRemainingQty):N2}.";
+                       $"Sisa kebutuhan SO tercatat {Rows.Sum(x => x.SoRemainingQty):N2}, sedangkan PO yang masih outstanding sebesar {Rows.Sum(x => x.PoRemainingQty):N2}. " +
+                       $"Berdasarkan histori penjualan {SalesHistoryMonths} bulan dan coverage {CoverageMonths} bulan, estimasi nilai PO yang direkomendasikan adalah {TotalRecommendedPoValue:N0}.";
             }
         }
     }
@@ -65,6 +71,13 @@ namespace eSoft.LaporanStock.View
         public decimal PoRemainingQty { get; set; }
         public decimal PoRemainingValue => PoRemainingQty * UnitCost;
         public decimal ProjectedQtyAfterPo => StockQty + PoRemainingQty;
+        public decimal SalesQty12Months { get; set; }
+        public decimal AverageMonthlySales { get; set; }
+        public decimal DemandCoverageQty { get; set; }
+        public decimal RecommendedPoQty { get; set; }
+        public decimal RecommendedPoValue => RecommendedPoQty * UnitCost;
+        public string DemandAnalysisReason { get; set; }
+        public bool HasPurchaseRecommendation => RecommendedPoQty > 0;
         public string Status { get; set; }
         public string Recommendation { get; set; }
 
@@ -90,7 +103,12 @@ namespace eSoft.LaporanStock.View
             if ((!row.LastOutDate.HasValue || row.DaysSinceLastOut >= agingThresholdDays) && row.StockValue > 0)
                 return row.IsSparePart ? "Sparepart utilisasi rendah" : "Dead Stock";
             if (row.PoRemainingQty > row.SoRemainingQty + row.StockQty)
-                return "Risiko Over Stock";
+            {
+                if (!row.LastOutDate.HasValue || row.DaysSinceLastOut >= 90)
+                    return "Risiko Over Stock";
+
+                return "PO Tanpa Kebutuhan SO";
+            }
             if (row.DaysSinceLastOut >= 90)
                 return "Slow Moving";
             return "Normal";
@@ -104,6 +122,8 @@ namespace eSoft.LaporanStock.View
                 "Dead Stock" => "Evaluasi promosi, transfer gudang, clearance, atau penghentian pembelian.",
                 "Sparepart utilisasi rendah" => "Validasi kebutuhan maintenance sebelum melakukan clearance atau penghapusan.",
                 "Risiko Over Stock" => "Tunda pembelian berikutnya dan evaluasi jumlah PO outstanding.",
+                "PO Tanpa Kebutuhan SO" => "PO melebihi kebutuhan SO saat ini, tetapi item masih bergerak. Pantau pemakaian sebelum membatalkan atau menunda PO.",
+                "Rekomendasi PO" => "Histori penjualan menunjukkan kebutuhan ke depan belum tertutup oleh stock dan PO outstanding. Evaluasi pembelian sebelum SO diterima.",
                 "Slow Moving" => "Pantau pemakaian dan batasi pembelian sampai pergerakan membaik.",
                 "Tidak ada stock" => "Tidak ada tindakan stock; evaluasi kebutuhan SO atau PO jika ada permintaan.",
                 _ => isSparePart ? "Pantau kebutuhan operasional dan jadwal maintenance." : "Persediaan dalam kondisi normal."

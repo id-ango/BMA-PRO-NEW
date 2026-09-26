@@ -50,6 +50,23 @@
                         </button>
                     </div>
                 </div>
+                <div class="row g-3 mt-1 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Coverage permintaan (bulan)</label>
+                        <InputNumber class="form-control" @bind-Value="CoverageMonths" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Lead time supplier (bulan)</label>
+                        <InputNumber class="form-control" @bind-Value="LeadTimeMonths" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Safety stock (bulan)</label>
+                        <InputNumber class="form-control" @bind-Value="SafetyStockMonths" />
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">PO rekomendasi dihitung dari penjualan 12 bulan, coverage, lead time, safety stock, stock, PO outstanding, dan sisa SO.</small>
+                    </div>
+                </div>
                 @if (!string.IsNullOrWhiteSpace(CompletionMessage))
                 {
                     <div class="alert alert-success mt-3 mb-0">@CompletionMessage</div>
@@ -116,6 +133,8 @@
                         <option value="Sparepart utilisasi rendah">Sparepart utilisasi rendah</option>
                         <option value="Prioritas SO">Prioritas SO</option>
                         <option value="Risiko Over Stock">Risiko Over Stock</option>
+                        <option value="PO Tanpa Kebutuhan SO">PO Tanpa Kebutuhan SO</option>
+                        <option value="Rekomendasi PO">Rekomendasi PO</option>
                         <option value="Slow Moving">Slow Moving</option>
                         <option value="Normal">Normal</option>
                     </select>
@@ -138,8 +157,8 @@
                     <thead class="table-dark">
                         <tr>
                             <th>Item</th><th>Jenis</th><th class="text-end">Stock</th><th class="text-end">Nilai Stock</th>
-                            <th>Last Out</th><th class="text-end">Umur</th><th class="text-end">Sisa SO</th><th class="text-end">Sisa PO</th>
-                            <th>Status</th><th>Rekomendasi</th>
+                            <th>Terakhir Keluar</th><th class="text-end">Umur</th><th class="text-end">Sisa SO</th><th class="text-end">Sisa PO</th>
+                            <th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th>Status</th><th>Alasan Analisa</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -154,8 +173,11 @@
                                 <td class="text-end">@(row.DaysSinceLastOut?.ToString() ?? "-")</td>
                                 <td class="text-end">@row.SoRemainingQty.ToString("N2")</td>
                                 <td class="text-end">@row.PoRemainingQty.ToString("N2")</td>
+                                <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
+                                <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
+                                <td class="text-end">@row.RecommendedPoQty.ToString("N2")</td>
                                 <td><span class="badge @GetStatusClass(row.Status)">@row.Status</span></td>
-                                <td><small>@row.Recommendation</small></td>
+                                <td><small><strong>@row.Recommendation</strong><br />@row.DemandAnalysisReason</small></td>
                             </tr>
                         }
                     </tbody>
@@ -175,6 +197,29 @@
                 </table>
                 <h3>Rekomendasi Manajemen</h3>
                 <p>@GetManagementRecommendation()</p>
+                <h3>Dasar Analisa &amp; Alasan Rekomendasi PO</h3>
+                @if (Report.Rows.Any(x => x.HasPurchaseRecommendation))
+                {
+                    <table class="table table-sm">
+                        <thead><tr><th>Item</th><th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th>Alasan</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(15))
+                            {
+                                <tr>
+                                    <td>@row.ItemCode - @row.NamaItem</td>
+                                    <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
+                                    <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
+                                    <td class="text-end">@row.RecommendedPoQty.ToString("N2")</td>
+                                    <td>@row.DemandAnalysisReason</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p>Tidak ada item yang direkomendasikan untuk PO berdasarkan parameter dan histori penjualan yang dipilih.</p>
+                }
             </div>
         </div>
     }
@@ -184,6 +229,9 @@
     private InventoryAnalysisReport Report;
     private DateTime AsOfDate = DateTime.Today;
     private int AgingThresholdDays = 180;
+    private int CoverageMonths = 3;
+    private int LeadTimeMonths = 2;
+    private int SafetyStockMonths = 1;
     private string SearchText = string.Empty;
     private string StatusFilter = "Semua";
     private string TypeFilter = "Semua";
@@ -213,7 +261,13 @@
                 ProcessMessage = message;
                 _ = InvokeAsync(StateHasChanged);
             });
-            Report = await StockReportService.GetInventoryAnalysisAsync(AsOfDate, Math.Max(AgingThresholdDays, 1), progress);
+            Report = await StockReportService.GetInventoryAnalysisAsync(
+                AsOfDate,
+                Math.Max(AgingThresholdDays, 1),
+                Math.Max(CoverageMonths, 1),
+                Math.Max(LeadTimeMonths, 0),
+                Math.Max(SafetyStockMonths, 0),
+                progress);
             CompletionMessage = $"Analisa selesai. {Report.Rows.Count:N0} item berhasil diringkas.";
         }
         catch (Exception ex)
@@ -245,6 +299,8 @@
         "Dead Stock" or "Sparepart utilisasi rendah" => "bg-danger",
         "Prioritas SO" => "bg-warning text-dark",
         "Risiko Over Stock" => "bg-dark",
+        "PO Tanpa Kebutuhan SO" => "bg-warning text-dark",
+        "Rekomendasi PO" => "bg-primary",
         "Slow Moving" => "bg-info text-dark",
         _ => "bg-success"
     };

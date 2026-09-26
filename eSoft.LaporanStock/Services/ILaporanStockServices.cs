@@ -39,7 +39,7 @@ namespace eSoft.LaporanStock.Services
         List<OePerTahun> DivisiPertahun(int tahun, List<string> kodeDiv);
        byte[] CustomerPerDivision(List<string> kodeDiv);
         List<IcRekapStock> RekapStock(DateTime Tanggal1, DateTime Tanggal2);
-        Task<InventoryAnalysisReport> GetInventoryAnalysisAsync(DateTime asOfDate, int agingThresholdDays = 180, IProgress<string> progress = null);
+        Task<InventoryAnalysisReport> GetInventoryAnalysisAsync(DateTime asOfDate, int agingThresholdDays = 180, int coverageMonths = 3, int leadTimeMonths = 2, int safetyStockMonths = 1, IProgress<string> progress = null);
         Task<List<ResultLunasView>> GetPenjualanLunasAsync(DateTime tanggalLunas1, DateTime tanggalLunas2);
     }
 }
