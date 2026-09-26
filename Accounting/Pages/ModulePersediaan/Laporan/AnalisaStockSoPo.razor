@@ -46,17 +46,17 @@
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-danger w-100" disabled="@(Report is null || IsLoading || IsPrinting)" @onclick="PrintSummary">
+                        <button class="btn btn-danger w-100" disabled="@(!CanExport)" @onclick="PrintSummary">
                             PDF Ringkasan
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-outline-danger w-100" disabled="@(Report is null || IsLoading || IsPrinting)" @onclick="PrintFullReport">
+                        <button class="btn btn-outline-danger w-100" disabled="@(!CanExport)" @onclick="PrintFullReport">
                             PDF Lengkap
                         </button>
                     </div>
                     <div class="col-md-1">
-                        <button class="btn btn-success w-100" disabled="@(Report is null || IsLoading || IsExporting)" @onclick="ExportToExcel" title="Download Excel lengkap">
+                        <button class="btn btn-success w-100" disabled="@(!CanExport)" @onclick="ExportToExcel" title="Download Excel lengkap">
                             Excel
                         </button>
                     </div>
@@ -93,6 +93,13 @@
                             <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
                         </div>
                         <small class="text-muted">Jangan tutup halaman sampai proses selesai.</small>
+                    </div>
+                }
+                @if (IsExporting)
+                {
+                    <div class="alert alert-info mt-3 mb-0" role="status" aria-live="polite">
+                        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        Excel sedang dibuat dan diunduh. Tombol laporan akan aktif kembali setelah proses selesai.
                     </div>
                 }
             </div>
@@ -307,6 +314,8 @@
     private string CompletionMessage;
     private string ProcessMessage;
 
+    private bool CanExport => Report is not null && !IsLoading && !IsExporting && !IsPrinting;
+
     private IEnumerable<InventoryAnalysisRow> FilteredRows => (Report?.Rows ?? Enumerable.Empty<InventoryAnalysisRow>())
         .Where(x => TypeFilter == "Semua" || x.JenisItem == TypeFilter)
         .Where(x => StatusFilter == "Semua" || x.Status == StatusFilter)
@@ -356,12 +365,18 @@
     {
         PrintMode = mode;
         IsPrinting = true;
-        await InvokeAsync(StateHasChanged);
-        await Task.Delay(200);
-        await JS.InvokeVoidAsync("window.print");
-        await Task.Delay(300);
-        IsPrinting = false;
-        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(200);
+            await JS.InvokeVoidAsync("window.print");
+            await Task.Delay(300);
+        }
+        finally
+        {
+            IsPrinting = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task ExportToExcel()
@@ -384,11 +399,16 @@
             summary.Range(1, 1, 1, 4).Merge();
             summary.Cell(2, 1).Value = "Analisa Stock, SO, PO & Rekomendasi Pengadaan";
             summary.Range(2, 1, 2, 4).Merge();
+            summary.Cell(1, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            summary.Cell(2, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            summary.Cell(2, 1).Style.Font.Italic = true;
             summary.Cell(4, 1).Value = "Tanggal Analisa";
             summary.Cell(4, 2).Value = Report.AsOfDate;
             summary.Cell(5, 1).Value = "Executive Summary";
             summary.Cell(5, 2).Value = Report.ExecutiveSummary;
             summary.Range(5, 2, 5, 4).Merge();
+            summary.Cell(5, 2).Style.Alignment.WrapText = true;
+            summary.Row(5).Height = 60;
             summary.Cell(7, 1).Value = "Parameter";
             summary.Cell(7, 2).Value = "Nilai";
             var parameterRows = new[]
@@ -410,9 +430,14 @@
                 summaryRow++;
             }
             summary.Range(7, 1, summaryRow - 1, 2).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            summary.Range(7, 1, summaryRow - 1, 2).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
             summary.Range(7, 1, 7, 2).Style.Font.Bold = true;
             summary.Range(7, 1, 7, 2).Style.Fill.BackgroundColor = XLColor.DarkBlue;
             summary.Range(7, 1, 7, 2).Style.Font.FontColor = XLColor.White;
+            summary.Column(1).Width = 32;
+            summary.Column(2).Width = 88;
+            summary.Column(3).Width = 18;
+            summary.Column(4).Width = 18;
 
             var detail = workbook.Worksheets.Add("Detail Analysis");
             var headers = new[] { "Item Code", "Nama Item", "Jenis", "Satuan", "Stock", "Nilai Stock", "Terakhir Keluar", "Umur Hari", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata-rata/Bln", "Coverage Qty", "Rekom PO", "Nilai Rekom PO", "Status", "Rekomendasi", "Alasan Analisa" };
@@ -448,13 +473,27 @@
             headerStyle.Style.Fill.BackgroundColor = XLColor.DarkBlue;
             headerStyle.Style.Font.FontColor = XLColor.White;
             headerStyle.Style.Alignment.WrapText = true;
-            detail.Range(1, 1, Math.Max(detailRow - 1, 1), headers.Length).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-            detail.Range(1, 1, Math.Max(detailRow - 1, 1), headers.Length).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-            detail.Column(2).Width = 28;
-            detail.Column(17).Width = 42;
-            detail.Column(18).Width = 70;
+            detail.Row(1).Height = 38;
+            var detailRange = detail.Range(1, 1, Math.Max(detailRow - 1, 1), headers.Length);
+            detailRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            detailRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            detailRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            detail.Range(2, 2, Math.Max(detailRow - 1, 2), 2).Style.Alignment.WrapText = true;
+            detail.Range(2, 17, Math.Max(detailRow - 1, 2), 18).Style.Alignment.WrapText = true;
+            if (detailRow > 2)
+            {
+                detail.Range(2, 5, detailRow - 1, 6).Style.NumberFormat.Format = "#,##0";
+                detail.Range(2, 7, detailRow - 1, 7).Style.NumberFormat.Format = "dd-mm-yyyy";
+                detail.Range(2, 8, detailRow - 1, 11).Style.NumberFormat.Format = "#,##0";
+                detail.Range(2, 12, detailRow - 1, 13).Style.NumberFormat.Format = "#,##0.00";
+                detail.Range(2, 14, detailRow - 1, 15).Style.NumberFormat.Format = "#,##0";
+            }
+            var widths = new[] { 14, 38, 13, 10, 11, 16, 16, 11, 11, 11, 13, 15, 15, 13, 17, 25, 45, 78 };
+            for (var column = 0; column < widths.Length; column++)
+                detail.Column(column + 1).Width = widths[column];
+            detail.Range(1, 1, Math.Max(detailRow - 1, 1), headers.Length).SetAutoFilter();
             detail.SheetView.FreezeRows(1);
-            summary.Columns().AdjustToContents();
+            summary.SheetView.FreezeRows(7);
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
@@ -470,6 +509,7 @@
         finally
         {
             IsExporting = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
