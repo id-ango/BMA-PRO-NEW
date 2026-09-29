@@ -52,7 +52,8 @@ namespace eSoft.CashBank.Services
         List<RekeningView> CetakSourceRekapBank(DateTime Tanggal1, DateTime Tanggal2, string[] sourceCode, string[] kodeBanks);
         Task SaveTransactionsAsync(List<BankTransactionView> transactions, DateTime formDate, string kodeBank, string tambah, string kurang);
         Task<List<bool>> CheckDuplicatesAsync(List<BankTransactionView> samples, string kodeBank);
-
+        Task<bool> UpdateKeteranganTransHAsync(int cbTransHId, string keterangan);
+        Task<bool> UpdateKeteranganTransDAsync(int cbTransDId, string keterangan);
 
     }
 }

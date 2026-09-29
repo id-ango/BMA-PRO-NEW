@@ -1676,6 +1676,39 @@ namespace eSoft.CashBank.Services
             return fallbackDate.Date;
         }
 
+        public async Task<bool> UpdateKeteranganTransHAsync(int cbTransHId, string keterangan)
+        {
+            try
+            {
+                var transH = await _context.CbTransHs.FirstOrDefaultAsync(x => x.CbTransHId == cbTransHId);
+                if (transH == null) return false;
+
+                transH.Keterangan = keterangan;
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateKeteranganTransDAsync(int cbTransDId, string keterangan)
+        {
+            try
+            {
+                var transD = await _context.CbTransDs.FirstOrDefaultAsync(x => x.CbTransDId == cbTransDId);
+                if (transD == null) return false;
+
+                transD.Keterangan = keterangan;
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         #endregion
     }

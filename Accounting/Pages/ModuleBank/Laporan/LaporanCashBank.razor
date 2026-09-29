@@ -107,7 +107,7 @@
         <TableHeader>
             <th scope="col">Doc #</th>
             <th scope="col">Tanggal</th>
-            <th scope="col">Keterangan</th>
+            <th scope="col" style="min-width: 250px;">Keterangan</th>
             <th scope="col">Mutasi</th>
             <th scope="col">Saldo</th>
             <th></th>
@@ -115,12 +115,26 @@
         <RowTemplate>
             <td>@cbBank.DocNo</td>
             <td>@cbBank.Tanggal.ToShortDateString()</td>
-            <td>@cbBank.Keterangan</td>
+            <td>
+                @if (cbBank.CbTransHId > 0)
+                {
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           value="@cbBank.Keterangan"
+                           @onchange="(e) => OnKeteranganHChanged(cbBank, e.Value?.ToString())" />
+                }
+                else
+                {
+                    @cbBank.Keterangan
+                }
+            </td>
             <td>@cbBank.Saldo.ToString("N")</td>
             <td>@cbBank.Balance.ToString("N")</td>
             <td>
-                <button @onclick="() => BtnChoose(cbBank.CbTransHId)" class="btn btn-success">Detail</button>
-
+                @if (cbBank.CbTransHId > 0)
+                {
+                    <button @onclick="() => BtnChoose(cbBank.CbTransHId)" class="btn btn-success btn-sm">Detail</button>
+                }
             </td>
         </RowTemplate>
     </DataGridComponent>
@@ -133,14 +147,19 @@
         <ModalSearchComponent Items="TransDetail" Context="transaksi" OnClose="OnDetailClose" GetFilterableText="@(item =>$"{item.SrcCode} {item.Keterangan} ")">
             <TableHeader>
                 <th scope="col">Source</th>
-                <th scope="col">Keterangan</th>
+                <th scope="col" style="min-width: 250px;">Keterangan</th>
                 <th scope="col">Jumlah</th>
 
                 <th></th>
             </TableHeader>
             <RowTemplate>
                 <td>@transaksi.SrcCode</td>
-                <td>@transaksi.Keterangan</td>
+                <td>
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           value="@transaksi.Keterangan"
+                           @onchange="(e) => OnKeteranganDChanged(transaksi, e.Value?.ToString())" />
+                </td>
                 <td>@transaksi.Jumlah.ToString("N")</td>
 
 
@@ -354,4 +373,22 @@
         cashBank.prosesCashBank();
         totalJumlah = BankView.Sum(x => x.Saldo);
     }
+
+    private async Task OnKeteranganHChanged(RekeningView item, string newKeterangan)
+    {
+        item.Keterangan = newKeterangan;
+        if (item.CbTransHId > 0)
+        {
+            await cashBank.UpdateKeteranganTransHAsync(item.CbTransHId, newKeterangan ?? string.Empty);
         }
+    }
+
+    private async Task OnKeteranganDChanged(CbTransD item, string newKeterangan)
+    {
+        item.Keterangan = newKeterangan;
+        if (item.CbTransDId > 0)
+        {
+            await cashBank.UpdateKeteranganTransDAsync(item.CbTransDId, newKeterangan ?? string.Empty);
+        }
+    }
+}
