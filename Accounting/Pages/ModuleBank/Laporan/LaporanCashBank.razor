@@ -105,23 +105,25 @@
 
     <DataGridComponent Items="RekKoran" Context="cbBank" GetFilterableText="@(item =>$"{item.Keterangan} {item.DocNo} ")">
         <TableHeader>
-            <th scope="col">Doc #</th>
-            <th scope="col">Tanggal</th>
-            <th scope="col" style="min-width: 250px;">Keterangan</th>
-            <th scope="col">Mutasi</th>
-            <th scope="col">Saldo</th>
-            <th></th>
+            <th scope="col" style="width: 14%;">Doc #</th>
+            <th scope="col" style="width: 11%;">Tanggal</th>
+            <th scope="col" style="width: 35%;">Keterangan</th>
+            <th scope="col" style="width: 13%;">Mutasi</th>
+            <th scope="col" style="width: 13%;">Saldo</th>
+            <th scope="col" style="width: 14%;" class="text-center">Aksi</th>
         </TableHeader>
         <RowTemplate>
             <td>@cbBank.DocNo</td>
             <td>@cbBank.Tanggal.ToShortDateString()</td>
             <td>
-                @if (cbBank.CbTransHId > 0)
+                @if (IsEditingH(cbBank.CbTransHId))
                 {
-                    <input type="text"
-                           class="form-control form-control-sm"
-                           value="@cbBank.Keterangan"
-                           @onchange="(e) => OnKeteranganHChanged(cbBank, e.Value?.ToString())" />
+                    <textarea class="form-control form-control-sm"
+                              @bind="EditKeteranganHValues[cbBank.CbTransHId]"
+                              @onkeydown="(KeyboardEventArgs e) => HandleEditHKeydown(e, cbBank)"
+                              placeholder="Keterangan..."
+                              rows="2"
+                              style="resize: vertical;"></textarea>
                 }
                 else
                 {
@@ -130,10 +132,33 @@
             </td>
             <td>@cbBank.Saldo.ToString("N")</td>
             <td>@cbBank.Balance.ToString("N")</td>
-            <td>
+            <td class="text-center align-middle">
                 @if (cbBank.CbTransHId > 0)
                 {
-                    <button @onclick="() => BtnChoose(cbBank.CbTransHId)" class="btn btn-success btn-sm">Detail</button>
+                    <div class="btn-group btn-group-sm" role="group">
+                        @if (IsEditingH(cbBank.CbTransHId))
+                        {
+                            <button @onclick="() => SaveKeteranganH(cbBank)" class="btn btn-success" title="Simpan keterangan">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-check" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z" />
+                                </svg>
+                            </button>
+                            <button @onclick="() => ToggleEditH(cbBank)" class="btn btn-secondary" title="Batal edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
+                                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+                                </svg>
+                            </button>
+                        }
+                        else
+                        {
+                            <button @onclick="() => ToggleEditH(cbBank)" class="btn btn-outline-warning" title="Edit keterangan">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                    <path d="M15.502 1.94a.5.5 0 0 1 0 .706l-1.459 1.459-2.121-2.121 1.459-1.459a.5.5 0 0 1 .706 0l1.415 1.415zM13.676 2.828l2.121-2.121a.75.75 0 1 1 1.06 1.06L14.74 3.89l-1.06-1.06zm2.896 6.63l-10-10A.5.5 0 1 0 3.058 3.3l10 10a.5.5 0 0 0 .707-.707zM3 13v2.5a.5.5 0 0 0 .5.5H6v-3H3z" />
+                                </svg>
+                            </button>
+                            <button @onclick="() => BtnChoose(cbBank.CbTransHId)" class="btn btn-outline-success" title="Detail transaksi">Detail</button>
+                        }
+                    </div>
                 }
             </td>
         </RowTemplate>
@@ -146,23 +171,54 @@
     <div class="container">
         <ModalSearchComponent Items="TransDetail" Context="transaksi" OnClose="OnDetailClose" GetFilterableText="@(item =>$"{item.SrcCode} {item.Keterangan} ")">
             <TableHeader>
-                <th scope="col">Source</th>
-                <th scope="col" style="min-width: 250px;">Keterangan</th>
-                <th scope="col">Jumlah</th>
-
-                <th></th>
+                <th scope="col" style="width: 20%;">Source</th>
+                <th scope="col" style="width: 45%;">Keterangan</th>
+                <th scope="col" style="width: 20%;">Jumlah</th>
+                <th scope="col" style="width: 15%;" class="text-center">Aksi</th>
             </TableHeader>
             <RowTemplate>
                 <td>@transaksi.SrcCode</td>
                 <td>
-                    <input type="text"
-                           class="form-control form-control-sm"
-                           value="@transaksi.Keterangan"
-                           @onchange="(e) => OnKeteranganDChanged(transaksi, e.Value?.ToString())" />
+                    @if (IsEditingD(transaksi.CbTransDId))
+                    {
+                        <textarea class="form-control form-control-sm"
+                                  @bind="EditKeteranganDValues[transaksi.CbTransDId]"
+                                  @onkeydown="(KeyboardEventArgs e) => HandleEditDKeydown(e, transaksi)"
+                                  placeholder="Keterangan..."
+                                  rows="2"
+                                  style="resize: vertical;"></textarea>
+                    }
+                    else
+                    {
+                        @transaksi.Keterangan
+                    }
                 </td>
                 <td>@transaksi.Jumlah.ToString("N")</td>
-
-
+                <td class="text-center align-middle">
+                    <div class="btn-group btn-group-sm" role="group">
+                        @if (IsEditingD(transaksi.CbTransDId))
+                        {
+                            <button @onclick="() => SaveKeteranganD(transaksi)" class="btn btn-success" title="Simpan keterangan">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-check" viewBox="0 0 16 16">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z" />
+                                </svg>
+                            </button>
+                            <button @onclick="() => ToggleEditD(transaksi)" class="btn btn-secondary" title="Batal edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
+                                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+                                </svg>
+                            </button>
+                        }
+                        else
+                        {
+                            <button @onclick="() => ToggleEditD(transaksi)" class="btn btn-outline-warning" title="Edit keterangan">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                    <path d="M15.502 1.94a.5.5 0 0 1 0 .706l-1.459 1.459-2.121-2.121 1.459-1.459a.5.5 0 0 1 .706 0l1.415 1.415zM13.676 2.828l2.121-2.121a.75.75 0 1 1 1.06 1.06L14.74 3.89l-1.06-1.06zm2.896 6.63l-10-10A.5.5 0 1 0 3.058 3.3l10 10a.5.5 0 0 0 .707-.707zM3 13v2.5a.5.5 0 0 0 .5.5H6v-3H3z" />
+                                </svg>
+                            </button>
+                        }
+                    </div>
+                </td>
             </RowTemplate>
         </ModalSearchComponent>
 
@@ -176,6 +232,11 @@
     private List<CbBank> BankView = new List<CbBank>();
     private List<RekeningView> RekKoran = new List<RekeningView>();
     private List<CbTransD> TransDetail = new List<CbTransD>();
+
+    private Dictionary<int, bool> EditModeHState = new();
+    private Dictionary<int, string> EditKeteranganHValues = new();
+    private Dictionary<int, bool> EditModeDState = new();
+    private Dictionary<int, string> EditKeteranganDValues = new();
 
     private CbBank _bankToDelete;
     private List<string> selectedList = new List<string>();
@@ -374,21 +435,97 @@
         totalJumlah = BankView.Sum(x => x.Saldo);
     }
 
-    private async Task OnKeteranganHChanged(RekeningView item, string newKeterangan)
+    private bool IsEditingH(int id) =>
+        id > 0 && EditModeHState.ContainsKey(id) && EditModeHState[id];
+
+    private void ToggleEditH(RekeningView transaction)
     {
-        item.Keterangan = newKeterangan;
-        if (item.CbTransHId > 0)
+        int id = transaction.CbTransHId;
+        if (id <= 0) return;
+
+        if (EditModeHState.ContainsKey(id) && EditModeHState[id])
         {
-            await cashBank.UpdateKeteranganTransHAsync(item.CbTransHId, newKeterangan ?? string.Empty);
+            EditModeHState[id] = false;
+            EditKeteranganHValues.Remove(id);
+        }
+        else
+        {
+            EditModeHState[id] = true;
+            EditKeteranganHValues[id] = transaction.Keterangan ?? "";
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveKeteranganH(RekeningView transaction)
+    {
+        int id = transaction.CbTransHId;
+        if (id > 0 && EditKeteranganHValues.ContainsKey(id))
+        {
+            string newKet = EditKeteranganHValues[id] ?? "";
+            await cashBank.UpdateKeteranganTransHAsync(id, newKet);
+            transaction.Keterangan = newKet;
+            EditModeHState[id] = false;
+            EditKeteranganHValues.Remove(id);
+            StateHasChanged();
         }
     }
 
-    private async Task OnKeteranganDChanged(CbTransD item, string newKeterangan)
+    private async Task HandleEditHKeydown(KeyboardEventArgs e, RekeningView transaction)
     {
-        item.Keterangan = newKeterangan;
-        if (item.CbTransDId > 0)
+        if (e.Key == "Enter" && !e.ShiftKey)
         {
-            await cashBank.UpdateKeteranganTransDAsync(item.CbTransDId, newKeterangan ?? string.Empty);
+            await SaveKeteranganH(transaction);
+        }
+        else if (e.Key == "Escape")
+        {
+            ToggleEditH(transaction);
+        }
+    }
+
+    private bool IsEditingD(int id) =>
+        id > 0 && EditModeDState.ContainsKey(id) && EditModeDState[id];
+
+    private void ToggleEditD(CbTransD detail)
+    {
+        int id = detail.CbTransDId;
+        if (id <= 0) return;
+
+        if (EditModeDState.ContainsKey(id) && EditModeDState[id])
+        {
+            EditModeDState[id] = false;
+            EditKeteranganDValues.Remove(id);
+        }
+        else
+        {
+            EditModeDState[id] = true;
+            EditKeteranganDValues[id] = detail.Keterangan ?? "";
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveKeteranganD(CbTransD detail)
+    {
+        int id = detail.CbTransDId;
+        if (id > 0 && EditKeteranganDValues.ContainsKey(id))
+        {
+            string newKet = EditKeteranganDValues[id] ?? "";
+            await cashBank.UpdateKeteranganTransDAsync(id, newKet);
+            detail.Keterangan = newKet;
+            EditModeDState[id] = false;
+            EditKeteranganDValues.Remove(id);
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleEditDKeydown(KeyboardEventArgs e, CbTransD detail)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SaveKeteranganD(detail);
+        }
+        else if (e.Key == "Escape")
+        {
+            ToggleEditD(detail);
         }
     }
 }
