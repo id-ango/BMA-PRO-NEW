@@ -41,10 +41,14 @@
 .print-section h2 { font-size: 1.15rem; font-weight: 700; color: #1e3a8a; border-bottom: 2.5px solid #2563eb; padding-bottom: .3rem; }
 .report-parameter-table th { width: 20%; background: #e0e7ff; color: #1e3a8a; font-weight: 700; border-color: #cbd5e1; }
 .report-parameter-table td { font-weight: 600; color: #0f172a; border-color: #cbd5e1; }
-.print-toc-table thead th { background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%) !important; color: #ffffff !important; font-weight: 700 !important; }
+.print-toc-table { border-collapse: collapse; border: 1px solid #64748b; }
+.print-toc-table thead th { background: #1e40af !important; color: #ffffff !important; font-weight: 700 !important; border: 1px solid #172554 !important; }
+.print-toc-table tbody tr:nth-child(odd) { background: #dbeafe; }
+.print-toc-table tbody tr:nth-child(even) { background: #ffffff; }
+.print-toc-table tbody td { border: 1px solid #cbd5e1; color: #0f172a; }
 .print-kpi-grid > .col { border: 1.5px solid #94a3b8; background: #f8fafc; padding: .45rem; text-align: center; font-size: .75rem; border-radius: 4px; }
 .print-summary-table { border-collapse: collapse; border: 1px solid #94a3b8; color: #0f172a; }
-.print-summary-table thead th { background: #2563eb !important; border: 1px solid #1e40af !important; color: #ffffff !important; }
+.print-summary-table thead th { background: #2563eb !important; border: 1px solid #1e40af !important; color: #ffffff !important; font-weight: 800 !important; }
 .print-summary-table tbody tr:nth-child(odd) { background: #eff6ff; }
 .print-summary-table tbody tr:nth-child(even) { background: #ffffff; }
 .print-summary-table tbody td { border: 1px solid #cbd5e1; color: #0f172a; font-weight: 500; }
@@ -79,6 +83,16 @@
 .analysis-basis-note p { margin: 0 0 .45rem; }
 .analysis-basis-note p:last-child { margin-bottom: 0; }
 .recommendation-note { border-bottom: 1px solid #cbd5e1; padding: .3rem 0; font-size: .75rem; }
+.print-summary-only .badge,
+.print-detail-table .badge,
+.print-toc-table .badge { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; font-weight: 700 !important; }
+.print-summary-only .bg-primary, .print-detail-table .bg-primary, .print-toc-table .bg-primary { background: #2563eb !important; color: #ffffff !important; }
+.print-summary-only .bg-info, .print-detail-table .bg-info, .print-toc-table .bg-info { background: #67e8f9 !important; color: #164e63 !important; }
+.print-summary-only .bg-danger, .print-detail-table .bg-danger, .print-toc-table .bg-danger { background: #f87171 !important; color: #450a0a !important; }
+.print-summary-only .bg-warning, .print-detail-table .bg-warning, .print-toc-table .bg-warning { background: #facc15 !important; color: #422006 !important; }
+.print-summary-only .bg-success, .print-detail-table .bg-success, .print-toc-table .bg-success { background: #4ade80 !important; color: #052e16 !important; }
+.print-summary-only .bg-secondary, .print-detail-table .bg-secondary, .print-toc-table .bg-secondary { background: #cbd5e1 !important; color: #1e293b !important; }
+.print-summary-only .bg-dark, .print-detail-table .bg-dark, .print-toc-table .bg-dark { background: #475569 !important; color: #ffffff !important; }
 
 @media print {
     @page { size: landscape; margin: 12mm; }
@@ -125,6 +139,16 @@
     .kpi-card strong { font-size: .95rem; }
     .print-summary-only h3 { font-size: 1rem; margin-top: 1rem; }
     .print-summary-only table { font-size: .78rem; }
+    .printing-summary .print-toc-table,
+    .printing-summary .print-summary-table,
+    .printing-full .print-toc-table,
+    .printing-full .print-detail-table { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .printing-summary .print-toc-table tbody tr:nth-child(odd),
+    .printing-full .print-toc-table tbody tr:nth-child(odd),
+    .printing-summary .print-summary-table tbody tr:nth-child(odd) { background: #dbeafe !important; }
+    .printing-full .print-detail-table tbody tr:nth-child(odd) { background: #eff6ff !important; }
+    .printing-full .print-detail-table td:first-child { background: #bae6fd !important; }
+    .printing-full .print-detail-table td:last-child { background: #fed7aa !important; }
     .printing-summary .print-summary-table { font-size: .84rem; }
     .printing-summary .print-summary-table thead th { background: #2563eb !important; color: #ffffff !important; }
     .printing-summary .print-summary-table tbody tr:nth-child(odd) { background: #dbeafe !important; }
