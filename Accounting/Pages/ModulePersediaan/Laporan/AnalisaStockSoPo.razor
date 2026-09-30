@@ -46,13 +46,13 @@
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-danger w-100" disabled="@(!CanExport)" @onclick="PrintSummary">
-                            PDF Ringkasan
+                        <button class="btn btn-danger w-100" disabled="@(!CanExport)" @onclick="PrintSummary" title="Buka pratinjau, lalu pilih Save as PDF">
+                            Simpan PDF Ringkasan
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-outline-danger w-100" disabled="@(!CanExport)" @onclick="PrintFullReport">
-                            PDF Lengkap
+                        <button class="btn btn-outline-danger w-100" disabled="@(!CanExport)" @onclick="PrintFullReport" title="Buka pratinjau, lalu pilih Save as PDF">
+                            Simpan PDF Lengkap
                         </button>
                     </div>
                     <div class="col-md-1">
@@ -76,6 +76,7 @@
                     </div>
                     <div class="col-md-3">
                         <small class="text-dark">Saran order PO dihitung dari penjualan 12 bulan, target persediaan, waktu tunggu supplier, cadangan aman, stock gudang, pesanan supplier (PO), dan pesanan pelanggan (SO).</small>
+                        <small class="d-block text-muted mt-1">Untuk menyimpan PDF: pilih <strong>Save as PDF</strong> pada jendela cetak browser.</small>
                     </div>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(CompletionMessage))
