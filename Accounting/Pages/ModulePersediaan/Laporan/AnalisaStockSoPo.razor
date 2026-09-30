@@ -326,6 +326,14 @@
                         }
                     </tbody>
                 </table>
+                <h3>Dasar Analisa Persediaan</h3>
+                <div class="analysis-basis-note">
+                    <p><strong>Umur barang (aging):</strong> menunjukkan berapa hari sejak barang terakhir kali keluar dari gudang. Barang yang tidak bergerak sampai @Report.AgingThresholdDays hari perlu ditinjau karena berisiko menjadi persediaan yang sulit terjual. Namun, barang yang masih terikat pesanan pelanggan (SO) tetap perlu diprioritaskan untuk dikirim, bukan langsung dianggap barang mati.</p>
+                    <p><strong>Target persediaan:</strong> laporan menjaga persediaan untuk kebutuhan sekitar @Report.CoverageMonths bulan berdasarkan rata-rata penjualan. Angka ini adalah target perencanaan, bukan perintah untuk langsung membeli.</p>
+                    <p><strong>Waktu tunggu supplier:</strong> perhitungan memperhitungkan waktu sekitar @Report.LeadTimeMonths bulan sejak PO dibuat sampai barang diperkirakan tiba. Karena itu, pembelian perlu dipertimbangkan sebelum stok benar-benar habis.</p>
+                    <p><strong>Cadangan aman:</strong> disiapkan sebesar @Report.SafetyStockMonths bulan sebagai perlindungan bila permintaan meningkat atau pengiriman supplier terlambat.</p>
+                    <p><strong>Dasar saran PO:</strong> sistem melihat penjualan @Report.SalesHistoryMonths bulan terakhir, rata-rata penjualan per bulan, stok yang tersedia, sisa PO, dan sisa SO. Hasilnya adalah rekomendasi jumlah PO, bukan pembuatan PO otomatis. Keputusan akhir tetap perlu mempertimbangkan kondisi pasar dan konfirmasi supplier.</p>
+                </div>
                 <h3>Rekomendasi Manajemen</h3>
                 <p>@GetManagementRecommendation()</p>
                 <h3>Dasar Analisa &amp; Alasan Rekomendasi PO</h3>
@@ -428,9 +436,9 @@
         try
         {
             await InvokeAsync(StateHasChanged);
-            await Task.Delay(200);
+            await Task.Yield();
+            await Task.Delay(mode == "full" ? 1000 : 400);
             await JS.InvokeVoidAsync("window.print");
-            await Task.Delay(300);
         }
         finally
         {
