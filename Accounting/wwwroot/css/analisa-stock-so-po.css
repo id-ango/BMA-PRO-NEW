@@ -9,11 +9,11 @@
 .kpi-card .card-body { padding: .85rem .8rem; }
 .kpi-card small { display: block; color: #1f2937; font-size: .75rem; }
 .kpi-card strong { display: block; color: #111827; font-size: .92rem; margin-top: .35rem; font-weight: 700; }
-.kpi-card:nth-child(1) { border-color: #93c5fd; background: linear-gradient(135deg, #ffffff 0%, #dbeafe 100%); }
-.kpi-card:nth-child(2) { border-color: #fca5a5; background: linear-gradient(135deg, #ffffff 0%, #fee2e2 100%); }
-.kpi-card:nth-child(3) { border-color: #fcd34d; background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%); }
-.kpi-card:nth-child(4) { border-color: #86efac; background: linear-gradient(135deg, #ffffff 0%, #dcfce7 100%); }
-.kpi-card:nth-child(5) { border-color: #c4b5fd; background: linear-gradient(135deg, #ffffff 0%, #ede9fe 100%); }
+.analysis-summary > .row.mb-3 > div:nth-child(1) .kpi-card { border-color: #93c5fd; background: linear-gradient(135deg, #ffffff 0%, #dbeafe 100%); }
+.analysis-summary > .row.mb-3 > div:nth-child(2) .kpi-card { border-color: #fca5a5; background: linear-gradient(135deg, #ffffff 0%, #fee2e2 100%); }
+.analysis-summary > .row.mb-3 > div:nth-child(3) .kpi-card { border-color: #fcd34d; background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%); }
+.analysis-summary > .row.mb-3 > div:nth-child(4) .kpi-card { border-color: #86efac; background: linear-gradient(135deg, #ffffff 0%, #dcfce7 100%); }
+.analysis-summary > .row.mb-3 > div:nth-child(5) .kpi-card { border-color: #c4b5fd; background: linear-gradient(135deg, #ffffff 0%, #ede9fe 100%); }
 .analysis-table { font-size: .86rem; color: #0f172a; border-collapse: separate; border-spacing: 0; }
 .analysis-table thead th { 
     background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%) !important; 
@@ -61,6 +61,8 @@
 .print-detail-table tr { border-bottom: 1px solid #cbd5e1; }
 .print-detail-section { page-break-before: always; }
 .print-summary-table thead th { background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%) !important; color: #ffffff !important; font-weight: 700 !important; }
+.print-chapter-link { color: #1d4ed8; font-weight: 700; text-decoration: none; }
+.print-chapter-link:hover { color: #1e40af; text-decoration: underline; }
 .analysis-basis-note { border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; background: #eff6ff; color: #1e293b; padding: .65rem .8rem; font-size: .78rem; line-height: 1.45; }
 .analysis-basis-note p { margin: 0 0 .45rem; }
 .analysis-basis-note p:last-child { margin-bottom: 0; }
@@ -68,6 +70,10 @@
 
 @media print {
     @page { size: landscape; margin: 12mm; }
+    *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 
     .app-sidebar,
     .app-header,
@@ -96,7 +102,14 @@
     .print-summary-only { display: block; }
     .printing-full { display: block !important; height: auto !important; max-height: none !important; overflow: visible !important; }
     .printing-full .print-summary-only { display: block !important; height: auto !important; max-height: none !important; overflow: visible !important; }
-    .kpi-card { border: 1px solid #adb5bd; }
+    .kpi-card { border-width: 1px !important; }
+    .analysis-summary > .row.mb-3 > div:nth-child(1) .kpi-card { border-color: #60a5fa !important; background: #dbeafe !important; }
+    .analysis-summary > .row.mb-3 > div:nth-child(2) .kpi-card { border-color: #f87171 !important; background: #fee2e2 !important; }
+    .analysis-summary > .row.mb-3 > div:nth-child(3) .kpi-card { border-color: #fbbf24 !important; background: #fef3c7 !important; }
+    .analysis-summary > .row.mb-3 > div:nth-child(4) .kpi-card { border-color: #4ade80 !important; background: #dcfce7 !important; }
+    .analysis-summary > .row.mb-3 > div:nth-child(5) .kpi-card { border-color: #a78bfa !important; background: #ede9fe !important; }
+    .analysis-summary > .row.mb-3 .kpi-card small,
+    .analysis-summary > .row.mb-3 .kpi-card strong { color: #111827 !important; }
     .kpi-card strong { font-size: .95rem; }
     .print-summary-only h3 { font-size: 1rem; margin-top: 1rem; }
     .print-summary-only table { font-size: .78rem; }

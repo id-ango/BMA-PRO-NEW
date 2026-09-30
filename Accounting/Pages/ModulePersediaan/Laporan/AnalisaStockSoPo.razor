@@ -248,7 +248,7 @@
                                 @foreach (var item in GetGroupedRowsForBook().Select((g, idx) => new { Group = g, Index = idx + 1 }))
                                 {
                                     <tr>
-                                        <td><strong>Bab @item.Index</strong></td>
+                                        <td><strong><a class="print-chapter-link" href="#print-bab-@item.Index">Bab @item.Index</a></strong></td>
                                         <td><span class="badge @GetStatusClass(item.Group.Key)">@item.Group.Key</span></td>
                                         <td class="text-end">@item.Group.Rows.Count() item</td>
                                         <td class="text-end">@item.Group.Rows.Sum(x => x.StockValue).ToString("N0")</td>
@@ -261,7 +261,7 @@
 
                     @foreach (var item in GetGroupedRowsForBook().Select((g, idx) => new { Group = g, Index = idx + 1 }))
                     {
-                        <section class="print-section print-chapter-section">
+                        <section id="print-bab-@item.Index" class="print-section print-chapter-section">
                             <div class="print-chapter-header d-flex justify-content-between align-items-center">
                                 <h2>Bab @item.Index: @item.Group.Key (@item.Group.Rows.Count() item)</h2>
                                 <span class="badge bg-light text-dark">Total Nilai: Rp @item.Group.Rows.Sum(x => x.StockValue).ToString("N0")</span>
