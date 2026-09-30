@@ -24,15 +24,15 @@
             <div class="card-body">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
-                        <label class="form-label">Tanggal analisa</label>
+                        <label class="form-label text-dark fw-bold">Tanggal analisa</label>
                         <InputDate class="form-control" @bind-Value="AsOfDate" />
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Batas aging (hari)</label>
+                        <label class="form-label text-dark fw-bold">Batas barang tidak keluar (hari)</label>
                         <InputNumber class="form-control" @bind-Value="AgingThresholdDays" />
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Jenis item</label>
+                        <label class="form-label text-dark fw-bold">Jenis item</label>
                         <select class="form-select" @bind="TypeFilter">
                             <option value="Semua">Semua</option>
                             <option value="Sparepart">Sparepart</option>
@@ -63,19 +63,19 @@
                 </div>
                 <div class="row g-3 mt-1 align-items-end">
                     <div class="col-md-3">
-                        <label class="form-label">Coverage permintaan (bulan)</label>
+                        <label class="form-label text-dark fw-bold">Target persediaan (bulan) <small class="text-muted fw-normal">(Coverage)</small></label>
                         <InputNumber class="form-control" @bind-Value="CoverageMonths" />
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Lead time supplier (bulan)</label>
+                        <label class="form-label text-dark fw-bold">Waktu tunggu kirim supplier (bulan) <small class="text-muted fw-normal">(Lead time)</small></label>
                         <InputNumber class="form-control" @bind-Value="LeadTimeMonths" />
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Safety stock (bulan)</label>
+                        <label class="form-label text-dark fw-bold">Cadangan aman persediaan (bulan) <small class="text-muted fw-normal">(Safety stock)</small></label>
                         <InputNumber class="form-control" @bind-Value="SafetyStockMonths" />
                     </div>
                     <div class="col-md-3">
-                        <small class="text-muted">PO rekomendasi dihitung dari penjualan 12 bulan, coverage, lead time, safety stock, stock, PO outstanding, dan sisa SO.</small>
+                        <small class="text-dark">Saran order PO dihitung dari penjualan 12 bulan, target persediaan, waktu tunggu supplier, cadangan aman, stock gudang, pesanan supplier (PO), dan pesanan pelanggan (SO).</small>
                     </div>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(CompletionMessage))
@@ -147,6 +147,8 @@
                     <label class="form-label mb-1">Status</label>
                     <select class="form-select" @bind="StatusFilter">
                         <option value="Semua">Semua</option>
+                        <option value="Alokasi SO (Siap Kirim)">Alokasi SO (Siap Kirim)</option>
+                        <option value="Sebagian Alokasi SO">Sebagian Alokasi SO</option>
                         <option value="Dead Stock">Dead Stock</option>
                         <option value="Sparepart utilisasi rendah">Sparepart utilisasi rendah</option>
                         <option value="Prioritas SO">Prioritas SO</option>
@@ -183,19 +185,24 @@
                         @foreach (var row in FilteredRows)
                         {
                             <tr>
-                                <td><strong>@row.ItemCode</strong><br /><small>@row.NamaItem</small></td>
+                                <td><strong class="item-code-highlight">@row.ItemCode</strong><br /><small class="item-name-text">@row.NamaItem</small></td>
                                 <td><span class="badge @(row.IsSparePart ? "bg-info text-dark" : "bg-secondary")">@row.JenisItem</span></td>
-                                <td class="text-end">@row.StockQty.ToString("N2") @row.Satuan</td>
-                                <td class="text-end">@row.StockValue.ToString("N0")</td>
+                                <td class="text-end fw-bold">@row.StockQty.ToString("N2") <small class="text-muted fw-normal">@row.Satuan</small></td>
+                                <td class="text-end fw-bold">@row.StockValue.ToString("N0")</td>
                                 <td>@(row.LastOutDate?.ToString("dd-MM-yyyy") ?? "Belum pernah")</td>
                                 <td class="text-end">@(row.DaysSinceLastOut?.ToString() ?? "-")</td>
                                 <td class="text-end">@row.SoRemainingQty.ToString("N2")</td>
                                 <td class="text-end">@row.PoRemainingQty.ToString("N2")</td>
                                 <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
                                 <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
-                                <td class="text-end">@row.RecommendedPoQty.ToString("N2")</td>
+                                <td class="text-end fw-bold text-primary">@row.RecommendedPoQty.ToString("N0")</td>
                                 <td><span class="badge @GetStatusClass(row.Status)">@row.Status</span></td>
-                                <td><small><strong>@row.Recommendation</strong><br />@row.DemandAnalysisReason</small></td>
+                                <td>
+                                    <small>
+                                        <strong class="rec-action-text">@row.Recommendation</strong><br />
+                                        <span class="rec-reason-text">@row.DemandAnalysisReason</span>
+                                    </small>
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -217,47 +224,100 @@
                         <p>@Report.ExecutiveSummary</p>
                         <table class="table table-sm report-parameter-table">
                             <tbody>
-                                <tr><th>Histori penjualan</th><td>@Report.SalesHistoryMonths bulan</td><th>Coverage</th><td>@Report.CoverageMonths bulan</td></tr>
-                                <tr><th>Lead time supplier</th><td>@Report.LeadTimeMonths bulan</td><th>Safety stock</th><td>@Report.SafetyStockMonths bulan</td></tr>
-                                <tr><th>Batas aging</th><td>@Report.AgingThresholdDays hari</td><th>Nilai PO rekomendasi</th><td>@Report.TotalRecommendedPoValue.ToString("N0")</td></tr>
+                                <tr><th>Riwayat penjualan</th><td>@Report.SalesHistoryMonths bulan</td><th>Target persediaan (Coverage)</th><td>@Report.CoverageMonths bulan</td></tr>
+                                <tr><th>Waktu kirim supplier (Lead time)</th><td>@Report.LeadTimeMonths bulan</td><th>Cadangan aman (Safety stock)</th><td>@Report.SafetyStockMonths bulan</td></tr>
+                                <tr><th>Batas hari tidak keluar</th><td>@Report.AgingThresholdDays hari</td><th>Total nilai saran order PO</th><td>@Report.TotalRecommendedPoValue.ToString("N0")</td></tr>
                             </tbody>
                         </table>
                         <div class="row g-2 print-kpi-grid">
                             <div class="col"><strong>Nilai Stock</strong><br />@Report.TotalStockValue.ToString("N0")</div>
                             <div class="col"><strong>Dead Stock</strong><br />@Report.DeadStockValue.ToString("N0")</div>
                             <div class="col"><strong>Slow Moving</strong><br />@Report.SlowMovingValue.ToString("N0")</div>
-                            <div class="col"><strong>Sisa SO</strong><br />@Report.TotalSoRemainingValue.ToString("N0")</div>
-                            <div class="col"><strong>PO Outstanding</strong><br />@Report.TotalPoRemainingValue.ToString("N0")</div>
+                            <div class="col"><strong>Pesanan Customer (SO)</strong><br />@Report.TotalSoRemainingValue.ToString("N0")</div>
+                            <div class="col"><strong>Pesanan Supplier (PO)</strong><br />@Report.TotalPoRemainingValue.ToString("N0")</div>
                         </div>
                     </section>
 
                     <section class="print-section print-detail-section">
-                        <h2>Detail Lengkap Analisa Persediaan</h2>
-                        <table class="table table-sm print-detail-table">
-                            <thead><tr><th>Item</th><th>Jenis</th><th class="text-end">Stock</th><th class="text-end">Nilai</th><th>Keluar Terakhir</th><th class="text-end">Umur</th><th class="text-end">SO</th><th class="text-end">PO</th><th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2</th><th class="text-end">Rekom PO</th><th>Status</th></tr></thead>
+                        <h2>Daftar Isi Bab Analisa Persediaan</h2>
+                        <table class="table table-sm print-toc-table align-middle">
+                            <thead>
+                                <tr><th>Bab</th><th>Kategori Status</th><th class="text-end">Jumlah Item</th><th class="text-end">Total Nilai Stock</th><th>Keterangan / Fokus</th></tr>
+                            </thead>
                             <tbody>
-                                @foreach (var row in Report.Rows)
+                                @foreach (var item in GetGroupedRowsForBook().Select((g, idx) => new { Group = g, Index = idx + 1 }))
                                 {
                                     <tr>
-                                        <td>@row.ItemCode<br /><small>@row.NamaItem</small></td><td>@row.JenisItem</td><td class="text-end">@row.StockQty.ToString("N0")</td><td class="text-end">@row.StockValue.ToString("N0")</td><td>@(row.LastOutDate?.ToString("dd-MM-yyyy") ?? "Belum pernah")</td><td class="text-end">@(row.DaysSinceLastOut?.ToString() ?? "-")</td><td class="text-end">@row.SoRemainingQty.ToString("N0")</td><td class="text-end">@row.PoRemainingQty.ToString("N0")</td><td class="text-end">@row.SalesQty12Months.ToString("N0")</td><td class="text-end">@row.AverageMonthlySales.ToString("N1")</td><td class="text-end">@row.RecommendedPoQty.ToString("N0")</td><td>@row.Status</td>
+                                        <td><strong>Bab @item.Index</strong></td>
+                                        <td><span class="badge @GetStatusClass(item.Group.Key)">@item.Group.Key</span></td>
+                                        <td class="text-end">@item.Group.Rows.Count() item</td>
+                                        <td class="text-end">@item.Group.Rows.Sum(x => x.StockValue).ToString("N0")</td>
+                                        <td><small>@item.Group.Description</small></td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </section>
 
-                    <section class="print-section">
-                        <h2>Dasar Analisa &amp; Alasan Rekomendasi PO</h2>
-                        @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue))
-                        {
-                            <div class="recommendation-note"><strong>@row.ItemCode - @row.NamaItem: @row.RecommendedPoQty.ToString("N0") unit</strong><br />@row.DemandAnalysisReason</div>
-                        }
-                    </section>
+                    @foreach (var item in GetGroupedRowsForBook().Select((g, idx) => new { Group = g, Index = idx + 1 }))
+                    {
+                        <section class="print-section print-chapter-section">
+                            <div class="print-chapter-header d-flex justify-content-between align-items-center">
+                                <h2>Bab @item.Index: @item.Group.Key (@item.Group.Rows.Count() item)</h2>
+                                <span class="badge bg-light text-dark">Total Nilai: Rp @item.Group.Rows.Sum(x => x.StockValue).ToString("N0")</span>
+                            </div>
+                            <p class="print-chapter-desc">@item.Group.Description</p>
+                            <table class="table table-sm print-detail-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20%;">Item</th>
+                                        <th style="width: 5%;">Jenis</th>
+                                        <th class="text-end" style="width: 7%;">Stock</th>
+                                        <th class="text-end" style="width: 8%;">Nilai Stock</th>
+                                        <th style="width: 8%;">Terakhir Keluar</th>
+                                        <th class="text-end" style="width: 4%;">Umur</th>
+                                        <th class="text-end" style="width: 5%;">Sisa SO</th>
+                                        <th class="text-end" style="width: 5%;">Sisa PO</th>
+                                        <th class="text-end" style="width: 5%;">Jual 12 Bln</th>
+                                        <th class="text-end" style="width: 5%;">Rata2/Bln</th>
+                                        <th class="text-end" style="width: 5%;">Rekom PO</th>
+                                        <th style="width: 6%;">Status</th>
+                                        <th style="width: 17%;">Alasan Analisa</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in item.Group.Rows)
+                                    {
+                                        <tr>
+                                            <td><strong class="item-code-highlight">@row.ItemCode</strong><br /><small class="item-name-text">@row.NamaItem</small></td>
+                                            <td><span class="badge @(row.IsSparePart ? "bg-info text-dark" : "bg-secondary")">@row.JenisItem</span></td>
+                                            <td class="text-end fw-bold">@row.StockQty.ToString("N0")<br /><small class="text-muted fw-normal">@row.Satuan</small></td>
+                                            <td class="text-end fw-bold">@row.StockValue.ToString("N0")</td>
+                                            <td>@(row.LastOutDate?.ToString("dd-MM-yyyy") ?? "Belum pernah")</td>
+                                            <td class="text-end">@(row.DaysSinceLastOut?.ToString() ?? "-")</td>
+                                            <td class="text-end">@row.SoRemainingQty.ToString("N0")</td>
+                                            <td class="text-end">@row.PoRemainingQty.ToString("N0")</td>
+                                            <td class="text-end">@row.SalesQty12Months.ToString("N0")</td>
+                                            <td class="text-end">@row.AverageMonthlySales.ToString("N1")</td>
+                                            <td class="text-end fw-bold text-primary">@row.RecommendedPoQty.ToString("N0")</td>
+                                            <td><span class="badge @GetStatusClass(row.Status)">@row.Status</span></td>
+                                            <td>
+                                                <small>
+                                                    <strong class="rec-action-text">@row.Recommendation</strong><br />
+                                                    <span class="rec-reason-text">@row.DemandAnalysisReason</span>
+                                                </small>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </section>
+                    }
                 }
                 else
                 {
-                <h3>Top 10 Nilai Stock</h3>
-                <table class="table table-sm">
+                <h3>Top 30 Nilai Stock</h3>
+                <table class="table table-sm print-summary-table align-middle">
                     <thead><tr><th>Item</th><th>Jenis</th><th class="text-end">Qty</th><th class="text-end">Nilai</th><th>Status</th></tr></thead>
                     <tbody>
                         @foreach (var row in Report.TopValueRows)
@@ -271,16 +331,16 @@
                 <h3>Dasar Analisa &amp; Alasan Rekomendasi PO</h3>
                 @if (Report.Rows.Any(x => x.HasPurchaseRecommendation))
                 {
-                    <table class="table table-sm">
+                    <table class="table table-sm print-summary-table align-middle">
                         <thead><tr><th>Item</th><th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th>Alasan</th></tr></thead>
                         <tbody>
-                            @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(15))
+                            @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(30))
                             {
                                 <tr>
                                     <td>@row.ItemCode - @row.NamaItem</td>
                                     <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
                                     <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
-                                    <td class="text-end">@row.RecommendedPoQty.ToString("N2")</td>
+                                    <td class="text-end">@row.RecommendedPoQty.ToString("N0")</td>
                                     <td>@row.DemandAnalysisReason</td>
                                 </tr>
                             }
@@ -413,14 +473,14 @@
             summary.Cell(7, 2).Value = "Nilai";
             var parameterRows = new[]
             {
-                ("Histori penjualan (bulan)", Report.SalesHistoryMonths.ToString()),
-                ("Coverage (bulan)", Report.CoverageMonths.ToString()),
-                ("Lead time (bulan)", Report.LeadTimeMonths.ToString()),
-                ("Safety stock (bulan)", Report.SafetyStockMonths.ToString()),
-                ("Batas aging (hari)", Report.AgingThresholdDays.ToString()),
+                ("Riwayat penjualan (bulan)", Report.SalesHistoryMonths.ToString()),
+                ("Target persediaan / Coverage (bulan)", Report.CoverageMonths.ToString()),
+                ("Waktu kirim supplier / Lead time (bulan)", Report.LeadTimeMonths.ToString()),
+                ("Cadangan aman / Safety stock (bulan)", Report.SafetyStockMonths.ToString()),
+                ("Batas hari tidak keluar", Report.AgingThresholdDays.ToString()),
                 ("Total nilai stock", Report.TotalStockValue.ToString("N0")),
                 ("Nilai dead stock", Report.DeadStockValue.ToString("N0")),
-                ("Nilai PO rekomendasi", Report.TotalRecommendedPoValue.ToString("N0"))
+                ("Nilai saran order PO", Report.TotalRecommendedPoValue.ToString("N0"))
             };
             var summaryRow = 8;
             foreach (var parameter in parameterRows)
@@ -517,12 +577,14 @@
 
     private string GetStatusClass(string status) => status switch
     {
+        "Alokasi SO (Siap Kirim)" => "bg-primary",
+        "Sebagian Alokasi SO" => "bg-info text-dark",
         "Dead Stock" or "Sparepart utilisasi rendah" => "bg-danger",
         "Prioritas SO" => "bg-warning text-dark",
         "Risiko Over Stock" => "bg-dark",
         "PO Tanpa Kebutuhan SO" => "bg-warning text-dark",
-        "Rekomendasi PO" => "bg-primary",
-        "Slow Moving" => "bg-info text-dark",
+        "Rekomendasi PO" => "bg-success",
+        "Slow Moving" => "bg-secondary",
         _ => "bg-success"
     };
 
@@ -533,5 +595,43 @@
         if (Report.TotalSoRemainingValue > Report.TotalStockValue)
             return "Kebutuhan SO melebihi nilai stock yang tersedia. Prioritaskan pemenuhan SO dan pastikan PO outstanding memiliki jadwal kedatangan yang jelas.";
         return "Persediaan perlu dipantau berdasarkan umur, nilai, dan keterkaitannya dengan SO/PO. Sparepart dengan utilisasi rendah sebaiknya divalidasi terhadap kebutuhan maintenance sebelum dilakukan clearance.";
+    }
+
+    private record BookGroup(string Key, string Description, IEnumerable<InventoryAnalysisRow> Rows);
+
+    private IEnumerable<BookGroup> GetGroupedRowsForBook()
+    {
+        if (Report?.Rows == null) yield break;
+
+        var statusOrder = new[]
+        {
+            ("Alokasi SO (Siap Kirim)", "Item dengan saldo stock yang telah terikat pesanan pelanggan (SO aktif). Fokus: Segera lakukan pengiriman (Surat Jalan/DO) ke customer. Jangan clearance."),
+            ("Sebagian Alokasi SO", "Item di mana sebagian stock terikat pesanan pelanggan (SO), sedangkan sisa unitnya belum bergerak. Fokus: Kirim bagian yang ada SO, dan evaluasi sisa unitnya."),
+            ("Dead Stock", "Item dengan saldo stock tanpa pesanan SO dan tidak ada pergerakan keluar melebihi batas analisa. Fokus: Evaluasi promosi, transfer cabang, atau clearance."),
+            ("Sparepart utilisasi rendah", "Item suku cadang/sparepart dengan pergerakan rendah. Fokus: Validasi kebutuhan preventif maintenance mesin sebelum tindakan clearance."),
+            ("Prioritas SO", "Item dengan kebutuhan SO outstanding yang belum tertutup stock maupun PO. Fokus: Segera lakukan pengadaan atau percepat pengiriman."),
+            ("Rekomendasi PO", "Item dengan pergerakan historis penjualan yang membutuhkan penambahan PO untuk menjamin target persediaan dan waktu tunggu supplier. Fokus: Buat PO rekomendasi."),
+            ("Slow Moving", "Item dengan umur pengeluaran terakhir melampaui 90 hari namun belum mencapai batas dead stock. Fokus: Pantau sirkulasi dan batasi re-order."),
+            ("PO Tanpa Kebutuhan SO", "Item dengan PO aktif melampaui kebutuhan SO saat ini tetapi item masih aktif bergerak. Fokus: Monitor serapan pasar."),
+            ("Risiko Over Stock", "Item dengan PO berlebih di mana pergerakan stock lambat atau tidak ada pengeluaran terbaru. Fokus: Pertimbangkan penundaan kedatangan PO."),
+            ("Normal", "Item persediaan dengan pergerakan dan proporsi stock dalam batas wajar. Fokus: Pemantauan rutin operasional."),
+            ("Tidak ada stock", "Item tanpa saldo fisik saat ini. Fokus: Tinjau kebutuhan bila ada permintaan aktif.")
+        };
+
+        foreach (var (status, desc) in statusOrder)
+        {
+            var rows = Report.Rows.Where(x => x.Status == status).OrderByDescending(x => x.StockValue).ToList();
+            if (rows.Count > 0)
+            {
+                yield return new BookGroup(status, desc, rows);
+            }
+        }
+
+        var handledStatuses = statusOrder.Select(x => x.Item1).ToHashSet();
+        var remaining = Report.Rows.Where(x => !handledStatuses.Contains(x.Status)).GroupBy(x => x.Status);
+        foreach (var group in remaining)
+        {
+            yield return new BookGroup(group.Key, $"Kategori status: {group.Key}", group.OrderByDescending(x => x.StockValue).ToList());
+        }
     }
 }

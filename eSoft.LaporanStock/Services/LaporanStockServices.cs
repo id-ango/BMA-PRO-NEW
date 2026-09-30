@@ -2093,7 +2093,8 @@ namespace eSoft.LaporanStock.Services
                 var averageMonthlySales = salesQty / report.SalesHistoryMonths;
                 var demandCoverageQty = averageMonthlySales * effectiveCoverageMonths;
                 var targetQty = demandCoverageQty + soQty;
-                var recommendedPoQty = Math.Max(targetQty - Math.Max(item.Qty, 0) - poQty, 0);
+                var deficitQty = Math.Max(targetQty - Math.Max(item.Qty, 0) - poQty, 0);
+                var recommendedPoQty = Math.Ceiling(deficitQty);
 
                 var row = new InventoryAnalysisRow
                 {
@@ -2139,13 +2140,19 @@ namespace eSoft.LaporanStock.Services
 
         private static string BuildDemandAnalysisReason(InventoryAnalysisRow row, int effectiveCoverageMonths, int historyMonths)
         {
+            if (row.Status == "Alokasi SO (Siap Kirim)")
+                return $"Stock ({row.StockQty:N2} {row.Satuan}) telah terikat pesanan pelanggan (SO: {row.SoRemainingQty:N2} {row.Satuan}). Segera proses pengiriman (Surat Jalan/DO). Tidak direkomendasikan clearance/promo.";
+
+            if (row.Status == "Sebagian Alokasi SO")
+                return $"Sebanyak {row.SoRemainingQty:N2} {row.Satuan} telah terikat pesanan pelanggan (SO). Sisa stock {(row.StockQty - row.SoRemainingQty):N2} {row.Satuan} belum bergerak melebihi batas analisa dan dapat dievaluasi.";
+
             if (row.IsSparePart && row.SalesQty12Months <= 0 && row.SoRemainingQty <= 0)
-                return "Tidak ada penjualan dalam periode analisa. Karena item diklasifikasikan sebagai sparepart, kebutuhan maintenance perlu divalidasi sebelum membuat PO.";
+                return "Tidak ada penjualan dalam periode analisa. Karena item diklasifikasikan sebagai sparepart, kebutuhan perawatan mesin perlu divalidasi sebelum membuat PO.";
 
             if (row.HasPurchaseRecommendation)
-                return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; target coverage {effectiveCoverageMonths} bulan: {row.DemandCoverageQty:N2}; ditambah sisa SO: {row.SoRemainingQty:N2}; tersedia dari stock dan PO: {(row.StockQty + row.PoRemainingQty):N2}; kekurangan: {row.RecommendedPoQty:N2}.";
+                return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; target persediaan {effectiveCoverageMonths} bulan: {row.DemandCoverageQty:N2}; ditambah sisa pesanan customer (SO): {row.SoRemainingQty:N2}; tersedia dari stock dan pesanan supplier (PO): {(row.StockQty + row.PoRemainingQty):N2}; saran order PO (dibulatkan): {row.RecommendedPoQty:N0}.";
 
-            return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; kebutuhan coverage {effectiveCoverageMonths} bulan dan sisa SO masih tertutup oleh stock {row.StockQty:N2} serta PO outstanding {row.PoRemainingQty:N2}.";
+            return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; target persediaan {effectiveCoverageMonths} bulan dan sisa pesanan customer (SO) masih tertutup oleh stock {row.StockQty:N2} serta pesanan supplier (PO) aktif {row.PoRemainingQty:N2}.";
         }
 
         #region CustomerperDivision

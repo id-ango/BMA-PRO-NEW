@@ -26,13 +26,13 @@ namespace eSoft.LaporanStock.View
 
         public IEnumerable<InventoryAnalysisRow> TopValueRows => Rows
             .OrderByDescending(x => x.StockValue)
-            .Take(10);
+            .Take(30);
 
         public IEnumerable<InventoryAnalysisRow> TopAgingRows => Rows
             .Where(x => x.StockQty > 0)
             .OrderByDescending(x => x.DaysSinceLastOut ?? int.MaxValue)
             .ThenByDescending(x => x.StockValue)
-            .Take(10);
+            .Take(30);
 
         public string ExecutiveSummary
         {
@@ -82,7 +82,7 @@ namespace eSoft.LaporanStock.View
         public string Recommendation { get; set; }
 
         public bool IsSparePart => string.Equals(JenisItem, "Sparepart", StringComparison.OrdinalIgnoreCase);
-        public bool IsDeadStock => StockQty > 0 && (!LastOutDate.HasValue || (DaysSinceLastOut ?? 0) >= AgingThresholdDays);
+        public bool IsDeadStock => StockQty > 0 && SoRemainingQty <= 0 && (!LastOutDate.HasValue || (DaysSinceLastOut ?? 0) >= AgingThresholdDays);
         public bool IsSlowMoving => StockQty > 0 && DaysSinceLastOut.HasValue && DaysSinceLastOut.Value >= 90;
     }
 
@@ -98,10 +98,25 @@ namespace eSoft.LaporanStock.View
         {
             if (row.StockQty <= 0)
                 return "Tidak ada stock";
+
+            // Jika ada permintaan SO aktif yang melebihi stock fisik saat ini
             if (row.SoRemainingQty > row.StockQty && row.PoRemainingQty <= row.SoRemainingQty - row.StockQty)
                 return "Prioritas SO";
+
+            // Jika stock sudah terikat pesanan pelanggan (SO) yang aktif
+            if (row.SoRemainingQty > 0)
+            {
+                if (row.SoRemainingQty >= row.StockQty)
+                    return "Alokasi SO (Siap Kirim)";
+
+                // Ada SO sebagian, sisa stock di atas SO lama tidak keluar
+                if ((!row.LastOutDate.HasValue || row.DaysSinceLastOut >= agingThresholdDays) && row.StockValue > 0)
+                    return "Sebagian Alokasi SO";
+            }
+
             if ((!row.LastOutDate.HasValue || row.DaysSinceLastOut >= agingThresholdDays) && row.StockValue > 0)
                 return row.IsSparePart ? "Sparepart utilisasi rendah" : "Dead Stock";
+
             if (row.PoRemainingQty > row.SoRemainingQty + row.StockQty)
             {
                 if (!row.LastOutDate.HasValue || row.DaysSinceLastOut >= 90)
@@ -118,15 +133,17 @@ namespace eSoft.LaporanStock.View
         {
             return status switch
             {
-                "Prioritas SO" => "Prioritaskan pemenuhan SO dan evaluasi kekurangan pembelian.",
-                "Dead Stock" => "Evaluasi promosi, transfer gudang, clearance, atau penghentian pembelian.",
-                "Sparepart utilisasi rendah" => "Validasi kebutuhan maintenance sebelum melakukan clearance atau penghapusan.",
-                "Risiko Over Stock" => "Tunda pembelian berikutnya dan evaluasi jumlah PO outstanding.",
-                "PO Tanpa Kebutuhan SO" => "PO melebihi kebutuhan SO saat ini, tetapi item masih bergerak. Pantau pemakaian sebelum membatalkan atau menunda PO.",
-                "Rekomendasi PO" => "Histori penjualan menunjukkan kebutuhan ke depan belum tertutup oleh stock dan PO outstanding. Evaluasi pembelian sebelum SO diterima.",
-                "Slow Moving" => "Pantau pemakaian dan batasi pembelian sampai pergerakan membaik.",
-                "Tidak ada stock" => "Tidak ada tindakan stock; evaluasi kebutuhan SO atau PO jika ada permintaan.",
-                _ => isSparePart ? "Pantau kebutuhan operasional dan jadwal maintenance." : "Persediaan dalam kondisi normal."
+                "Prioritas SO" => "Prioritaskan pemenuhan pesanan pelanggan (SO) dan percepat pembelian atau pengiriman.",
+                "Alokasi SO (Siap Kirim)" => "Stock sudah terikat pesanan pelanggan (SO). Segera proses pengiriman (Surat Jalan/DO) ke customer. Jangan clearance atau promo.",
+                "Sebagian Alokasi SO" => "Sebagian stock terikat pesanan pelanggan (SO) siap kirim; sisa unit di atas SO lama tidak bergerak dan perlu dievaluasi.",
+                "Dead Stock" => "Evaluasi promosi penjualan, pemindahan gudang cabang, clearance, atau penghentian pembelian.",
+                "Sparepart utilisasi rendah" => "Cek kebutuhan perawatan mesin dan operasional sebelum melakukan clearance.",
+                "Risiko Over Stock" => "Tunda pembelian berikutnya dan cek ulang jadwal kedatangan pesanan PO.",
+                "PO Tanpa Kebutuhan SO" => "Pesanan ke supplier (PO) melebihi pesanan pelanggan (SO), tetapi barang masih aktif laku. Pantau penjualan sebelum menunda PO.",
+                "Rekomendasi PO" => "Riwayat penjualan menunjukkan kebutuhan ke depan belum cukup dari stock dan PO aktif. Disarankan pesan ke supplier.",
+                "Slow Moving" => "Penjualan melambat. Pantau pemakaian dan batasi pembelian baru.",
+                "Tidak ada stock" => "Tidak ada saldo fisik barang; cek kebutuhan pesanan bila ada permintaan customer.",
+                _ => isSparePart ? "Pantau jadwal pemakaian dan perawatan berkala." : "Persediaan dalam kondisi normal dan lancar."
             };
         }
     }
