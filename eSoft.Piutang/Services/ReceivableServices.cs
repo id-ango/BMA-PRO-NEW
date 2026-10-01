@@ -1195,6 +1195,17 @@ namespace eSoft.Piutang.Services
                 var bayarCust = semuaBayar
                     .Where(x => dokumenCust.Contains(x.Lpb))
                     .ToList();
+                var tanggalPembayaran = bayarCust
+                    .Where(x => x.Tanggal.HasValue)
+                    .Select(x => x.Tanggal.Value.Date)
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToList();
+                var maxJedaPembayaran = tanggalPembayaran
+                    .Zip(tanggalPembayaran.Skip(1), (sebelumnya, berikutnya) => (int)(berikutnya - sebelumnya).TotalDays)
+                    .DefaultIfEmpty(0)
+                    .Max();
+                var pembayaran60HariTerakhir = tanggalPembayaran.Count(x => x >= today.AddDays(-60));
 
                 // Outstanding
                 var outstandingCust = outstanding.Where(x => x.Customer == custCode).ToList();
@@ -1304,23 +1315,33 @@ namespace eSoft.Piutang.Services
                 int    riskScore;
 
                 bool adaOutstanding = totalOutstandingBersih > 0;
+                bool pembayaranAktif = pembayaran60HariTerakhir > 0;
+                bool historiJedaSerius = maxJedaPembayaran > 60;
+                bool polaBayarCukupBaik = pembayaranAktif && !historiJedaSerius && avgDaysLate <= 30 && maxDaysLate <= 60;
 
                 if (adaOutstanding)
                 {
-                    // Ada piutang yang belum lunas — nilai dari maxHariMacet
-                    if (maxHariMacet > 60)
+                    // Jeda pembayaran customer menjadi pembeda antara benar-benar macet
+                    // dan nota lama yang masih dibayar secara berkala.
+                    if (maxHariMacet > 60 && !polaBayarCukupBaik)
                     {
-                        // Sudah >60 hari diam (tidak bayar / cicilan berhenti) → Blacklist
+                        // Sudah >60 hari diam dan tidak ada pola pembayaran aktif → Blacklist
                         riskLabel   = "Blacklist";
-                        rekomendasi = $"⛔ Ada piutang yang {maxHariMacet} hari tidak ada pembayaran. Hentikan kredit. Minta pelunasan + jaminan sebelum transaksi baru.";
+                        rekomendasi = $"⛔ Ada piutang yang {maxHariMacet} hari tidak ada pembayaran dan pola pembayaran customer belum cukup meyakinkan. Hentikan kredit sementara dan minta komitmen pelunasan.";
                         riskScore   = 5;
                     }
-                    else if (maxHariMacet > 30)
+                    else if (maxHariMacet > 30 && (!pembayaranAktif || historiJedaSerius))
                     {
-                        // 31-60 hari diam → Macet
+                        // 31-60 hari diam tanpa pola pembayaran aktif → Macet
                         riskLabel   = "Macet";
-                        rekomendasi = $"🔴 Ada piutang yang {maxHariMacet} hari tidak ada pembayaran. Tahan pengiriman. Minta komitmen bayar segera.";
+                        rekomendasi = $"🔴 Ada piutang yang {maxHariMacet} hari tidak ada pembayaran atau terdapat jeda pembayaran >60 hari. Tahan pengiriman dan minta komitmen bayar.";
                         riskScore   = 20;
+                    }
+                    else if (polaBayarCukupBaik)
+                    {
+                        riskLabel   = "Cukup";
+                        rekomendasi = "✅ Pembayaran masih aktif dan tidak ada jeda lebih dari 60 hari. Ada outstanding, tetapi histori customer cukup baik; monitor rutin.";
+                        riskScore   = 65;
                     }
                     else if (maxHariMacet > 0)
                     {
@@ -1358,11 +1379,17 @@ namespace eSoft.Piutang.Services
                 else
                 {
                     // Semua sudah lunas — nilai murni dari histori
-                    if (maxDaysLate > 60 || avgDaysLate > 45)
+                    if (historiJedaSerius && !polaBayarCukupBaik || maxDaysLate > 60 || avgDaysLate > 45)
                     {
                         riskLabel   = "Hati-hati";
-                        rekomendasi = "⚠️ Semua lunas, tapi pernah terlambat >60 hari. Setujui kredit dengan syarat ketat.";
+                        rekomendasi = "⚠️ Semua lunas, tetapi terdapat keterlambatan atau jeda pembayaran yang perlu dipantau. Setujui kredit dengan syarat sesuai limit.";
                         riskScore   = 50;
+                    }
+                    else if (polaBayarCukupBaik)
+                    {
+                        riskLabel   = "Baik";
+                        rekomendasi = "✅ Semua lunas dan pola pembayaran aktif tanpa jeda lebih dari 60 hari. Histori customer cukup baik.";
+                        riskScore   = 90;
                     }
                     else if (avgDaysLate > 15)
                     {
@@ -1403,6 +1430,8 @@ namespace eSoft.Piutang.Services
                     MaxDaysLate                = maxDaysLate,
                     OnTimeRate                 = Math.Round(onTimeRate, 1),
                     DSO                        = Math.Round(dso, 1),
+                    MaxJedaPembayaran         = maxJedaPembayaran,
+                    Pembayaran60HariTerakhir  = pembayaran60HariTerakhir,
                     RiskScore                  = riskScore,
                     RiskLabel                  = riskLabel,
                     Rekomendasi                = rekomendasi,

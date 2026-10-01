@@ -16,6 +16,9 @@
 - For the inventory analysis Excel export, use D:\Report_Stock_Analysis_20260926.xlsx as the formatting baseline, while allowing practical improvements to readability and usability rather than copying it blindly.
 - When modifying Excel exports, ensure the customer-analysis sheet remains included and is loaded before generating the workbook, even if the dashboard analysis tab has not been opened.
 
+## Customer Receivable Analysis Guidelines
+- For customer receivable analysis, evaluate payment behavior across all invoices and advances: distinguish active installment/payment cadence from a single old outstanding invoice, use approximately 60 days as the concerning inactivity threshold, and allow customers with historically good purchases/payments within two months to be classified as sufficiently good when current net exposure is covered and no severe recent delinquency exists.
+
 ## Service Refactoring Guidelines
 - When refactoring `OrderPurchaseServices`, preserve original intent: `AddTransH` passes header currency (`trans.Currency`) to item price updates; `EditTransH` originally also passed `trans.Currency`, so helpers should allow an explicit currency override.
 - Validate that refactored service logic is identical to the original before accepting changes. Continue to perform side-by-side equivalence checks when refactoring and explicitly flag any behavioral differences.

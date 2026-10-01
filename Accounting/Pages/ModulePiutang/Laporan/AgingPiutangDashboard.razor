@@ -993,6 +993,8 @@
                                     <th class="ar-th text-end">Nunggak &gt;60hr</th>
                                     <th class="ar-th text-center">Avg Terlambat</th>
                                     <th class="ar-th text-center">Max Terlambat</th>
+                                    <th class="ar-th text-center">Jeda Bayar Max</th>
+                                    <th class="ar-th text-center">Bayar 60 Hari</th>
                                     <th class="ar-th text-center">On-Time %</th>
                                     <th class="ar-th text-center">DSO (hr)</th>
                                     <th class="ar-th" style="min-width:300px;">Rekomendasi</th>
@@ -1060,6 +1062,8 @@
                                         </td>
                                         <td class="text-center">@GetDaysLateBadge(a.AvgDaysLate, false)</td>
                                         <td class="text-center">@GetDaysLateBadge(a.MaxDaysLate, true)</td>
+                                        <td class="text-center">@GetDaysLateBadge(a.MaxJedaPembayaran, true)</td>
+                                        <td class="text-center">@a.Pembayaran60HariTerakhir</td>
                                         <td class="text-center">@GetOnTimeRateBadge(a.OnTimeRate)</td>
                                         <td class="text-center">@GetDsoBadge(a.DSO)</td>
                                         <td style="font-size:0.78rem; white-space:normal; max-width:300px;">@a.Rekomendasi</td>

@@ -70,6 +70,12 @@ namespace eSoft.Piutang.View
         /// <summary>DSO — Days Sales Outstanding.</summary>
         public double DSO { get; set; }
 
+        /// <summary>Jeda terpanjang antar pembayaran customer dalam hari.</summary>
+        public int MaxJedaPembayaran { get; set; }
+
+        /// <summary>Jumlah pembayaran customer dalam 60 hari terakhir.</summary>
+        public int Pembayaran60HariTerakhir { get; set; }
+
         // ── Label & Rekomendasi ─────────────────────────────────
         public int RiskScore { get; set; }
 

@@ -1085,7 +1085,7 @@ namespace Accounting.Services
                     "Outstanding Bruto", "Uang Muka", "Outstanding Bersih",
                     "Faktur Open", "Cicilan", "Diam (hr)", "Tgl Bayar Terakhir",
                     "Nunggak >60hr", "Nilai Nunggak >60hr",
-                    "Avg Terlambat (hr)", "Max Terlambat (hr)", "On-Time %",
+                    "Avg Terlambat (hr)", "Max Terlambat (hr)", "Jeda Bayar Max (hr)", "Bayar 60 Hari", "On-Time %",
                     "DSO (hr)", "Total Transaksi"
                 };
                 for (int i = 0; i < anH.Length; i++)
@@ -1132,12 +1132,14 @@ namespace Accounting.Services
                     wsAn.Cell(anRow, 16).Value = a.AvgDaysLate;
                     wsAn.Cell(anRow, 16).Style.NumberFormat.Format = "0.0";
                     wsAn.Cell(anRow, 17).Value = a.MaxDaysLate;
-                    wsAn.Cell(anRow, 18).Value = a.OnTimeRate;
-                    wsAn.Cell(anRow, 18).Style.NumberFormat.Format = "0.0\"%\"";
-                    wsAn.Cell(anRow, 19).Value = a.DSO;
-                    wsAn.Cell(anRow, 19).Style.NumberFormat.Format = "0.0";
-                    wsAn.Cell(anRow, 20).Value = a.TotalNilaiTransaksi;
-                    wsAn.Cell(anRow, 20).Style.NumberFormat.Format = "#,##0";
+                    wsAn.Cell(anRow, 18).Value = a.MaxJedaPembayaran;
+                    wsAn.Cell(anRow, 19).Value = a.Pembayaran60HariTerakhir;
+                    wsAn.Cell(anRow, 20).Value = a.OnTimeRate;
+                    wsAn.Cell(anRow, 20).Style.NumberFormat.Format = "0.0\"%\"";
+                    wsAn.Cell(anRow, 21).Value = a.DSO;
+                    wsAn.Cell(anRow, 21).Style.NumberFormat.Format = "0.0";
+                    wsAn.Cell(anRow, 22).Value = a.TotalNilaiTransaksi;
+                    wsAn.Cell(anRow, 22).Style.NumberFormat.Format = "#,##0";
 
                     // Warna baris sesuai risiko
                     XLColor anBg = a.RiskLabel switch
