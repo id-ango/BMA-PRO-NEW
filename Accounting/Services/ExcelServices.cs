@@ -1039,11 +1039,123 @@ namespace Accounting.Services
             ws.Range(1, 1, row, 20).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
             ws.Columns().AdjustToContents();
 
-            // ── Sheet 2: Forecast Bulanan ────────────────────────────
+            // ── Sheet 2: Outstanding Customer ────────────────────────
+            var wsCustomer = workbook.Worksheets.Add("Outstanding Customer");
+            string[] customerHeaders = { "No", "Customer", "Kode Customer", "Total Sisa", "Jumlah Dokumen", "Terlambat Max (hr)", "Salesman" };
+            for (int i = 0; i < customerHeaders.Length; i++)
+            {
+                var cell = wsCustomer.Cell(1, i + 1);
+                cell.Value = customerHeaders[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = XLColor.DarkSlateGray;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+
+            var customerSummary = aging
+                .GroupBy(x => new { x.Customer, x.NamaCust })
+                .Select(x => new
+                {
+                    x.Key.Customer,
+                    x.Key.NamaCust,
+                    TotalSisa = x.Sum(y => y.Sisa),
+                    JumlahDokumen = x.Count(),
+                    MaxHari = x.Max(y => Math.Max(0, (int)(DateTime.Today - y.Duedate).TotalDays)),
+                    Salesman = string.Join(", ", x.Select(y => salesmanNames.TryGetValue(y.Salesman ?? string.Empty, out var nama) ? nama : (y.NamaSales ?? y.Salesman))
+                        .Where(y => !string.IsNullOrWhiteSpace(y))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(y => y))
+                })
+                .OrderByDescending(x => x.TotalSisa)
+                .ThenBy(x => x.NamaCust)
+                .ToList();
+
+            int customerRow = 2;
+            int customerNo = 1;
+            foreach (var item in customerSummary)
+            {
+                wsCustomer.Cell(customerRow, 1).Value = customerNo++;
+                wsCustomer.Cell(customerRow, 2).Value = item.NamaCust;
+                wsCustomer.Cell(customerRow, 3).Value = item.Customer;
+                wsCustomer.Cell(customerRow, 4).Value = item.TotalSisa;
+                wsCustomer.Cell(customerRow, 4).Style.NumberFormat.Format = "#,##0";
+                wsCustomer.Cell(customerRow, 5).Value = item.JumlahDokumen;
+                wsCustomer.Cell(customerRow, 6).Value = item.MaxHari;
+                wsCustomer.Cell(customerRow, 7).Value = item.Salesman;
+                customerRow++;
+            }
+
+            wsCustomer.Cell(customerRow, 1).Value = "TOTAL";
+            wsCustomer.Cell(customerRow, 1).Style.Font.Bold = true;
+            wsCustomer.Cell(customerRow, 4).FormulaA1 = $"=SUM({wsCustomer.Cell(2, 4).Address}:{wsCustomer.Cell(customerRow - 1, 4).Address})";
+            wsCustomer.Cell(customerRow, 4).Style.NumberFormat.Format = "#,##0";
+            wsCustomer.Range(customerRow, 1, customerRow, customerHeaders.Length).Style.Font.Bold = true;
+            wsCustomer.Range(customerRow, 1, customerRow, customerHeaders.Length).Style.Fill.BackgroundColor = XLColor.DarkSlateGray;
+            wsCustomer.Range(customerRow, 1, customerRow, customerHeaders.Length).Style.Font.FontColor = XLColor.White;
+            wsCustomer.Range(1, 1, customerRow, customerHeaders.Length).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            wsCustomer.Range(1, 1, customerRow, customerHeaders.Length).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            wsCustomer.Columns().AdjustToContents();
+
+            // ── Sheet 3: Piutang per Salesman ────────────────────────
+            var wsSalesman = workbook.Worksheets.Add("Piutang per Salesman");
+            string[] salesmanHeaders = { "No", "Salesman", "Total Sisa", "Sisa >60 Hari", "Jumlah Customer" };
+            for (int i = 0; i < salesmanHeaders.Length; i++)
+            {
+                var cell = wsSalesman.Cell(1, i + 1);
+                cell.Value = salesmanHeaders[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = XLColor.DarkSlateGray;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+
+            var salesmanSummary = aging
+                .GroupBy(x => string.IsNullOrWhiteSpace(x.NamaSales)
+                    ? (string.IsNullOrWhiteSpace(x.Salesman) ? "(kosong)" : x.Salesman)
+                    : x.NamaSales)
+                .Select(x => new
+                {
+                    Salesman = x.Key,
+                    TotalSisa = x.Sum(y => y.Sisa),
+                    Sisa60 = x.Where(y => (int)(DateTime.Today - y.Duedate).TotalDays > 60).Sum(y => y.Sisa),
+                    JumlahCustomer = x.Select(y => y.Customer).Distinct().Count()
+                })
+                .OrderByDescending(x => x.TotalSisa)
+                .ToList();
+
+            int salesmanRow = 2;
+            int salesmanNo = 1;
+            foreach (var item in salesmanSummary)
+            {
+                wsSalesman.Cell(salesmanRow, 1).Value = salesmanNo++;
+                wsSalesman.Cell(salesmanRow, 2).Value = item.Salesman;
+                wsSalesman.Cell(salesmanRow, 3).Value = item.TotalSisa;
+                wsSalesman.Cell(salesmanRow, 3).Style.NumberFormat.Format = "#,##0";
+                wsSalesman.Cell(salesmanRow, 4).Value = item.Sisa60;
+                wsSalesman.Cell(salesmanRow, 4).Style.NumberFormat.Format = "#,##0";
+                wsSalesman.Cell(salesmanRow, 5).Value = item.JumlahCustomer;
+                salesmanRow++;
+            }
+
+            wsSalesman.Cell(salesmanRow, 1).Value = "TOTAL";
+            wsSalesman.Cell(salesmanRow, 1).Style.Font.Bold = true;
+            foreach (var column in new[] { 3, 4 })
+            {
+                wsSalesman.Cell(salesmanRow, column).FormulaA1 = $"=SUM({wsSalesman.Cell(2, column).Address}:{wsSalesman.Cell(salesmanRow - 1, column).Address})";
+                wsSalesman.Cell(salesmanRow, column).Style.NumberFormat.Format = "#,##0";
+            }
+            wsSalesman.Range(salesmanRow, 1, salesmanRow, salesmanHeaders.Length).Style.Font.Bold = true;
+            wsSalesman.Range(salesmanRow, 1, salesmanRow, salesmanHeaders.Length).Style.Fill.BackgroundColor = XLColor.DarkSlateGray;
+            wsSalesman.Range(salesmanRow, 1, salesmanRow, salesmanHeaders.Length).Style.Font.FontColor = XLColor.White;
+            wsSalesman.Range(1, 1, salesmanRow, salesmanHeaders.Length).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            wsSalesman.Range(1, 1, salesmanRow, salesmanHeaders.Length).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            wsSalesman.Columns().AdjustToContents();
+
+            // ── Sheet 4: Forecast Bulanan ────────────────────────────
             if (forecast != null && forecast.Any())
             {
                 var wsFc = workbook.Worksheets.Add("Forecast Tagihan");
-                string[] fcH = { "Bulan", "Tahun", "Dok", "Customer", "Due Date", "Sisa", "Salesman", "Keterangan" };
+                string[] fcH = { "Bulan", "Tahun", "Dok", "Customer", "Estimasi Tanggal", "Estimasi Tagihan", "Sisa", "Dasar Forecast", "Salesman", "Keterangan" };
                 for (int i = 0; i < fcH.Length; i++)
                 {
                     var hc = wsFc.Cell(1, i + 1);
@@ -1063,15 +1175,18 @@ namespace Accounting.Services
                         wsFc.Cell(fcRow, 3).Value = d.Dokumen;
                         wsFc.Cell(fcRow, 4).Value = d.NamaCust;
                         wsFc.Cell(fcRow, 5).Value = d.DueDate.ToString("dd/MM/yyyy");
-                        wsFc.Cell(fcRow, 6).Value = d.Sisa;
+                        wsFc.Cell(fcRow, 6).Value = d.EstimasiTagihan;
                         wsFc.Cell(fcRow, 6).Style.NumberFormat.Format = "#,##0";
-                        wsFc.Cell(fcRow, 7).Value = d.Salesman;
-                        wsFc.Cell(fcRow, 8).Value = d.Keterangan;
+                        wsFc.Cell(fcRow, 7).Value = d.Sisa;
+                        wsFc.Cell(fcRow, 7).Style.NumberFormat.Format = "#,##0";
+                        wsFc.Cell(fcRow, 8).Value = d.DasarForecast;
+                        wsFc.Cell(fcRow, 9).Value = d.Salesman;
+                        wsFc.Cell(fcRow, 10).Value = d.Keterangan;
                         fcRow++;
                     }
                 }
-                wsFc.Range(1, 1, fcRow - 1, 8).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-                wsFc.Range(1, 1, fcRow - 1, 8).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                wsFc.Range(1, 1, fcRow - 1, 10).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                wsFc.Range(1, 1, fcRow - 1, 10).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
                 wsFc.Columns().AdjustToContents();
             }
 

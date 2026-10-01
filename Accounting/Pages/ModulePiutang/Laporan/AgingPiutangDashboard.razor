@@ -802,7 +802,7 @@
         {
             <div class="container-fluid ar-scroll-area">
                 <p class="text-muted mb-2" style="font-size:0.85rem;">
-                    Tagihan yang akan jatuh tempo berdasarkan Due Date dari piutang yang belum lunas. Klik bulan untuk lihat detail.
+                    Estimasi tagihan berdasarkan cicilan terakhir + 30 hari. Jika belum ada cicilan, digunakan jatuh tempo yang tersedia. Klik bulan untuk lihat detail.
                 </p>
                 @if (!ForecastData.Any())
                 {
@@ -842,7 +842,8 @@
                                                     <tr>
                                                         <th>Customer</th>
                                                         <th>Dokumen</th>
-                                                        <th>Due Date</th>
+                                                        <th>Estimasi Tanggal</th>
+                                                        <th class="text-end">Estimasi Tagihan</th>
                                                         <th class="text-end">Sisa</th>
                                                         <th>Salesman</th>
                                                         <th>Keterangan</th>
@@ -854,8 +855,9 @@
                                                         <tr>
                                                             <td><strong>@d.NamaCust</strong></td>
                                                             <td>@d.Dokumen</td>
-                                                            <td>@d.DueDate.ToString("dd/MM/yy")</td>
-                                                            <td class="text-end fw-bold">@d.Sisa.ToString("N0")</td>
+                                                        <td title="@d.DasarForecast">@d.DueDate.ToString("dd/MM/yy")</td>
+                                                        <td class="text-end fw-bold">@d.EstimasiTagihan.ToString("N0")</td>
+                                                        <td class="text-end">@d.Sisa.ToString("N0")</td>
                                                             <td>@d.Salesman</td>
                                                             <td title="@d.Keterangan" style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@d.Keterangan</td>
                                                         </tr>

@@ -1049,21 +1049,50 @@ namespace eSoft.Piutang.Services
         {
             var tanggalAkhir = tanggalMulai.AddMonths(jumlahBulan);
 
-            // Ambil piutang yang belum lunas
             var piutangBelumLunas = _context.ArPiutngs
                 .AsNoTracking()
                 .Where(x => x.Sisa > 0)
+                .ToList();
+
+            var dokumen = piutangBelumLunas.Select(x => x.Dokumen).ToList();
+            var pembayaran = _context.ArTransDs
+                .AsNoTracking()
+                .Where(x => dokumen.Contains(x.Lpb) && (x.Bayar > 0 || x.Discount > 0))
+                .Select(x => new { x.Lpb, x.Tanggal, x.Bayar, x.Discount })
                 .ToList()
-                .Where(x =>
+                .GroupBy(x => x.Lpb)
+                .ToDictionary(x => x.Key, x => x.OrderBy(y => y.Tanggal).ToList());
+
+            var forecastDetails = piutangBelumLunas
+                .Select(x =>
                 {
-                    var dueDate = x.DueDate ?? x.Tanggal;
-                    return dueDate >= tanggalMulai && dueDate < tanggalAkhir;
+                    pembayaran.TryGetValue(x.Dokumen, out var riwayatBayar);
+                    var pembayaranTerakhir = riwayatBayar?.LastOrDefault();
+                    var dasarPembayaran = pembayaranTerakhir != null;
+                    var tanggalForecast = dasarPembayaran
+                        ? pembayaranTerakhir.Tanggal.Date.AddDays(30)
+                        : (x.DueDate ?? tanggalMulai).Date;
+                    var nilaiPembayaranTerakhir = dasarPembayaran
+                        ? pembayaranTerakhir.Bayar + pembayaranTerakhir.Discount
+                        : x.Sisa;
+                    var estimasiTagihan = Math.Min(x.Sisa, nilaiPembayaranTerakhir);
+
+                    return new
+                    {
+                        Piutang = x,
+                        TanggalForecast = tanggalForecast,
+                        EstimasiTagihan = Math.Max(0, estimasiTagihan),
+                        DasarForecast = dasarPembayaran
+                            ? "Cicilan terakhir + 30 hari"
+                            : "Belum ada cicilan; memakai jatuh tempo"
+                    };
                 })
-                .OrderBy(x => x.DueDate ?? x.Tanggal)
+                .Where(x => x.TanggalForecast >= tanggalMulai && x.TanggalForecast < tanggalAkhir)
+                .OrderBy(x => x.TanggalForecast)
                 .ToList();
 
             // Load customer untuk lookup nama
-            var customerIds = piutangBelumLunas.Select(x => x.Customer).Distinct().ToList();
+            var customerIds = forecastDetails.Select(x => x.Piutang.Customer).Distinct().ToList();
             var customers = _context.ArCusts
                 .AsNoTracking()
                 .Where(x => customerIds.Contains(x.Customer))
@@ -1077,12 +1106,8 @@ namespace eSoft.Piutang.Services
                 var bulanInt = bulan.Month;
                 var tahunInt = bulan.Year;
 
-                var piutangBulan = piutangBelumLunas
-                    .Where(x =>
-                    {
-                        var dueDate = x.DueDate ?? x.Tanggal;
-                        return dueDate.Year == tahunInt && dueDate.Month == bulanInt;
-                    })
+                var detailBulan = forecastDetails
+                    .Where(x => x.TanggalForecast.Year == tahunInt && x.TanggalForecast.Month == bulanInt)
                     .ToList();
 
                 forecast.Add(new ArForecastPiutangView
@@ -1091,20 +1116,22 @@ namespace eSoft.Piutang.Services
                     Tahun = tahunInt,
                     NamaBulan = new DateTime(tahunInt, bulanInt, 1).ToString("MMMM yyyy",
                         new System.Globalization.CultureInfo("id-ID")),
-                    TotalTagihan = piutangBulan.Sum(x => x.Sisa),
-                    JumlahDokumen = piutangBulan.Count,
-                    Details = piutangBulan.Select(x => new ArPiutangForecastDetail
+                    TotalTagihan = detailBulan.Sum(x => x.EstimasiTagihan),
+                    JumlahDokumen = detailBulan.Count,
+                    Details = detailBulan.Select(item => new ArPiutangForecastDetail
                     {
-                        Dokumen = x.Dokumen,
-                        Tanggal = x.Tanggal,
-                        DueDate = x.DueDate ?? x.Tanggal,
-                        Customer = x.Customer,
-                        NamaCust = customers.TryGetValue(x.Customer, out var nama) ? nama : x.Customer,
-                        Jumlah = x.Jumlah,
-                        Bayar = x.Bayar,
-                        Sisa = x.Sisa,
-                        Keterangan = x.Keterangan,
-                        Salesman = x.Salesman
+                        Dokumen = item.Piutang.Dokumen,
+                        Tanggal = item.Piutang.Tanggal,
+                        DueDate = item.TanggalForecast,
+                        Customer = item.Piutang.Customer,
+                        NamaCust = customers.TryGetValue(item.Piutang.Customer, out var nama) ? nama : item.Piutang.Customer,
+                        Jumlah = item.Piutang.Jumlah,
+                        Bayar = item.EstimasiTagihan,
+                        Sisa = item.Piutang.Sisa,
+                        EstimasiTagihan = item.EstimasiTagihan,
+                        DasarForecast = item.DasarForecast,
+                        Keterangan = item.Piutang.Keterangan,
+                        Salesman = item.Piutang.Salesman
                     }).ToList()
                 });
             }

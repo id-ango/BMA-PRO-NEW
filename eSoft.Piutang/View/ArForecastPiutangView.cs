@@ -23,6 +23,8 @@ namespace eSoft.Piutang.View
         public decimal Jumlah { get; set; }
         public decimal Bayar { get; set; }
         public decimal Sisa { get; set; }
+        public decimal EstimasiTagihan { get; set; }
+        public string DasarForecast { get; set; }
         public string Keterangan { get; set; }
         public string Salesman { get; set; }
     }
