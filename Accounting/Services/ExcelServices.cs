@@ -1180,7 +1180,9 @@ namespace Accounting.Services
                         wsFc.Cell(fcRow, 7).Value = d.Sisa;
                         wsFc.Cell(fcRow, 7).Style.NumberFormat.Format = "#,##0";
                         wsFc.Cell(fcRow, 8).Value = d.DasarForecast;
-                        wsFc.Cell(fcRow, 9).Value = d.Salesman;
+                        wsFc.Cell(fcRow, 9).Value = salesmanNames.TryGetValue(d.Salesman ?? string.Empty, out var forecastNamaSales)
+                            ? forecastNamaSales
+                            : d.Salesman;
                         wsFc.Cell(fcRow, 10).Value = d.Keterangan;
                         fcRow++;
                     }
@@ -1201,7 +1203,7 @@ namespace Accounting.Services
                     "Faktur Open", "Cicilan", "Diam (hr)", "Tgl Bayar Terakhir",
                     "Nunggak >60hr", "Nilai Nunggak >60hr",
                     "Avg Terlambat (hr)", "Max Terlambat (hr)", "Jeda Bayar Max (hr)", "Bayar 60 Hari", "On-Time %",
-                    "DSO (hr)", "Total Transaksi"
+                    "DSO (hr)", "Total Invoice Historis (All Time)"
                 };
                 for (int i = 0; i < anH.Length; i++)
                 {

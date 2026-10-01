@@ -1069,9 +1069,13 @@ namespace eSoft.Piutang.Services
                     pembayaran.TryGetValue(x.Dokumen, out var riwayatBayar);
                     var pembayaranTerakhir = riwayatBayar?.LastOrDefault();
                     var dasarPembayaran = pembayaranTerakhir != null;
+                    var dueDateTersedia = x.DueDate?.Date;
+                    var invoiceSudahJatuhTempo = dueDateTersedia.HasValue && dueDateTersedia.Value < tanggalMulai.Date;
                     var tanggalForecast = dasarPembayaran
                         ? pembayaranTerakhir.Tanggal.Date.AddDays(30)
-                        : (x.DueDate ?? tanggalMulai).Date;
+                        : invoiceSudahJatuhTempo || !dueDateTersedia.HasValue
+                            ? tanggalMulai.Date
+                            : dueDateTersedia.Value;
                     var nilaiPembayaranTerakhir = dasarPembayaran
                         ? pembayaranTerakhir.Bayar + pembayaranTerakhir.Discount
                         : x.Sisa;
@@ -1084,7 +1088,9 @@ namespace eSoft.Piutang.Services
                         EstimasiTagihan = Math.Max(0, estimasiTagihan),
                         DasarForecast = dasarPembayaran
                             ? "Cicilan terakhir + 30 hari"
-                            : "Belum ada cicilan; memakai jatuh tempo"
+                            : invoiceSudahJatuhTempo
+                                ? "Belum ada cicilan; sudah jatuh tempo, ditagihkan sekarang"
+                                : "Belum ada cicilan; memakai jatuh tempo"
                     };
                 })
                 .Where(x => x.TanggalForecast >= tanggalMulai && x.TanggalForecast < tanggalAkhir)

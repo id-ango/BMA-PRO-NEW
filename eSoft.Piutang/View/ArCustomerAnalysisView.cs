@@ -53,6 +53,7 @@ namespace eSoft.Piutang.View
         // ── Histori keseluruhan (untuk catatan, bukan penentu label utama) ──
         public int TotalFaktur { get; set; }
         public int FakturLunas { get; set; }
+        /// <summary>Total nilai invoice non-CA dari seluruh histori sampai hari ini.</summary>
         public decimal TotalNilaiTransaksi { get; set; }
 
         /// <summary>Rata-rata hari dari invoice ke pembayaran (faktur lunas).</summary>
