@@ -77,6 +77,21 @@ namespace eSoft.Piutang.View
         /// <summary>Jumlah pembayaran customer dalam 60 hari terakhir.</summary>
         public int Pembayaran60HariTerakhir { get; set; }
 
+        /// <summary>Umur perilaku customer yang menjadi dasar bucket aging customer.</summary>
+        public int UmurAgingCustomer { get; set; }
+
+        /// <summary>Outstanding bersih dengan aktivitas 0-30 hari.</summary>
+        public decimal AgingCustomer030 { get; set; }
+
+        /// <summary>Outstanding bersih dengan aktivitas 31-60 hari.</summary>
+        public decimal AgingCustomer3160 { get; set; }
+
+        /// <summary>Outstanding bersih dengan aktivitas 61-90 hari.</summary>
+        public decimal AgingCustomer6190 { get; set; }
+
+        /// <summary>Outstanding bersih dengan aktivitas lebih dari 90 hari.</summary>
+        public decimal AgingCustomer90Plus { get; set; }
+
         // ── Label & Rekomendasi ─────────────────────────────────
         public int RiskScore { get; set; }
 

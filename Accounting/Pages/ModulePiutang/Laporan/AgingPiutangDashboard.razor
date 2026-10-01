@@ -976,6 +976,22 @@
                         </div>
                     </div>
 
+                    @* ── Aging customer: perilaku pembayaran, bukan aging per nota ── *@
+                    <div class="card border-primary mb-2">
+                        <div class="card-header py-2 bg-primary text-white">
+                            <strong>Aging Customer (Perilaku)</strong>
+                            <small class="ms-2">Outstanding bersih dikelompokkan berdasarkan umur customer tidak aktif membayar</small>
+                        </div>
+                        <div class="card-body p-2">
+                            <div class="row g-2 text-end">
+                                <div class="col-6 col-md-3"><small class="d-block text-muted">0-30 hari</small><strong class="text-success">@FilteredAnalisa.Sum(x => x.AgingCustomer030).ToString("N0")</strong></div>
+                                <div class="col-6 col-md-3"><small class="d-block text-muted">31-60 hari</small><strong style="color:#d68910;">@FilteredAnalisa.Sum(x => x.AgingCustomer3160).ToString("N0")</strong></div>
+                                <div class="col-6 col-md-3"><small class="d-block text-muted">61-90 hari</small><strong style="color:#e67e22;">@FilteredAnalisa.Sum(x => x.AgingCustomer6190).ToString("N0")</strong></div>
+                                <div class="col-6 col-md-3"><small class="d-block text-muted">&gt;90 hari</small><strong class="text-danger">@FilteredAnalisa.Sum(x => x.AgingCustomer90Plus).ToString("N0")</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
                     @* ── Tabel analisa ── *@
                     <div class="ar-table-wrapper" style="max-height:calc(100vh - 340px);">
                         <table class="table table-sm ar-table" style="border-collapse:separate;border-spacing:0;font-size:0.81rem;white-space:nowrap;margin:0;">
@@ -988,6 +1004,7 @@
                                     <th class="ar-th text-end">Outstanding Bruto</th>
                                     <th class="ar-th text-end">Uang Muka</th>
                                     <th class="ar-th text-end">Outstanding Bersih</th>
+                                     <th class="ar-th text-center">Aging Customer</th>
                                     <th class="ar-th text-center">Faktur Open</th>
                                     <th class="ar-th text-center">Cicilan</th>
                                     <th class="ar-th text-center">Diam (hr)</th>
@@ -1024,6 +1041,28 @@
                                             }
                                         </td>
                                         <td class="text-end fw-bold">@a.TotalOutstandingBersih.ToString("N0")</td>
+                                         <td class="text-center">
+                                             @if (a.TotalOutstandingBersih == 0)
+                                             {
+                                                 <span class="ar-badge ar-badge-baru">Lunas</span>
+                                             }
+                                             else if (a.UmurAgingCustomer <= 30)
+                                             {
+                                                 <span class="ar-badge ar-badge-baru">0-30 hr</span>
+                                             }
+                                             else if (a.UmurAgingCustomer <= 60)
+                                             {
+                                                 <span class="ar-badge" style="background:#fff3cd;color:#856404;">31-60 hr</span>
+                                             }
+                                             else if (a.UmurAgingCustomer <= 90)
+                                             {
+                                                 <span class="ar-badge" style="background:#ffe5d0;color:#a04b00;">61-90 hr</span>
+                                             }
+                                             else
+                                             {
+                                                 <span class="ar-badge ar-badge-lama">&gt;90 hr</span>
+                                             }
+                                         </td>
                                         <td class="text-center">@a.JumlahFakturOpen</td>
                                         <td class="text-center">
                                             @if (a.JumlahFakturCicilan == 0)

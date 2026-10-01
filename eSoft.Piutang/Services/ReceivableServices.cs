@@ -1332,6 +1332,27 @@ namespace eSoft.Piutang.Services
                     }
                 }
 
+                // Aging customer adalah aging perilaku, bukan aging per nota.
+                // Seluruh outstanding bersih ditempatkan pada bucket berdasarkan
+                // umur terlama sejak pembayaran/aktivitas customer berhenti.
+                int umurAgingCustomer = totalOutstandingBersih > 0 ? maxHariMacet : 0;
+                decimal agingCustomer030 = 0;
+                decimal agingCustomer3160 = 0;
+                decimal agingCustomer6190 = 0;
+                decimal agingCustomer90Plus = 0;
+
+                if (totalOutstandingBersih > 0)
+                {
+                    if (umurAgingCustomer <= 30)
+                        agingCustomer030 = totalOutstandingBersih;
+                    else if (umurAgingCustomer <= 60)
+                        agingCustomer3160 = totalOutstandingBersih;
+                    else if (umurAgingCustomer <= 90)
+                        agingCustomer6190 = totalOutstandingBersih;
+                    else
+                        agingCustomer90Plus = totalOutstandingBersih;
+                }
+
                 // ── DSO ───────────────────────────────────────────────────────
                 var cutoff12bln = today.AddMonths(-12);
                 decimal penjualan12bln = fakturCust
@@ -1465,6 +1486,11 @@ namespace eSoft.Piutang.Services
                     DSO                        = Math.Round(dso, 1),
                     MaxJedaPembayaran         = maxJedaPembayaran,
                     Pembayaran60HariTerakhir  = pembayaran60HariTerakhir,
+                     UmurAgingCustomer         = umurAgingCustomer,
+                     AgingCustomer030          = agingCustomer030,
+                     AgingCustomer3160         = agingCustomer3160,
+                     AgingCustomer6190         = agingCustomer6190,
+                     AgingCustomer90Plus       = agingCustomer90Plus,
                     RiskScore                  = riskScore,
                     RiskLabel                  = riskLabel,
                     Rekomendasi                = rekomendasi,

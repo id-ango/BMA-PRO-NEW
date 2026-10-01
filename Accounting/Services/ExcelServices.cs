@@ -1203,7 +1203,9 @@ namespace Accounting.Services
                     "Faktur Open", "Cicilan", "Diam (hr)", "Tgl Bayar Terakhir",
                     "Nunggak >60hr", "Nilai Nunggak >60hr",
                     "Avg Terlambat (hr)", "Max Terlambat (hr)", "Jeda Bayar Max (hr)", "Bayar 60 Hari", "On-Time %",
-                    "DSO (hr)", "Total Invoice Historis (All Time)"
+                     "DSO (hr)", "Total Invoice Historis (All Time)",
+                     "Umur Aging Customer (hr)", "Aging Customer 0-30", "Aging Customer 31-60",
+                     "Aging Customer 61-90", "Aging Customer >90"
                 };
                 for (int i = 0; i < anH.Length; i++)
                 {
@@ -1257,6 +1259,12 @@ namespace Accounting.Services
                     wsAn.Cell(anRow, 21).Style.NumberFormat.Format = "0.0";
                     wsAn.Cell(anRow, 22).Value = a.TotalNilaiTransaksi;
                     wsAn.Cell(anRow, 22).Style.NumberFormat.Format = "#,##0";
+                     wsAn.Cell(anRow, 23).Value = a.UmurAgingCustomer;
+                     wsAn.Cell(anRow, 24).Value = a.AgingCustomer030;
+                     wsAn.Cell(anRow, 25).Value = a.AgingCustomer3160;
+                     wsAn.Cell(anRow, 26).Value = a.AgingCustomer6190;
+                     wsAn.Cell(anRow, 27).Value = a.AgingCustomer90Plus;
+                     wsAn.Range(anRow, 24, anRow, 27).Style.NumberFormat.Format = "#,##0";
 
                     // Warna baris sesuai risiko
                     XLColor anBg = a.RiskLabel switch
