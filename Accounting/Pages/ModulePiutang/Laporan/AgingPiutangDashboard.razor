@@ -2,10 +2,13 @@
 @using eSoft.Piutang.View
 @using eSoft.Piutang.Services
 @using Accounting.Services
+@using eSoft.Penjualan.Model
+@using eSoft.Penjualan.Services
 @using System.IO
 
 @inject IReceivableServices serviceAR
 @inject IExcelServices serviceXL
+@inject ISalesmanMasterService serviceSales
 @inject IJSRuntime JS
 
 <div class="ar-page-shell">
@@ -1002,7 +1005,7 @@
                                     var scoreBar = GetScoreBar(a.RiskScore);
                                     <tr style="background:@rowBg;">
                                         <td class="ar-sticky-col-1 fw-bold" style="background:@rowBg;">@a.NamaCust</td>
-                                        <td style="font-size:0.75rem; white-space:normal;">@(string.IsNullOrWhiteSpace(a.Salesman) ? "-" : a.Salesman)</td>
+                                        <td style="font-size:0.75rem; white-space:normal;">@(string.IsNullOrWhiteSpace(a.NamaSales) ? (string.IsNullOrWhiteSpace(a.Salesman) ? "-" : a.Salesman) : a.NamaSales)</td>
                                         <td class="text-center">@scoreBar</td>
                                         <td class="text-center">@labelBadge</td>
                                         <td class="text-end">@a.TotalOutstanding.ToString("N0")</td>
@@ -1152,6 +1155,20 @@
     {
         Aging = serviceAR.GetAgingSchedule();
         ForecastData = serviceAR.GetForecastPiutang(DateTime.Today, 12);
+        var salesmanNames = serviceSales.GetSalesman()
+            .Where(x => !string.IsNullOrWhiteSpace(x.Salesman))
+            .GroupBy(x => x.Salesman, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.First().NamaSales ?? x.Key, StringComparer.OrdinalIgnoreCase);
+
+        if (Aging != null)
+        {
+            foreach (var item in Aging)
+            {
+                item.NamaSales = salesmanNames.TryGetValue(item.Salesman ?? string.Empty, out var nama)
+                    ? nama
+                    : item.Salesman;
+            }
+        }
     }
 
     private void Refresh()
@@ -1198,7 +1215,7 @@
             if (!string.IsNullOrWhiteSpace(AnalisaFilterLabel))
                 q = q.Where(x => x.RiskLabel == AnalisaFilterLabel);
             if (!string.IsNullOrWhiteSpace(AnalisaSearch))
-                q = q.Where(x => $"{x.NamaCust} {x.Customer} {x.Salesman}"
+                q = q.Where(x => $"{x.NamaCust} {x.Customer} {x.Salesman} {x.NamaSales}"
                     .Contains(AnalisaSearch, StringComparison.OrdinalIgnoreCase));
             return q.ToList();
         }
@@ -1232,6 +1249,18 @@
         AnalisaLoading = true;
         StateHasChanged();
         AnalisaData = await Task.Run(() => serviceAR.GetCustomerAnalysis());
+        var salesmanNames = serviceSales.GetSalesman()
+            .Where(x => !string.IsNullOrWhiteSpace(x.Salesman))
+            .GroupBy(x => x.Salesman, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.First().NamaSales ?? x.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in AnalisaData)
+        {
+            item.NamaSales = string.Join(", ", (item.Salesman ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => salesmanNames.TryGetValue(x, out var nama) ? nama : x)
+                .Distinct(StringComparer.OrdinalIgnoreCase));
+        }
         AnalisaLoading = false;
     }
 

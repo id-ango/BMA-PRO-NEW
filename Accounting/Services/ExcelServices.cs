@@ -928,6 +928,11 @@ namespace Accounting.Services
 
             // ── Sheet 1: Aging Schedule ──────────────────────────────
             var ws = workbook.Worksheets.Add("Aging Schedule");
+            var salesmanNames = _context.OeSalesmans
+                .AsNoTracking()
+                .Where(x => !string.IsNullOrWhiteSpace(x.Salesman))
+                .GroupBy(x => x.Salesman)
+                .ToDictionary(x => x.Key, x => x.First().NamaSales ?? x.Key, StringComparer.OrdinalIgnoreCase);
 
             string[] headers = {
                 "No", "Customer", "Dokumen", "Tanggal", "Due Date", "Terlambat (hr)",
@@ -947,7 +952,12 @@ namespace Accounting.Services
             // Warnai kelompok header bayar (kolom 7-12)
             ws.Range(1, 7, 1, 12).Style.Fill.BackgroundColor = XLColor.FromHtml("#084298");
 
-            var agingSorted = aging.OrderBy(x => x.Duedate).ThenBy(x => x.Customer).ToList();
+            var agingSorted = aging
+                .OrderBy(x => x.NamaCust)
+                .ThenBy(x => x.Customer)
+                .ThenBy(x => x.Tanggal)
+                .ThenBy(x => x.Dokumen)
+                .ToList();
             int row = 2;
             int no = 1;
             foreach (var a in agingSorted)
@@ -993,7 +1003,9 @@ namespace Accounting.Services
                 ws.Cell(row, 16).Value = a.Jumlah2;
                 ws.Cell(row, 17).Value = a.Jumlah3;
                 ws.Cell(row, 18).Value = a.Jumlah4;
-                ws.Cell(row, 19).Value = a.NamaSales;
+                ws.Cell(row, 19).Value = salesmanNames.TryGetValue(a.Salesman ?? string.Empty, out var namaSales)
+                    ? namaSales
+                    : (a.NamaSales ?? a.Salesman ?? "");
                 ws.Cell(row, 20).Value = a.Keterangan;
 
                 // Warna baris berdasarkan aging
@@ -1093,7 +1105,13 @@ namespace Accounting.Services
                 {
                     wsAn.Cell(anRow, 1).Value  = a.Customer;
                     wsAn.Cell(anRow, 2).Value  = a.NamaCust;
-                    wsAn.Cell(anRow, 3).Value  = a.Salesman;
+                    var namaSalesAnalisa = string.Join(", ", (a.Salesman ?? string.Empty)
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Select(x => salesmanNames.TryGetValue(x, out var nama) ? nama : x)
+                        .Distinct(StringComparer.OrdinalIgnoreCase));
+                    wsAn.Cell(anRow, 3).Value  = string.IsNullOrWhiteSpace(namaSalesAnalisa)
+                        ? a.NamaSales
+                        : namaSalesAnalisa;
                     wsAn.Cell(anRow, 4).Value  = a.RiskScore;
                     wsAn.Cell(anRow, 5).Value  = a.RiskLabel;
                     wsAn.Cell(anRow, 6).Value  = a.Rekomendasi;

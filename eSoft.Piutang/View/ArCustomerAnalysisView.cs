@@ -14,6 +14,8 @@ namespace eSoft.Piutang.View
         public string NamaCust { get; set; }
         /// <summary>Salesman unik yang tercatat pada seluruh faktur customer.</summary>
         public string Salesman { get; set; }
+        /// <summary>Nama salesman unik yang tercatat pada seluruh faktur customer.</summary>
+        public string NamaSales { get; set; }
 
         // ── Outstanding saat ini ────────────────────────────────
         public decimal TotalOutstanding { get; set; }
