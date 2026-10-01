@@ -1131,6 +1131,12 @@ namespace eSoft.Piutang.Services
                 .Where(x => x.Kode != "CA")
                 .ToList();
 
+            var uangMukaPerCustomer = _context.ArPiutngs
+                .AsNoTracking()
+                .Where(x => x.Kode == "CA" && x.Sisa < 0)
+                .GroupBy(x => x.Customer)
+                .ToDictionary(x => x.Key, x => x.Sum(y => -y.Sisa));
+
             // Load ArTransD tanpa Include — hanya ambil kolom yang dibutuhkan
             var semuaBayarRaw = _context.ArTransDs
                 .AsNoTracking()
@@ -1178,6 +1184,11 @@ namespace eSoft.Piutang.Services
                 var custCode = grp.Key;
                 var custInfo = customers.FirstOrDefault(x => x.Customer == custCode);
                 var fakturCust = grp.ToList();
+                var salesman = string.Join(", ", fakturCust
+                    .Select(x => x.Salesman)
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(x => x));
 
                 // Pembayaran untuk customer ini (lewat Lpb yang ada di daftar faktur customer ini)
                 var dokumenCust = new HashSet<string>(fakturCust.Select(x => x.Dokumen));
@@ -1188,6 +1199,10 @@ namespace eSoft.Piutang.Services
                 // Outstanding
                 var outstandingCust = outstanding.Where(x => x.Customer == custCode).ToList();
                 decimal totalOutstanding = outstandingCust.Sum(x => x.Sisa);
+                decimal uangMukaBelumDialokasikan = uangMukaPerCustomer.TryGetValue(custCode, out var uangMuka)
+                    ? uangMuka
+                    : 0;
+                decimal totalOutstandingBersih = Math.Max(0, totalOutstanding - uangMukaBelumDialokasikan);
                 int fakturOpen = outstandingCust.Count;
 
                 int totalFaktur = fakturCust.Count;
@@ -1279,7 +1294,7 @@ namespace eSoft.Piutang.Services
                     .Where(x => x.Tanggal >= cutoff12bln && x.SldSisa > 0)
                     .Sum(x => x.SldSisa);
                 double dso = penjualan12bln > 0
-                    ? (double)totalOutstanding / (double)penjualan12bln * 365.0
+                    ? (double)totalOutstandingBersih / (double)penjualan12bln * 365.0
                     : 0;
 
                 // ── PENENTUAN LABEL RISIKO ────────────────────────────────────
@@ -1288,7 +1303,7 @@ namespace eSoft.Piutang.Services
                 string riskLabel, rekomendasi;
                 int    riskScore;
 
-                bool adaOutstanding = outstandingCust.Any();
+                bool adaOutstanding = totalOutstandingBersih > 0;
 
                 if (adaOutstanding)
                 {
@@ -1370,8 +1385,10 @@ namespace eSoft.Piutang.Services
                 {
                     Customer                   = custCode,
                     NamaCust                   = custInfo?.NamaCust ?? custCode,
-                    Salesman                   = fakturCust.LastOrDefault()?.Salesman ?? "",
+                    Salesman                   = salesman,
                     TotalOutstanding           = totalOutstanding,
+                    UangMukaBelumDialokasikan = uangMukaBelumDialokasikan,
+                    TotalOutstandingBersih    = totalOutstandingBersih,
                     JumlahFakturOpen           = fakturOpen,
                     JumlahFakturCicilan        = jumlahFakturCicilan,
                     CountTelat60               = countTelat60,

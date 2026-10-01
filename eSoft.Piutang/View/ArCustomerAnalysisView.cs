@@ -12,10 +12,15 @@ namespace eSoft.Piutang.View
     {
         public string Customer { get; set; }
         public string NamaCust { get; set; }
+        /// <summary>Salesman unik yang tercatat pada seluruh faktur customer.</summary>
         public string Salesman { get; set; }
 
         // ── Outstanding saat ini ────────────────────────────────
         public decimal TotalOutstanding { get; set; }
+        /// <summary>Total saldo uang muka customer yang belum dialokasikan ke nota.</summary>
+        public decimal UangMukaBelumDialokasikan { get; set; }
+        /// <summary>Outstanding nota setelah dikurangi uang muka customer.</summary>
+        public decimal TotalOutstandingBersih { get; set; }
         public int JumlahFakturOpen { get; set; }
 
         /// <summary>

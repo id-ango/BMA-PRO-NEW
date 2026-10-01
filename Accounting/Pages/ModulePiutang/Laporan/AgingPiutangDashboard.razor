@@ -977,10 +977,12 @@
                             <thead>
                                 <tr>
                                     <th class="ar-th ar-sticky-col-1">Customer</th>
-                                    <th class="ar-th" style="min-width:80px;">Salesman</th>
+                                    <th class="ar-th" style="min-width:120px;">Salesman pada Nota</th>
                                     <th class="ar-th text-center" style="min-width:90px;">Risk Score</th>
                                     <th class="ar-th text-center" style="min-width:100px;">Label Risiko</th>
-                                    <th class="ar-th text-end">Outstanding</th>
+                                    <th class="ar-th text-end">Outstanding Bruto</th>
+                                    <th class="ar-th text-end">Uang Muka</th>
+                                    <th class="ar-th text-end">Outstanding Bersih</th>
                                     <th class="ar-th text-center">Faktur Open</th>
                                     <th class="ar-th text-center">Cicilan</th>
                                     <th class="ar-th text-center">Diam (hr)</th>
@@ -1000,10 +1002,21 @@
                                     var scoreBar = GetScoreBar(a.RiskScore);
                                     <tr style="background:@rowBg;">
                                         <td class="ar-sticky-col-1 fw-bold" style="background:@rowBg;">@a.NamaCust</td>
-                                        <td style="font-size:0.75rem;">@a.Salesman</td>
+                                        <td style="font-size:0.75rem; white-space:normal;">@(string.IsNullOrWhiteSpace(a.Salesman) ? "-" : a.Salesman)</td>
                                         <td class="text-center">@scoreBar</td>
                                         <td class="text-center">@labelBadge</td>
-                                        <td class="text-end fw-bold">@a.TotalOutstanding.ToString("N0")</td>
+                                        <td class="text-end">@a.TotalOutstanding.ToString("N0")</td>
+                                        <td class="text-end">
+                                            @if (a.UangMukaBelumDialokasikan > 0)
+                                            {
+                                                <span class="ar-badge" style="background:#e8dff5;color:#5b2c83;">@a.UangMukaBelumDialokasikan.ToString("N0")</span>
+                                            }
+                                            else
+                                            {
+                                                <span style="color:#aaa;">-</span>
+                                            }
+                                        </td>
+                                        <td class="text-end fw-bold">@a.TotalOutstandingBersih.ToString("N0")</td>
                                         <td class="text-center">@a.JumlahFakturOpen</td>
                                         <td class="text-center">
                                             @if (a.JumlahFakturCicilan == 0)

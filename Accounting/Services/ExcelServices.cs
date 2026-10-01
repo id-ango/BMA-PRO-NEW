@@ -1070,7 +1070,8 @@ namespace Accounting.Services
                 string[] anH = {
                     "Customer", "Nama Customer", "Salesman",
                     "Risk Score", "Label Risiko", "Rekomendasi",
-                    "Outstanding", "Faktur Open", "Cicilan", "Diam (hr)", "Tgl Bayar Terakhir",
+                    "Outstanding Bruto", "Uang Muka", "Outstanding Bersih",
+                    "Faktur Open", "Cicilan", "Diam (hr)", "Tgl Bayar Terakhir",
                     "Nunggak >60hr", "Nilai Nunggak >60hr",
                     "Avg Terlambat (hr)", "Max Terlambat (hr)", "On-Time %",
                     "DSO (hr)", "Total Transaksi"
@@ -1098,23 +1099,27 @@ namespace Accounting.Services
                     wsAn.Cell(anRow, 6).Value  = a.Rekomendasi;
                     wsAn.Cell(anRow, 7).Value  = a.TotalOutstanding;
                     wsAn.Cell(anRow, 7).Style.NumberFormat.Format = "#,##0";
-                    wsAn.Cell(anRow, 8).Value  = a.JumlahFakturOpen;
-                    wsAn.Cell(anRow, 9).Value  = a.JumlahFakturCicilan;
-                    wsAn.Cell(anRow, 10).Value = a.MaxHariMacetOutstanding;
-                    wsAn.Cell(anRow, 11).Value = a.TglTerakhirBayarOutstanding.HasValue
+                    wsAn.Cell(anRow, 8).Value  = a.UangMukaBelumDialokasikan;
+                    wsAn.Cell(anRow, 8).Style.NumberFormat.Format = "#,##0";
+                    wsAn.Cell(anRow, 9).Value  = a.TotalOutstandingBersih;
+                    wsAn.Cell(anRow, 9).Style.NumberFormat.Format = "#,##0";
+                    wsAn.Cell(anRow, 10).Value = a.JumlahFakturOpen;
+                    wsAn.Cell(anRow, 11).Value = a.JumlahFakturCicilan;
+                    wsAn.Cell(anRow, 12).Value = a.MaxHariMacetOutstanding;
+                    wsAn.Cell(anRow, 13).Value = a.TglTerakhirBayarOutstanding.HasValue
                         ? a.TglTerakhirBayarOutstanding.Value.ToString("dd/MM/yyyy") : "-";
-                    wsAn.Cell(anRow, 12).Value = a.CountTelat60;
-                    wsAn.Cell(anRow, 13).Value = a.OutstandingTelat60;
-                    wsAn.Cell(anRow, 13).Style.NumberFormat.Format = "#,##0";
-                    wsAn.Cell(anRow, 14).Value = a.AvgDaysLate;
-                    wsAn.Cell(anRow, 14).Style.NumberFormat.Format = "0.0";
-                    wsAn.Cell(anRow, 15).Value = a.MaxDaysLate;
-                    wsAn.Cell(anRow, 16).Value = a.OnTimeRate;
-                    wsAn.Cell(anRow, 16).Style.NumberFormat.Format = "0.0\"%\"";
-                    wsAn.Cell(anRow, 17).Value = a.DSO;
-                    wsAn.Cell(anRow, 17).Style.NumberFormat.Format = "0.0";
-                    wsAn.Cell(anRow, 18).Value = a.TotalNilaiTransaksi;
-                    wsAn.Cell(anRow, 18).Style.NumberFormat.Format = "#,##0";
+                    wsAn.Cell(anRow, 14).Value = a.CountTelat60;
+                    wsAn.Cell(anRow, 15).Value = a.OutstandingTelat60;
+                    wsAn.Cell(anRow, 15).Style.NumberFormat.Format = "#,##0";
+                    wsAn.Cell(anRow, 16).Value = a.AvgDaysLate;
+                    wsAn.Cell(anRow, 16).Style.NumberFormat.Format = "0.0";
+                    wsAn.Cell(anRow, 17).Value = a.MaxDaysLate;
+                    wsAn.Cell(anRow, 18).Value = a.OnTimeRate;
+                    wsAn.Cell(anRow, 18).Style.NumberFormat.Format = "0.0\"%\"";
+                    wsAn.Cell(anRow, 19).Value = a.DSO;
+                    wsAn.Cell(anRow, 19).Style.NumberFormat.Format = "0.0";
+                    wsAn.Cell(anRow, 20).Value = a.TotalNilaiTransaksi;
+                    wsAn.Cell(anRow, 20).Style.NumberFormat.Format = "#,##0";
 
                     // Warna baris sesuai risiko
                     XLColor anBg = a.RiskLabel switch

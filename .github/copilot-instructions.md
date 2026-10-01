@@ -9,6 +9,7 @@
 - Preserve functional preview actions during UI cleanup; for this page, 'Display Rekap' should remain available inside the export section rather than being removed.
 - When comparing projects, always verify the actual files from the requested path and do not rely on results from the navigator/workspace that may point to different repositories; note that D:\Project\BMA-PT uses .NET 10 and its Program.cs is different.
 - For long processes in the UI, display a clear and informative completion message inline to the user, rather than just a spinner or error alert. Prefer disabling the action and using a visible Bootstrap spinner during long processes; loading indicators in Blazor must yield control before long synchronous service work.
+- Preserve existing UI/UX styling, programming techniques, and established project patterns when continuing work in the same repository, rather than introducing different approaches.
 
 ## Inventory Analysis Guidelines
 - When classifying inventory analysis status, do not label an item as Risiko Over Stock solely because PO quantity exceeds current stock; consider current stock age/last-out movement and a defined demand or coverage threshold. A recent last-out date such as 38 days should not be treated as dead/overstock without additional evidence.
