@@ -1383,6 +1383,23 @@
     // ── Excel ─────────────────────────────────────────────────
     private async Task DownloadExcel()
     {
+        if (AnalisaData == null)
+        {
+            AnalisaData = await Task.Run(() => serviceAR.GetCustomerAnalysis());
+            var salesmanNames = serviceSales.GetSalesman()
+                .Where(x => !string.IsNullOrWhiteSpace(x.Salesman))
+                .GroupBy(x => x.Salesman, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.First().NamaSales ?? x.Key, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in AnalisaData)
+            {
+                item.NamaSales = string.Join(", ", (item.Salesman ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(x => salesmanNames.TryGetValue(x, out var nama) ? nama : x)
+                    .Distinct(StringComparer.OrdinalIgnoreCase));
+            }
+        }
+
         var data = serviceXL.CreateAgingPiutangExcel(FilteredRows, ForecastData, AnalisaData);
         var stream = new MemoryStream(data);
         var fileName = $"AgingPiutang_{DateTime.Today:yyyyMMdd}.xlsx";

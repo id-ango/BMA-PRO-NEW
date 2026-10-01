@@ -14,6 +14,7 @@
 ## Inventory Analysis Guidelines
 - When classifying inventory analysis status, do not label an item as Risiko Over Stock solely because PO quantity exceeds current stock; consider current stock age/last-out movement and a defined demand or coverage threshold. A recent last-out date such as 38 days should not be treated as dead/overstock without additional evidence.
 - For the inventory analysis Excel export, use D:\Report_Stock_Analysis_20260926.xlsx as the formatting baseline, while allowing practical improvements to readability and usability rather than copying it blindly.
+- When modifying Excel exports, ensure the customer-analysis sheet remains included and is loaded before generating the workbook, even if the dashboard analysis tab has not been opened.
 
 ## Service Refactoring Guidelines
 - When refactoring `OrderPurchaseServices`, preserve original intent: `AddTransH` passes header currency (`trans.Currency`) to item price updates; `EditTransH` originally also passed `trans.Currency`, so helpers should allow an explicit currency override.
