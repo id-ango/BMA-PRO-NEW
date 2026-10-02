@@ -51,7 +51,7 @@ public sealed class ExecutiveDashboardService : IExecutiveDashboardService
         var inventoryValue = _inventoryContext.IcItems
             .AsNoTracking()
             .Where(x => x.Qty != 0)
-            .Select(x => x.Qty * x.Cost)
+            .Select(x => x.Cost)
             .AsEnumerable()
             .Sum();
 
