@@ -172,6 +172,7 @@ builder.Services.AddTransient<ILaporanStockServices, LaporanStockServices>();
 builder.Services.AddTransient<ICompanyServices, CompanyServices>();
 builder.Services.AddTransient<IAdministrationServices, AdministrationServices>();
 builder.Services.AddTransient<IExcelServices, ExcelServices>();
+builder.Services.AddTransient<IExecutiveDashboardService, ExecutiveDashboardService>();
 builder.Services.AddTransient<IAssetServices, AssetServices>();
 builder.Services.AddTransient<IOrderSalesServices, OrderSalesServices>();
 builder.Services.AddTransient<IFinancialServices, FinancialServices>();
