@@ -39,14 +39,14 @@ h2 { font-size: 1rem; font-weight: 750; margin: 0; }
 .aging-summary label { color: var(--muted); font-size: .82rem; } .aging-summary strong { font-size: .9rem; }
 .dot, .legend i { width: .65rem; height: .65rem; display: inline-block; border-radius: 50%; } .dot.ar { background: #4774d1; } .dot.ap { background: #df6c75; } .dot.net { background: #3ca979; }
 
-.trend-chart { height: 14rem; display: flex; align-items: stretch; justify-content: space-around; gap: .5rem; margin-top: 1.5rem; padding: 1rem 0 0; border-bottom: 1px solid var(--line); }
-.trend-column { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: .5rem; min-width: 2rem; }
-.trend-bars { height: 11rem; display: flex; align-items: flex-end; gap: 3px; width: 100%; justify-content: center; }
-.trend-bar { width: min(1rem, 35%); min-height: 2px; border-radius: .35rem .35rem 0 0; transition: height .25s ease; } .trend-bar.so, .legend i.so { background: #e0a338; } .trend-bar.po, .legend i.po { background: #4a9ab5; }
-.trend-column small { color: var(--muted); font-size: .68rem; white-space: nowrap; }
-.legend { display: flex; justify-content: center; gap: 1.5rem; margin-top: 1rem; color: var(--muted); font-size: .75rem; } .legend span { display: inline-flex; align-items: center; gap: .4rem; }
+.current-balance-chart { height: 18rem; display: flex; align-items: stretch; justify-content: space-around; gap: .75rem; margin-top: 1.5rem; padding: 1rem 0 0; border-bottom: 1px solid var(--line); }
+.current-balance-column { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: .5rem; min-width: 3rem; }
+.current-balance-value { color: var(--muted); font-size: .7rem; font-weight: 700; text-align: center; min-height: 2.1rem; }
+.current-balance-track { height: 12rem; width: min(3rem, 70%); display: flex; align-items: flex-end; background: #edf0f5; border-radius: .5rem .5rem 0 0; overflow: hidden; }
+.current-balance-bar { width: 100%; min-height: 2px; border-radius: .5rem .5rem 0 0; transition: height .25s ease; }
+.current-balance-bar.cash { background: #3ca979; } .current-balance-bar.receivable { background: #4774d1; } .current-balance-bar.payable { background: #df6c75; } .current-balance-bar.inventory { background: #9a72c2; } .current-balance-bar.sales-order { background: #e0a338; } .current-balance-bar.purchase-order { background: #4a9ab5; }
+.current-balance-column small { color: var(--muted); font-size: .68rem; white-space: nowrap; }
 .dashboard-state { min-height: 18rem; display: grid; place-content: center; justify-items: center; color: var(--muted); }
-.empty-chart { min-height: 14rem; display: grid; place-items: center; color: var(--muted); font-size: .85rem; text-align: center; }
 
 @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .executive-dashboard { padding: .75rem; } .dashboard-heading, .panel-heading { flex-direction: column; } .dashboard-heading .text-end { text-align: left !important; } .kpi-grid, .dashboard-grid { grid-template-columns: 1fr; } .bar-row { grid-template-columns: 6rem 1fr 6rem; } }

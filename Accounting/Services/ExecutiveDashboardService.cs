@@ -41,8 +41,6 @@ public sealed class ExecutiveDashboardService : IExecutiveDashboardService
 
     public Task<ExecutiveDashboardView> GetDashboardAsync()
     {
-        var today = DateTime.Today;
-        var cutoff = new DateTime(today.Year, today.Month, 1).AddMonths(-11);
         var banks = _cashBankService.GetBank() ?? new();
         var receivables = _receivableService.GetAgingSchedule() ?? new();
         var payables = _payableService.GetAgingSchedule() ?? new();
@@ -57,20 +55,6 @@ public sealed class ExecutiveDashboardService : IExecutiveDashboardService
             .AsEnumerable()
             .Sum();
 
-        var trends = Enumerable.Range(0, 12)
-            .Select(offset => cutoff.AddMonths(offset))
-            .Select(month => new ExecutiveDashboardTrendView
-            {
-                Label = month.ToString("MMM yy"),
-                SalesOrder = activeSalesOrders
-                    .Where(x => x.Tanggal.Year == month.Year && x.Tanggal.Month == month.Month)
-                    .Sum(ValueOfSalesOrder),
-                PurchaseOrder = activePurchaseOrders
-                    .Where(x => x.Tanggal.Year == month.Year && x.Tanggal.Month == month.Month)
-                    .Sum(ValueOfPurchaseOrder)
-            })
-            .ToList();
-
         var result = new ExecutiveDashboardView
         {
             GeneratedAt = DateTime.Now,
@@ -84,8 +68,7 @@ public sealed class ExecutiveDashboardService : IExecutiveDashboardService
             JumlahSalesOrder = activeSalesOrders.Count,
             JumlahPurchaseOrder = activePurchaseOrders.Count,
             PiutangJatuhTempo = receivables.Sum(x => x.Jumlah2 + x.Jumlah3 + x.Jumlah4 + x.Jumlah5),
-            HutangJatuhTempo = payables.Sum(x => (x.Jumlah2 + x.Jumlah3 + x.Jumlah4 + x.Jumlah5) * EffectiveRate(x.Kurs)),
-            Trends = trends
+            HutangJatuhTempo = payables.Sum(x => (x.Jumlah2 + x.Jumlah3 + x.Jumlah4 + x.Jumlah5) * EffectiveRate(x.Kurs))
         };
 
         return Task.FromResult(result);
