@@ -68,20 +68,27 @@
         </div>
 
         <section class="panel mt-4">
-            <div class="panel-heading"><div><h2>Tren SO & PO</h2><small>Nilai transaksi aktif berdasarkan bulan dokumen, 12 bulan terakhir</small></div></div>
-            <div class="trend-chart">
-                @foreach (var trend in dashboard.Trends)
-                {
-                    <div class="trend-column">
-                        <div class="trend-bars">
-                            <div class="trend-bar so" style="height:@Percent(trend.SalesOrder, TrendMax)%" title="SO @Money(trend.SalesOrder)"></div>
-                            <div class="trend-bar po" style="height:@Percent(trend.PurchaseOrder, TrendMax)%" title="PO @Money(trend.PurchaseOrder)"></div>
+            <div class="panel-heading"><div><h2>Tren SO & PO</h2><small>Nilai seluruh transaksi berdasarkan bulan dokumen, 12 bulan terakhir</small></div></div>
+            @if (TrendMax <= 0)
+            {
+                <div class="empty-chart">Belum ada transaksi SO atau PO pada periode 12 bulan terakhir.</div>
+            }
+            else
+            {
+                <div class="trend-chart">
+                    @foreach (var trend in dashboard.Trends)
+                    {
+                        <div class="trend-column">
+                            <div class="trend-bars">
+                                <div class="trend-bar so" style="height:@Percent(trend.SalesOrder, TrendMax)%" title="SO @Money(trend.SalesOrder)"></div>
+                                <div class="trend-bar po" style="height:@Percent(trend.PurchaseOrder, TrendMax)%" title="PO @Money(trend.PurchaseOrder)"></div>
+                            </div>
+                            <small>@trend.Label</small>
                         </div>
-                        <small>@trend.Label</small>
-                    </div>
-                }
-            </div>
-            <div class="legend"><span><i class="so"></i> Sales Order</span><span><i class="po"></i> Purchase Order</span></div>
+                    }
+                </div>
+                <div class="legend"><span><i class="so"></i> Sales Order</span><span><i class="po"></i> Purchase Order</span></div>
+            }
         </section>
     }
 </div>
@@ -92,7 +99,7 @@
     private string? errorMessage;
 
     private decimal CurrentMax => CurrentMetrics().Select(x => x.Value).DefaultIfEmpty(1).Max();
-    private decimal TrendMax => dashboard?.Trends.SelectMany(x => new[] { x.SalesOrder, x.PurchaseOrder }).DefaultIfEmpty(1).Max() ?? 1;
+    private decimal TrendMax => dashboard?.Trends.SelectMany(x => new[] { x.SalesOrder, x.PurchaseOrder }).DefaultIfEmpty(0).Max() ?? 0;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 

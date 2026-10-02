@@ -11,6 +11,8 @@ namespace Accounting.Services;
 
 public sealed class ExecutiveDashboardService : IExecutiveDashboardService
 {
+    private const decimal PurchaseOrderCnyRate = 2700m;
+
     private readonly ICashBankServices _cashBankService;
     private readonly IReceivableServices _receivableService;
     private readonly IPayableServices _payableService;
@@ -62,10 +64,10 @@ public sealed class ExecutiveDashboardService : IExecutiveDashboardService
                 Label = month.ToString("MMM yy"),
                 SalesOrder = activeSalesOrders
                     .Where(x => x.Tanggal.Year == month.Year && x.Tanggal.Month == month.Month)
-                    .Sum(ValueOf),
+                    .Sum(ValueOfSalesOrder),
                 PurchaseOrder = activePurchaseOrders
                     .Where(x => x.Tanggal.Year == month.Year && x.Tanggal.Month == month.Month)
-                    .Sum(ValueOf)
+                    .Sum(ValueOfPurchaseOrder)
             })
             .ToList();
 
@@ -76,8 +78,8 @@ public sealed class ExecutiveDashboardService : IExecutiveDashboardService
             Piutang = receivables.Sum(x => x.Sisa),
             Hutang = payables.Sum(x => x.Sisa * EffectiveRate(x.Kurs)),
             Persediaan = inventoryValue,
-            SalesOrder = activeSalesOrders.Sum(ValueOf),
-            PurchaseOrder = activePurchaseOrders.Sum(ValueOf),
+            SalesOrder = activeSalesOrders.Sum(ValueOfSalesOrder),
+            PurchaseOrder = activePurchaseOrders.Sum(ValueOfPurchaseOrder),
             JumlahItemStock = stock.Count,
             JumlahSalesOrder = activeSalesOrders.Count,
             JumlahPurchaseOrder = activePurchaseOrders.Count,
@@ -89,10 +91,15 @@ public sealed class ExecutiveDashboardService : IExecutiveDashboardService
         return Task.FromResult(result);
     }
 
-    private static decimal ValueOf(eSoft.Order.Model.PoTransH order)
+    private static decimal ValueOfSalesOrder(eSoft.Order.Model.PoTransH order)
+    {
+        return order.Jumlah != 0 ? order.Jumlah : order.TtlJumlah;
+    }
+
+    private static decimal ValueOfPurchaseOrder(eSoft.Order.Model.PoTransH order)
     {
         var value = order.Jumlah != 0 ? order.Jumlah : order.TtlJumlah;
-        return value * EffectiveRate(order.Kurs);
+        return value * PurchaseOrderCnyRate;
     }
 
     private static decimal EffectiveRate(decimal kurs) => kurs > 0 ? kurs : 1;
