@@ -11,6 +11,7 @@
 - For long processes in the UI, display a clear and informative completion message inline to the user, rather than just a spinner or error alert. Prefer disabling the action and using a visible Bootstrap spinner during long processes; loading indicators in Blazor must yield control before long synchronous service work.
 - Preserve existing UI/UX styling, programming techniques, and established project patterns when continuing work in the same repository, rather than introducing different approaches.
 - For the Executive Dashboard, use a fixed exchange rate of 2700 for PO values since the company's POs use CNY; do not use the empty header PO exchange rate as a conversion factor. Use the field `IcItem.Cost` directly for inventory values, as Cost already represents the total inventory value; do not multiply Cost by Qty to avoid duplicating the value.
+- On the TransOrderBeli page, use the term PO (Purchase Order) instead of SO (Sales Order); the term SO should only be used for TransOrderJual.
 
 ## Inventory Analysis Guidelines
 - When classifying inventory analysis status, do not label an item as Risiko Over Stock solely because PO quantity exceeds current stock; consider current stock age/last-out movement and a defined demand or coverage threshold. A recent last-out date such as 38 days should not be treated as dead/overstock without additional evidence.

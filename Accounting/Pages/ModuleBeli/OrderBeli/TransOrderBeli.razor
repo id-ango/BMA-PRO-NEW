@@ -32,7 +32,21 @@
 </div>
 
 <div class="container-fluid">
-    <DataGridVerticalComponent Items="TransHeader" Context="transaksi" GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaVendor} {item.Keterangan}")">
+    <div class="row g-3 mb-3">
+        @foreach (var currencyTotal in GetOutstandingTotalsByCurrency())
+        {
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="card h-100 border-primary">
+                    <div class="card-body py-2">
+                        <div class="small text-muted">Total PO Gantung (@currencyTotal.Currency)</div>
+                        <div class="fs-5 fw-semibold">@currencyTotal.Total.ToString("N")</div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <DataGridVerticalComponent Items="TransHeader" Context="transaksi" TotalEnabled="false" GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaVendor} {item.Keterangan}")">
         <TableHeader>
             <th scope="col" style="width:13%">No Bukti</th>
             <th scope="col" style="width:18%">Supplier</th>
@@ -252,6 +266,13 @@
 
     private string GetRowBackgroundClass(string cek) =>
         cek == "3" ? "table-warning" : "";
+
+    private IEnumerable<(string Currency, decimal Total)> GetOutstandingTotalsByCurrency() =>
+        (TransHeader ?? Enumerable.Empty<PoTransH>())
+            .Where(transaction => transaction.Cek != "3")
+            .GroupBy(transaction => string.IsNullOrWhiteSpace(transaction.Currency) ? "Mata uang belum diisi" : transaction.Currency)
+            .OrderBy(group => group.Key)
+            .Select(group => (group.Key, group.Sum(transaction => transaction.Jumlah)));
 
     private void ToggleEditMode(PoTransH transaction)
     {
