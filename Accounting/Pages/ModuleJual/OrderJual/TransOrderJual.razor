@@ -31,7 +31,7 @@
 </div>
 
 <div class="container-fluid">
-    <DataGridVerticalComponent Items="TransHeader" Context="transaksi" GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaVendor} {item.Keterangan}")">
+    <DataGridVerticalComponent Items="TransHeader" Context="transaksi" GetFilterableText="@(item =>$"{item.NoLpb} {item.NamaVendor} {item.Keterangan}")" fieldName="Jumlah" TotalFilter="@IsOutstandingSalesOrder">
         <TableHeader>
             <th scope="col" style="width:13%">No Bukti</th>
             <th scope="col" style="width:18%">Customer</th>
@@ -394,6 +394,9 @@
 
     private string GetStatusText(string cek) =>
         cek == "3" ? "Received" : "Open";
+
+    private static bool IsOutstandingSalesOrder(PoTransH transaction) =>
+        transaction is not null && transaction.Cek != "3";
 
     private string GetRowBackgroundClass(string cek) =>
         cek == "3" ? "table-warning" : "";

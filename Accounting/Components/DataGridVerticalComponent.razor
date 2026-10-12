@@ -71,6 +71,9 @@
     [Parameter]
     public string fieldName { get; set; }
 
+    [Parameter]
+    public Func<TItem, bool> TotalFilter { get; set; }
+
 
     private string searchText = string.Empty;
 
@@ -118,9 +121,13 @@
                     .Contains(searchText, StringComparison.InvariantCultureIgnoreCase));
         }
 
+        var totalItems = TotalFilter is null
+            ? FilteredItems
+            : FilteredItems.Where(TotalFilter);
+
         DisplayTotalJumlah = string.IsNullOrWhiteSpace(fieldName)
             ? TotalJumlah
-            : CalculateTotalJumlah(FilteredItems);
+            : CalculateTotalJumlah(totalItems);
     }
 
     private decimal CalculateTotalJumlah(IEnumerable<TItem> items)
