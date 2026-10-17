@@ -99,11 +99,12 @@ public static class InventoryAnalysisPdfExporter
             {
                 columns.RelativeColumn(1.5f); columns.RelativeColumn(3); columns.RelativeColumn(1);
                 columns.RelativeColumn(1); columns.RelativeColumn(1); columns.RelativeColumn(1);
+                columns.RelativeColumn(1);
                 columns.RelativeColumn(5);
             });
-            Header(table, "Kode Item", "Nama Item", "Jual 12 Bln", "Rata-rata/Bln", "Rekom PO", "Adj. Netto", "Alasan");
+            Header(table, "Kode Item", "Nama Item", "Stock Saat Ini", "Jual 12 Bln", "Rata-rata/Bln", "Rekom PO", "Adj. Netto", "Alasan");
             foreach (var item in recommendations)
-                Cells(table, item.ItemCode, item.NamaItem, item.SalesQty12Months.ToString("N2"), item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N0"), FormatAdjustment(item.NetAdjustmentQty), item.DemandAnalysisReason);
+                Cells(table, item.ItemCode, item.NamaItem, item.StockQty.ToString("N2"), item.SalesQty12Months.ToString("N2"), item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N0"), FormatAdjustment(item.NetAdjustmentQty), item.DemandAnalysisReason);
         });
     }
 
