@@ -166,4 +166,11 @@
     }
     .printing-full .print-chapter-section:first-of-type { page-break-before: always; break-before: page; }
     .printing-full .print-chapter-header { page-break-after: avoid; break-after: avoid-page; }
+    .print-top-value-page,
+    .print-po-recommendation-page {
+        page-break-before: always;
+        break-before: page;
+    }
+    .print-summary-table thead { display: table-header-group; }
+    .print-summary-table tr { page-break-inside: avoid; break-inside: avoid; }
 }

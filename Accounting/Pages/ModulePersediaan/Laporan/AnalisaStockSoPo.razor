@@ -320,16 +320,18 @@
                 }
                 else
                 {
-                <h3>Top 30 Nilai Stock</h3>
-                <table class="table table-sm print-summary-table align-middle">
-                    <thead><tr><th>Item</th><th>Jenis</th><th class="text-end">Qty</th><th class="text-end">Nilai</th><th>Status</th></tr></thead>
-                    <tbody>
-                        @foreach (var row in Report.TopValueRows)
-                        {
-                            <tr><td>@row.ItemCode - @row.NamaItem</td><td>@row.JenisItem</td><td class="text-end">@row.StockQty.ToString("N2")</td><td class="text-end">@row.StockValue.ToString("N0")</td><td>@row.Status</td></tr>
-                        }
-                    </tbody>
-                </table>
+                <section class="print-summary-page print-top-value-page">
+                    <h3>Top 30 Nilai Stock</h3>
+                    <table class="table table-sm print-summary-table align-middle">
+                        <thead><tr><th>Item</th><th>Jenis</th><th class="text-end">Qty</th><th class="text-end">Nilai</th><th>Status</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in Report.TopValueRows)
+                            {
+                                <tr><td>@row.ItemCode - @row.NamaItem</td><td>@row.JenisItem</td><td class="text-end">@row.StockQty.ToString("N2")</td><td class="text-end">@row.StockValue.ToString("N0")</td><td>@row.Status</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </section>
                 <h3>Dasar Analisa Persediaan</h3>
                 <div class="analysis-basis-note">
                     <p><strong>Umur barang (aging):</strong> menunjukkan berapa hari sejak barang terakhir kali keluar dari gudang. Barang yang tidak bergerak sampai @Report.AgingThresholdDays hari perlu ditinjau karena berisiko menjadi persediaan yang sulit terjual. Namun, barang yang masih terikat pesanan pelanggan (SO) tetap perlu diprioritaskan untuk dikirim, bukan langsung dianggap barang mati.</p>
@@ -340,30 +342,33 @@
                 </div>
                 <h3>Rekomendasi Manajemen</h3>
                 <p>@GetManagementRecommendation()</p>
-                <h3>Dasar Analisa &amp; Alasan Rekomendasi PO</h3>
-                @if (Report.Rows.Any(x => x.HasPurchaseRecommendation))
-                {
-                    <table class="table table-sm print-summary-table align-middle">
-                        <thead><tr><th>Item</th><th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th>Adj. Netto</th><th>Alasan</th></tr></thead>
-                        <tbody>
-                            @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(30))
-                            {
-                                <tr>
-                                    <td>@row.ItemCode - @row.NamaItem</td>
-                                    <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
-                                    <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
-                                    <td class="text-end">@row.RecommendedPoQty.ToString("N0")</td>
-                                    <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
-                                    <td>@row.DemandAnalysisReason</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-                else
-                {
-                    <p>Tidak ada item yang direkomendasikan untuk PO berdasarkan parameter dan histori penjualan yang dipilih.</p>
-                }
+                <section class="print-summary-page print-po-recommendation-page">
+                    <h3>Dasar Analisa &amp; Alasan Rekomendasi PO</h3>
+                    @if (Report.Rows.Any(x => x.HasPurchaseRecommendation))
+                    {
+                        <table class="table table-sm print-summary-table align-middle">
+                            <thead><tr><th>Item</th><th class="text-end">Stock Saat Ini</th><th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th>Adj. Netto</th><th>Alasan</th></tr></thead>
+                            <tbody>
+                                @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(30))
+                                {
+                                    <tr>
+                                        <td>@row.ItemCode - @row.NamaItem</td>
+                                        <td class="text-end">@row.StockQty.ToString("N2") @row.Satuan</td>
+                                        <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
+                                        <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
+                                        <td class="text-end">@row.RecommendedPoQty.ToString("N0")</td>
+                                        <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
+                                        <td>@row.DemandAnalysisReason</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>Tidak ada item yang direkomendasikan untuk PO berdasarkan parameter dan histori penjualan yang dipilih.</p>
+                    }
+                </section>
                 }
             </div>
         </div>
