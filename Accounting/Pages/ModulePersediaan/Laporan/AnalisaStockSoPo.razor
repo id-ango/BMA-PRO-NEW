@@ -52,8 +52,8 @@
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-outline-danger w-100" disabled="@(!CanExport)" @onclick="ExportPdfFull" title="Unduh PDF lengkap">
-                            @(IsExporting && ExportingFormat == "PDF lengkap" ? "Membuat PDF..." : "Simpan PDF Lengkap")
+                        <button class="btn btn-outline-danger w-100" disabled="@(!CanExport)" @onclick="PrintPdfFull" title="Cetak laporan lengkap atau simpan sebagai PDF">
+                            Cetak / Simpan PDF Lengkap
                         </button>
                     </div>
                     <div class="col-md-1">
@@ -433,7 +433,25 @@
 
     private Task ExportPdfSummary() => ExportPdf(fullReport: false);
 
-    private Task ExportPdfFull() => ExportPdf(fullReport: true);
+    private async Task PrintPdfFull()
+    {
+        if (Report is null)
+            return;
+
+        PrintMode = "full";
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        try
+        {
+            await JS.InvokeVoidAsync("window.print");
+        }
+        finally
+        {
+            PrintMode = "summary";
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
     private async Task ExportPdf(bool fullReport)
     {
