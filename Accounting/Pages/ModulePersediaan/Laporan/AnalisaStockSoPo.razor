@@ -8,7 +8,7 @@
 @inject ILaporanStockServices StockReportService
 @inject IJSRuntime JS
 
-<link rel="stylesheet" href="css/analisa-stock-so-po.css?v=2" />
+<link rel="stylesheet" href="css/analisa-stock-so-po.css?v=3" />
 
 <div class="container-fluid analysis-page">
     <div class="dont-print">
@@ -340,8 +340,10 @@
                     <p><strong>Cadangan aman:</strong> disiapkan sebesar @Report.SafetyStockMonths bulan sebagai perlindungan bila permintaan meningkat atau pengiriman supplier terlambat.</p>
                     <p><strong>Dasar saran PO:</strong> sistem melihat penjualan @Report.SalesHistoryMonths bulan terakhir, rata-rata penjualan per bulan, stok yang tersedia, sisa PO, dan sisa SO. Hasilnya adalah rekomendasi jumlah PO, bukan pembuatan PO otomatis. Keputusan akhir tetap perlu mempertimbangkan kondisi pasar dan konfirmasi supplier.</p>
                 </div>
-                <h3>Rekomendasi Manajemen</h3>
-                <p>@GetManagementRecommendation()</p>
+                <section class="print-summary-page print-management-recommendation-page">
+                    <h3>Rekomendasi Manajemen</h3>
+                    <p>@GetManagementRecommendation()</p>
+                </section>
                 <section class="print-summary-page print-po-recommendation-page">
                     <h3>Dasar Analisa &amp; Alasan Rekomendasi PO</h3>
                     @if (Report.Rows.Any(x => x.HasPurchaseRecommendation))

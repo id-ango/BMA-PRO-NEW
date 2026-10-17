@@ -167,11 +167,13 @@
     .printing-full .print-chapter-section:first-of-type { page-break-before: always; break-before: page; }
     .printing-full .print-chapter-header { page-break-after: avoid; break-after: avoid-page; }
     .print-top-value-page,
+    .print-management-recommendation-page,
     .print-po-recommendation-page {
         page-break-before: always !important;
         break-before: page !important;
     }
     .print-top-value-page > h3,
+    .print-management-recommendation-page > h3,
     .print-po-recommendation-page > h3 { page-break-after: avoid; break-after: avoid-page; }
     .print-summary-table thead { display: table-header-group; }
     .print-summary-table tr { page-break-inside: avoid; break-inside: avoid; }
