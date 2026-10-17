@@ -104,10 +104,11 @@ public static class InventoryAnalysisPdfExporter
         {
             var sectionName = GetSectionName(index);
             column.Item().PageBreak();
-            column.Item().Section(sectionName).Column(chapter =>
+            column.Item().Column(chapter =>
             {
                 chapter.Spacing(6);
-                chapter.Item().Background(Colors.Blue.Darken3).Padding(7).Text($"Bab {index + 1}: {group.Key} ({group.Rows.Count:N0} item)")
+                // Keep the destination on the actual heading rather than the multi-page chapter container.
+                chapter.Item().Section(sectionName).Background(Colors.Blue.Darken3).Padding(7).Text($"Bab {index + 1}: {group.Key} ({group.Rows.Count:N0} item)")
                     .FontSize(12).Bold().FontColor(Colors.White);
                 chapter.Item().Text(group.Description).FontSize(8).FontColor(Colors.Grey.Darken2);
                 chapter.Item().Text($"Total Nilai Stock: {group.Rows.Sum(item => item.StockValue):N0}").Bold();
