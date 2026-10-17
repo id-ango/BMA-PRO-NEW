@@ -84,6 +84,7 @@ public static class InventoryAnalysisPdfExporter
                 Cells(table, item.ItemCode, item.NamaItem, item.JenisItem, item.StockQty.ToString("N2"), item.StockValue.ToString("N0"), item.Status);
         });
 
+        column.Item().PageBreak();
         column.Item().Text("Dasar Analisa & Alasan Rekomendasi PO").FontSize(12).Bold().FontColor(Colors.Blue.Darken3);
         var recommendations = report.Rows.Where(row => row.HasPurchaseRecommendation).OrderByDescending(row => row.RecommendedPoValue).Take(30).ToList();
         if (recommendations.Count == 0)
@@ -96,12 +97,13 @@ public static class InventoryAnalysisPdfExporter
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(2); columns.RelativeColumn(1); columns.RelativeColumn(1);
-                columns.RelativeColumn(1); columns.RelativeColumn(1); columns.RelativeColumn(5);
+                columns.RelativeColumn(1.5f); columns.RelativeColumn(3); columns.RelativeColumn(1);
+                columns.RelativeColumn(1); columns.RelativeColumn(1); columns.RelativeColumn(1);
+                columns.RelativeColumn(5);
             });
-            Header(table, "Kode Item", "Jual 12 Bln", "Rata-rata/Bln", "Rekom PO", "Adj. Netto", "Alasan");
+            Header(table, "Kode Item", "Nama Item", "Jual 12 Bln", "Rata-rata/Bln", "Rekom PO", "Adj. Netto", "Alasan");
             foreach (var item in recommendations)
-                Cells(table, item.ItemCode, item.SalesQty12Months.ToString("N2"), item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N0"), FormatAdjustment(item.NetAdjustmentQty), item.DemandAnalysisReason);
+                Cells(table, item.ItemCode, item.NamaItem, item.SalesQty12Months.ToString("N2"), item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N0"), FormatAdjustment(item.NetAdjustmentQty), item.DemandAnalysisReason);
         });
     }
 
