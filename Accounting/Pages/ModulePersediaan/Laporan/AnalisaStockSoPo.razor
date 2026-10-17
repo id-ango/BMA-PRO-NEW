@@ -5,7 +5,6 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.JSInterop
 @using ClosedXML.Excel
-@using Accounting.Services
 @inject ILaporanStockServices StockReportService
 @inject IJSRuntime JS
 
@@ -47,8 +46,8 @@
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-danger w-100" disabled="@(!CanExport)" @onclick="ExportPdfSummary" title="Unduh PDF ringkasan">
-                            @(IsExporting && ExportingFormat == "PDF ringkasan" ? "Membuat PDF..." : "Simpan PDF Ringkasan")
+                        <button class="btn btn-danger w-100" disabled="@(!CanExport)" @onclick="PrintPdfSummary" title="Cetak ringkasan atau simpan sebagai PDF">
+                            Cetak / Simpan PDF Ringkasan
                         </button>
                     </div>
                     <div class="col-md-2">
@@ -101,7 +100,7 @@
                 {
                     <div class="alert alert-info mt-3 mb-0" role="status" aria-live="polite">
                         <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                        @ExportingFormat sedang dibuat dan diunduh. Tombol laporan akan aktif kembali setelah proses selesai.
+                        Excel sedang dibuat dan diunduh. Tombol ekspor akan aktif kembali setelah proses selesai.
                     </div>
                 }
             </div>
@@ -384,7 +383,6 @@
     private bool IsLoading;
     private bool IsExporting;
     private string PrintMode = "summary";
-    private string ExportingFormat;
     private string CompletionMessage;
     private string ProcessMessage;
 
@@ -431,14 +429,16 @@
         }
     }
 
-    private Task ExportPdfSummary() => ExportPdf(fullReport: false);
+    private Task PrintPdfSummary() => PrintReport("summary");
 
-    private async Task PrintPdfFull()
+    private Task PrintPdfFull() => PrintReport("full");
+
+    private async Task PrintReport(string printMode)
     {
         if (Report is null)
             return;
 
-        PrintMode = "full";
+        PrintMode = printMode;
         await InvokeAsync(StateHasChanged);
         await Task.Yield();
 
@@ -449,37 +449,6 @@
         finally
         {
             PrintMode = "summary";
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task ExportPdf(bool fullReport)
-    {
-        if (Report is null)
-            return;
-
-        IsExporting = true;
-        ExportingFormat = fullReport ? "PDF lengkap" : "PDF ringkasan";
-        CompletionMessage = null;
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-        try
-        {
-            var pdfBytes = InventoryAnalysisPdfExporter.Generate(Report, fullReport);
-            using var stream = new MemoryStream(pdfBytes);
-            using var streamRef = new DotNetStreamReference(stream);
-            var suffix = fullReport ? "Lengkap" : "Ringkasan";
-            await JS.InvokeVoidAsync("downloadFileFromStream", $"Report_Stock_Analysis_{suffix}_{Report.AsOfDate:yyyyMMdd}.pdf", streamRef);
-            CompletionMessage = $"PDF {suffix.ToLowerInvariant()} berhasil dibuat dan siap diunduh.";
-        }
-        catch (Exception ex)
-        {
-            CompletionMessage = $"Export PDF gagal: {ex.Message}";
-        }
-        finally
-        {
-            IsExporting = false;
-            ExportingFormat = null;
             await InvokeAsync(StateHasChanged);
         }
     }
