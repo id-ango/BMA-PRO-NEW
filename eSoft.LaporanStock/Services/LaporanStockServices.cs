@@ -2069,6 +2069,15 @@ namespace eSoft.LaporanStock.Services
                 .Select(x => new { ItemCode = x.Key, Qty = x.Sum(y => y.Qty - y.QtyBo) })
                 .ToDictionary(x => x.ItemCode, x => Math.Max(x.Qty, 0));
 
+            progress?.Report("Mengukur dampak adjustment terhadap saran PO...");
+            await Task.Yield();
+            var adjustmentByItem = _context.IcTransDs
+                .AsNoTracking()
+                .Where(x => x.Kode == "81" && x.Tanggal <= asOfDate.Date)
+                .GroupBy(x => x.ItemCode)
+                .Select(x => new { ItemCode = x.Key, Qty = x.Sum(y => y.QtyShp) })
+                .ToDictionary(x => x.ItemCode, x => x.Qty);
+
             progress?.Report("Menggabungkan stock, SO, dan PO serta menghitung nilai dan umur item...");
             await Task.Yield();
             var report = new InventoryAnalysisReport
@@ -2089,6 +2098,7 @@ namespace eSoft.LaporanStock.Services
                 soRemaining.TryGetValue(item.ItemCode, out var soQty);
                 poRemaining.TryGetValue(item.ItemCode, out var poQty);
                 salesHistory.TryGetValue(item.ItemCode, out var salesQty);
+                adjustmentByItem.TryGetValue(item.ItemCode, out var netAdjustmentQty);
 
                 var averageMonthlySales = salesQty / report.SalesHistoryMonths;
                 var demandCoverageQty = averageMonthlySales * effectiveCoverageMonths;
@@ -2113,6 +2123,7 @@ namespace eSoft.LaporanStock.Services
                     AgingThresholdDays = agingThresholdDays,
                     SoRemainingQty = soQty,
                     PoRemainingQty = poQty,
+                    NetAdjustmentQty = netAdjustmentQty,
                     SalesQty12Months = salesQty,
                     AverageMonthlySales = averageMonthlySales,
                     DemandCoverageQty = demandCoverageQty,

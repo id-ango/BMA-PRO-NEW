@@ -70,6 +70,7 @@ namespace eSoft.LaporanStock.View
         public decimal SoRemainingValue => SoRemainingQty * UnitCost;
         public decimal PoRemainingQty { get; set; }
         public decimal PoRemainingValue => PoRemainingQty * UnitCost;
+        public decimal NetAdjustmentQty { get; set; }
         public decimal ProjectedQtyAfterPo => StockQty + PoRemainingQty;
         public decimal SalesQty12Months { get; set; }
         public decimal AverageMonthlySales { get; set; }

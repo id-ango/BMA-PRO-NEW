@@ -179,7 +179,7 @@
                         <tr>
                             <th>Item</th><th>Jenis</th><th class="text-end">Stock</th><th class="text-end">Nilai Stock</th>
                             <th>Terakhir Keluar</th><th class="text-end">Umur</th><th class="text-end">Sisa SO</th><th class="text-end">Sisa PO</th>
-                            <th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th>Status</th><th>Alasan Analisa</th>
+                            <th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th title="Total netto qty adjustment sampai tanggal analisa">Adj. Netto</th><th>Status</th><th>Alasan Analisa</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -197,6 +197,7 @@
                                 <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
                                 <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
                                 <td class="text-end fw-bold text-primary">@row.RecommendedPoQty.ToString("N0")</td>
+                                <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
                                 <td><span class="badge @GetStatusClass(row.Status)">@row.Status</span></td>
                                 <td>
                                     <small>
@@ -271,7 +272,7 @@
                             <table class="table table-sm print-detail-table align-middle">
                                 <thead>
                                     <tr>
-                                        <th style="width: 20%;">Item</th>
+                                        <th style="width: 18%;">Item</th>
                                         <th style="width: 5%;">Jenis</th>
                                         <th class="text-end" style="width: 7%;">Stock</th>
                                         <th class="text-end" style="width: 8%;">Nilai Stock</th>
@@ -282,6 +283,7 @@
                                         <th class="text-end" style="width: 5%;">Jual 12 Bln</th>
                                         <th class="text-end" style="width: 5%;">Rata2/Bln</th>
                                         <th class="text-end" style="width: 5%;">Rekom PO</th>
+                                        <th style="width: 7%;">Adj. Netto</th>
                                         <th style="width: 6%;">Status</th>
                                         <th style="width: 17%;">Alasan Analisa</th>
                                     </tr>
@@ -301,6 +303,7 @@
                                             <td class="text-end">@row.SalesQty12Months.ToString("N0")</td>
                                             <td class="text-end">@row.AverageMonthlySales.ToString("N1")</td>
                                             <td class="text-end fw-bold text-primary">@row.RecommendedPoQty.ToString("N0")</td>
+                                            <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
                                             <td><span class="badge @GetStatusClass(row.Status)">@row.Status</span></td>
                                             <td>
                                                 <small>
@@ -341,7 +344,7 @@
                 @if (Report.Rows.Any(x => x.HasPurchaseRecommendation))
                 {
                     <table class="table table-sm print-summary-table align-middle">
-                        <thead><tr><th>Item</th><th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th>Alasan</th></tr></thead>
+                        <thead><tr><th>Item</th><th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th>Adj. Netto</th><th>Alasan</th></tr></thead>
                         <tbody>
                             @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(30))
                             {
@@ -350,6 +353,7 @@
                                     <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
                                     <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
                                     <td class="text-end">@row.RecommendedPoQty.ToString("N0")</td>
+                                    <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
                                     <td>@row.DemandAnalysisReason</td>
                                 </tr>
                             }
@@ -509,7 +513,7 @@
             summary.Column(4).Width = 18;
 
             var detail = workbook.Worksheets.Add("Detail Analysis");
-            var headers = new[] { "Item Code", "Nama Item", "Jenis", "Satuan", "Stock", "Nilai Stock", "Terakhir Keluar", "Umur Hari", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata-rata/Bln", "Coverage Qty", "Rekom PO", "Nilai Rekom PO", "Status", "Rekomendasi", "Alasan Analisa" };
+            var headers = new[] { "Item Code", "Nama Item", "Jenis", "Satuan", "Stock", "Nilai Stock", "Terakhir Keluar", "Umur Hari", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata-rata/Bln", "Coverage Qty", "Rekom PO", "Nilai Rekom PO", "Adjustment Netto Qty", "Status", "Rekomendasi", "Alasan Analisa" };
             for (var column = 0; column < headers.Length; column++)
                 detail.Cell(1, column + 1).Value = headers[column];
 
@@ -531,9 +535,10 @@
                 detail.Cell(detailRow, 13).Value = row.DemandCoverageQty;
                 detail.Cell(detailRow, 14).Value = row.RecommendedPoQty;
                 detail.Cell(detailRow, 15).Value = row.RecommendedPoValue;
-                detail.Cell(detailRow, 16).Value = row.Status;
-                detail.Cell(detailRow, 17).Value = row.Recommendation;
-                detail.Cell(detailRow, 18).Value = row.DemandAnalysisReason;
+                detail.Cell(detailRow, 16).Value = row.NetAdjustmentQty;
+                detail.Cell(detailRow, 17).Value = row.Status;
+                detail.Cell(detailRow, 18).Value = row.Recommendation;
+                detail.Cell(detailRow, 19).Value = row.DemandAnalysisReason;
                 detailRow++;
             }
 
@@ -548,7 +553,8 @@
             detailRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             detailRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
             detail.Range(2, 2, Math.Max(detailRow - 1, 2), 2).Style.Alignment.WrapText = true;
-            detail.Range(2, 17, Math.Max(detailRow - 1, 2), 18).Style.Alignment.WrapText = true;
+            detail.Range(2, 16, Math.Max(detailRow - 1, 2), 16).Style.Alignment.WrapText = true;
+            detail.Range(2, 18, Math.Max(detailRow - 1, 2), 19).Style.Alignment.WrapText = true;
             if (detailRow > 2)
             {
                 detail.Range(2, 5, detailRow - 1, 6).Style.NumberFormat.Format = "#,##0";
@@ -557,7 +563,7 @@
                 detail.Range(2, 12, detailRow - 1, 13).Style.NumberFormat.Format = "#,##0.00";
                 detail.Range(2, 14, detailRow - 1, 15).Style.NumberFormat.Format = "#,##0";
             }
-            var widths = new[] { 14, 38, 13, 10, 11, 16, 16, 11, 11, 11, 13, 15, 15, 13, 17, 25, 45, 78 };
+            var widths = new[] { 14, 38, 13, 10, 11, 16, 16, 11, 11, 11, 13, 15, 15, 13, 17, 22, 25, 45, 78 };
             for (var column = 0; column < widths.Length; column++)
                 detail.Column(column + 1).Width = widths[column];
             detail.Range(1, 1, Math.Max(detailRow - 1, 1), headers.Length).SetAutoFilter();
@@ -596,6 +602,10 @@
         "Slow Moving" => "bg-secondary",
         _ => "bg-success"
     };
+
+    private static string FormatNetAdjustment(decimal quantity) => quantity > 0
+        ? $"+{quantity:N0}"
+        : quantity.ToString("N0");
 
     private string GetManagementRecommendation()
     {
