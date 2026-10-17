@@ -37,10 +37,13 @@ using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using System.Globalization;
+using QuestPDF.Infrastructure;
 
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 var indonesiaCulture = new CultureInfo("id-ID");
 CultureInfo.DefaultThreadCurrentCulture = indonesiaCulture;

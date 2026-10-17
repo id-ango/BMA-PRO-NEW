@@ -5,12 +5,13 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.JSInterop
 @using ClosedXML.Excel
+@using Accounting.Services
 @inject ILaporanStockServices StockReportService
 @inject IJSRuntime JS
 
 <link rel="stylesheet" href="css/analisa-stock-so-po.css" />
 
-<div class="container-fluid analysis-page @(IsPrinting ? $"printing-{PrintMode}" : "")">
+<div class="container-fluid analysis-page">
     <div class="dont-print">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
@@ -46,13 +47,13 @@
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-danger w-100" disabled="@(!CanExport)" @onclick="PrintSummary" title="Buka pratinjau, lalu pilih Save as PDF">
-                            Simpan PDF Ringkasan
+                        <button class="btn btn-danger w-100" disabled="@(!CanExport)" @onclick="ExportPdfSummary" title="Unduh PDF ringkasan">
+                            @(IsExporting && ExportingFormat == "PDF ringkasan" ? "Membuat PDF..." : "Simpan PDF Ringkasan")
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-outline-danger w-100" disabled="@(!CanExport)" @onclick="PrintFullReport" title="Buka pratinjau, lalu pilih Save as PDF">
-                            Simpan PDF Lengkap
+                        <button class="btn btn-outline-danger w-100" disabled="@(!CanExport)" @onclick="ExportPdfFull" title="Unduh PDF lengkap">
+                            @(IsExporting && ExportingFormat == "PDF lengkap" ? "Membuat PDF..." : "Simpan PDF Lengkap")
                         </button>
                     </div>
                     <div class="col-md-1">
@@ -76,7 +77,7 @@
                     </div>
                     <div class="col-md-3">
                         <small class="text-dark">Saran order PO dihitung dari penjualan 12 bulan, target persediaan, waktu tunggu supplier, cadangan aman, stock gudang, pesanan supplier (PO), dan pesanan pelanggan (SO).</small>
-                        <small class="d-block text-muted mt-1">Untuk menyimpan PDF: pilih <strong>Save as PDF</strong> pada jendela cetak browser.</small>
+                        <small class="d-block text-muted mt-1">Adjustment netto hanya informasi jumlah bersih penambahan/pengurangan dan tidak menjadi dasar penjualan atau rekomendasi PO.</small>
                     </div>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(CompletionMessage))
@@ -100,7 +101,7 @@
                 {
                     <div class="alert alert-info mt-3 mb-0" role="status" aria-live="polite">
                         <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                        Excel sedang dibuat dan diunduh. Tombol laporan akan aktif kembali setelah proses selesai.
+                        @ExportingFormat sedang dibuat dan diunduh. Tombol laporan akan aktif kembali setelah proses selesai.
                     </div>
                 }
             </div>
@@ -381,13 +382,13 @@
     private string StatusFilter = "Semua";
     private string TypeFilter = "Semua";
     private bool IsLoading;
-    private bool IsPrinting;
     private bool IsExporting;
     private string PrintMode = "summary";
+    private string ExportingFormat;
     private string CompletionMessage;
     private string ProcessMessage;
 
-    private bool CanExport => Report is not null && !IsLoading && !IsExporting && !IsPrinting;
+    private bool CanExport => Report is not null && !IsLoading && !IsExporting;
 
     private IEnumerable<InventoryAnalysisRow> FilteredRows => (Report?.Rows ?? Enumerable.Empty<InventoryAnalysisRow>())
         .Where(x => TypeFilter == "Semua" || x.JenisItem == TypeFilter)
@@ -430,24 +431,37 @@
         }
     }
 
-    private Task PrintSummary() => PrintReport("summary");
+    private Task ExportPdfSummary() => ExportPdf(fullReport: false);
 
-    private Task PrintFullReport() => PrintReport("full");
+    private Task ExportPdfFull() => ExportPdf(fullReport: true);
 
-    private async Task PrintReport(string mode)
+    private async Task ExportPdf(bool fullReport)
     {
-        PrintMode = mode;
-        IsPrinting = true;
+        if (Report is null)
+            return;
+
+        IsExporting = true;
+        ExportingFormat = fullReport ? "PDF lengkap" : "PDF ringkasan";
+        CompletionMessage = null;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
         try
         {
-            await InvokeAsync(StateHasChanged);
-            await Task.Yield();
-            await Task.Delay(mode == "full" ? 1000 : 400);
-            await JS.InvokeVoidAsync("window.print");
+            var pdfBytes = InventoryAnalysisPdfExporter.Generate(Report, fullReport);
+            using var stream = new MemoryStream(pdfBytes);
+            using var streamRef = new DotNetStreamReference(stream);
+            var suffix = fullReport ? "Lengkap" : "Ringkasan";
+            await JS.InvokeVoidAsync("downloadFileFromStream", $"Report_Stock_Analysis_{suffix}_{Report.AsOfDate:yyyyMMdd}.pdf", streamRef);
+            CompletionMessage = $"PDF {suffix.ToLowerInvariant()} berhasil dibuat dan siap diunduh.";
+        }
+        catch (Exception ex)
+        {
+            CompletionMessage = $"Export PDF gagal: {ex.Message}";
         }
         finally
         {
-            IsPrinting = false;
+            IsExporting = false;
+            ExportingFormat = null;
             await InvokeAsync(StateHasChanged);
         }
     }
