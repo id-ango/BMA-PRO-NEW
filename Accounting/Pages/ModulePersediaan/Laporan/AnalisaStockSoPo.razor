@@ -352,7 +352,7 @@
                 </section>
                 <section class="print-summary-page print-po-recommendation-page">
                     <h3>Dasar Analisa &amp; Alasan Rekomendasi PO</h3>
-                    @if (Report.Rows.Any(x => x.HasPurchaseRecommendation))
+                    @if (FilteredRows.Any(x => x.HasPurchaseRecommendation))
                     {
                         <table class="table table-sm print-summary-table align-middle">
                             <thead>
@@ -367,7 +367,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(30))
+                                @foreach (var row in FilteredRows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(30))
                                 {
                                     <tr>
                                         <td>@row.ItemCode - @row.NamaItem</td>
