@@ -156,6 +156,9 @@
                         <option value="Risiko Over Stock">Risiko Over Stock</option>
                         <option value="PO Tanpa Kebutuhan SO">PO Tanpa Kebutuhan SO</option>
                         <option value="Rekomendasi PO">Rekomendasi PO</option>
+                        <option value="Stock Kosong - Ada SO">Stock Kosong - Ada SO</option>
+                        <option value="Stock Kosong - Ada PO">Stock Kosong - Ada PO</option>
+                        <option value="Stock Habis - Tanpa Pesanan">Stock Habis - Tanpa Pesanan</option>
                         <option value="Tidak ada stock">Tidak ada stock</option>
                         <option value="Slow Moving">Slow Moving</option>
                         <option value="Normal">Normal</option>
@@ -609,6 +612,10 @@
         "PO Tanpa Kebutuhan SO" => "bg-warning text-dark",
         "Rekomendasi PO" => "bg-success",
         "Slow Moving" => "bg-secondary",
+        "Stock Kosong - Ada SO" => "bg-danger",
+        "Stock Kosong - Ada PO" => "bg-warning text-dark",
+        "Stock Habis - Tanpa Pesanan" => "bg-info text-dark",
+        "Tidak ada stock" => "bg-dark",
         _ => "bg-success"
     };
 
@@ -643,6 +650,9 @@
             ("PO Tanpa Kebutuhan SO", "Item dengan PO aktif melampaui kebutuhan SO saat ini tetapi item masih aktif bergerak. Fokus: Monitor serapan pasar."),
             ("Risiko Over Stock", "Item dengan PO berlebih di mana pergerakan stock lambat atau tidak ada pengeluaran terbaru. Fokus: Pertimbangkan penundaan kedatangan PO."),
             ("Normal", "Item persediaan dengan pergerakan dan proporsi stock dalam batas wajar. Fokus: Pemantauan rutin operasional."),
+            ("Stock Kosong - Ada SO", "Item tanpa stock fisik namun ada SO aktif. Fokus: Percepat pengadaan atau kedatangan PO untuk memenuhi SO."),
+            ("Stock Kosong - Ada PO", "Item tanpa stock fisik namun ada PO aktif. Fokus: Pantau jadwal kedatangan PO."),
+            ("Stock Habis - Tanpa Pesanan", "Item tanpa stock fisik, tanpa SO dan PO aktif, namun ada penjualan dalam periode analisa. Fokus: Evaluasi pembelian ulang bila barang masih laku."),
             ("Tidak ada stock", "Item tanpa saldo fisik saat ini. Fokus: Tinjau kebutuhan bila ada permintaan aktif.")
         };
 

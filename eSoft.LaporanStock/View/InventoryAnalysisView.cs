@@ -98,7 +98,15 @@ namespace eSoft.LaporanStock.View
         public static string GetStatus(InventoryAnalysisRow row, int agingThresholdDays)
         {
             if (row.StockQty <= 0)
+            {
+                if (row.SoRemainingQty > 0)
+                    return "Stock Kosong - Ada SO";
+                if (row.PoRemainingQty > 0)
+                    return "Stock Kosong - Ada PO";
+                if (row.SalesQty12Months > 0)
+                    return "Stock Habis - Tanpa Pesanan";
                 return "Tidak ada stock";
+            }
 
             // Jika ada permintaan SO aktif yang melebihi stock fisik saat ini
             if (row.SoRemainingQty > row.StockQty && row.PoRemainingQty <= row.SoRemainingQty - row.StockQty)
@@ -143,6 +151,9 @@ namespace eSoft.LaporanStock.View
                 "PO Tanpa Kebutuhan SO" => "Pesanan ke supplier (PO) melebihi pesanan pelanggan (SO), tetapi barang masih aktif laku. Pantau penjualan sebelum menunda PO.",
                 "Rekomendasi PO" => "Riwayat penjualan menunjukkan kebutuhan ke depan belum cukup dari stock dan PO aktif. Disarankan pesan ke supplier.",
                 "Slow Moving" => "Penjualan melambat. Pantau pemakaian dan batasi pembelian baru.",
+                "Stock Kosong - Ada SO" => "Stock fisik habis, namun ada SO aktif. Prioritaskan pemenuhan SO melalui pengadaan atau percepatan kedatangan PO.",
+                "Stock Habis - Tanpa Pesanan" => "Stock fisik habis dan tidak ada SO/PO aktif, namun item masih ada penjualan dalam periode analisa. Evaluasi kebutuhan pembelian ulang bila barang masih aktif laku.",
+                "Stock Kosong - Ada PO" => 
                 "Tidak ada stock" => "Tidak ada saldo fisik barang; cek kebutuhan pesanan bila ada permintaan customer.",
                 _ => isSparePart ? "Pantau jadwal pemakaian dan perawatan berkala." : "Persediaan dalam kondisi normal dan lancar."
             };
