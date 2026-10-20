@@ -2140,7 +2140,7 @@ namespace eSoft.LaporanStock.Services
             }
 
             report.Rows = report.Rows
-                .Where(x => x.StockQty > 0 || x.SoRemainingQty > 0 || x.PoRemainingQty > 0)
+                .Where(x => x.StockQty > 0 || x.SoRemainingQty > 0 || x.PoRemainingQty > 0 || x.SalesQty12Months > 0)
                 .OrderByDescending(x => x.StockValue)
                 .ThenBy(x => x.ItemCode)
                 .ToList();
@@ -2159,6 +2159,9 @@ namespace eSoft.LaporanStock.Services
 
             if (row.IsSparePart && row.SalesQty12Months <= 0 && row.SoRemainingQty <= 0)
                 return "Tidak ada penjualan dalam periode analisa. Karena item diklasifikasikan sebagai sparepart, kebutuhan perawatan mesin perlu divalidasi sebelum membuat PO.";
+
+            if (row.StockQty <= 0 && !row.HasPurchaseRecommendation && row.SalesQty12Months > 0)
+                return $"Tidak ada stock fisik dan tidak ada SO/PO aktif, namun ada penjualan {row.SalesQty12Months:N2} {row.Satuan} dalam {historyMonths} bulan analisa (rata-rata {row.AverageMonthlySales:N2}/bulan). Evaluasi kebutuhan pembelian ulang bila barang masih aktif laku.";
 
             if (row.HasPurchaseRecommendation)
                 return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; target persediaan {effectiveCoverageMonths} bulan: {row.DemandCoverageQty:N2}; ditambah sisa pesanan customer (SO): {row.SoRemainingQty:N2}; tersedia dari stock dan pesanan supplier (PO): {(row.StockQty + row.PoRemainingQty):N2}; saran order PO (dibulatkan): {row.RecommendedPoQty:N0}.";

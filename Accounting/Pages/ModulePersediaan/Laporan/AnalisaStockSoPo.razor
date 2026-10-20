@@ -156,6 +156,7 @@
                         <option value="Risiko Over Stock">Risiko Over Stock</option>
                         <option value="PO Tanpa Kebutuhan SO">PO Tanpa Kebutuhan SO</option>
                         <option value="Rekomendasi PO">Rekomendasi PO</option>
+                        <option value="Tidak ada stock">Tidak ada stock</option>
                         <option value="Slow Moving">Slow Moving</option>
                         <option value="Normal">Normal</option>
                     </select>
@@ -349,7 +350,7 @@
                     @if (Report.Rows.Any(x => x.HasPurchaseRecommendation))
                     {
                         <table class="table table-sm print-summary-table align-middle">
-                            <thead><tr><th>Item</th><th class="text-end">Stock Saat Ini</th><th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th>Adj. Netto</th><th>Alasan</th></tr></thead>
+                            <th>Adj. Netto</th><th class="text-end">Rekom PO</th><th>Alasan</th>
                             <tbody>
                                 @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(30))
                                 {
@@ -358,8 +359,8 @@
                                         <td class="text-end">@row.StockQty.ToString("N2") @row.Satuan</td>
                                         <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
                                         <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
-                                        <td class="text-end">@row.RecommendedPoQty.ToString("N0")</td>
                                         <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
+                                        <td class="text-end">@row.RecommendedPoQty.ToString("N0")</td>
                                         <td>@row.DemandAnalysisReason</td>
                                     </tr>
                                 }
