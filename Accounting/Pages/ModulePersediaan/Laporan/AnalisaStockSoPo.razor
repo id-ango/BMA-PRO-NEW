@@ -355,7 +355,11 @@
                     @if (Report.Rows.Any(x => x.HasPurchaseRecommendation))
                     {
                         <table class="table table-sm print-summary-table align-middle">
-                            <th>Adj. Netto</th><th class="text-end">Rekom PO</th><th>Alasan</th>
+                            <thead>
+                                <tr>
+                                    <th>Adj. Netto</th><th class="text-end">Rekom PO</th><th>Alasan</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 @foreach (var row in Report.Rows.Where(x => x.HasPurchaseRecommendation).OrderByDescending(x => x.RecommendedPoValue).Take(30))
                                 {
@@ -365,7 +369,7 @@
                                         <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
                                         <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
                                         <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
-                                        <td class="text-end">@row.RecommendedPoQty.ToString("N0")</td>
+                                        <td class="text-end text-danger fw-bold">@row.RecommendedPoQty.ToString("N0")</td>
                                         <td>@row.DemandAnalysisReason</td>
                                     </tr>
                                 }
@@ -576,6 +580,8 @@
                 detail.Range(2, 8, detailRow - 1, 11).Style.NumberFormat.Format = "#,##0";
                 detail.Range(2, 12, detailRow - 1, 13).Style.NumberFormat.Format = "#,##0.00";
                 detail.Range(2, 14, detailRow - 1, 15).Style.NumberFormat.Format = "#,##0";
+                detail.Range(2, 14, detailRow - 1, 14).Style.Font.FontColor = XLColor.Red;
+                detail.Range(2, 14, detailRow - 1, 14).Style.Font.Bold = true;
             }
             var widths = new[] { 14, 38, 13, 10, 11, 16, 16, 11, 11, 11, 13, 15, 15, 13, 17, 22, 25, 45, 78 };
             for (var column = 0; column < widths.Length; column++)
