@@ -2131,7 +2131,7 @@ namespace eSoft.LaporanStock.Services
                 };
 
                 row.Status = InventoryAnalysisClassification.GetStatus(row, agingThresholdDays);
-                if (row.RecommendedPoQty > 0 && (row.Status == "Normal" || row.Status == "PO Tanpa Kebutuhan SO" || row.Status == "Tidak ada stock"))
+                if (row.RecommendedPoQty > 0 && (row.Status == "Normal" || row.Status == "PO Tanpa Kebutuhan SO"))
                     row.Status = "Rekomendasi PO";
 
                 row.Recommendation = InventoryAnalysisClassification.GetRecommendation(row.Status, row.IsSparePart);
@@ -2160,7 +2160,7 @@ namespace eSoft.LaporanStock.Services
             if (row.IsSparePart && row.SalesQty12Months <= 0 && row.SoRemainingQty <= 0)
                 return "Tidak ada penjualan dalam periode analisa. Karena item diklasifikasikan sebagai sparepart, kebutuhan perawatan mesin perlu divalidasi sebelum membuat PO.";
 
-            if (row.StockQty <= 0 && !row.HasPurchaseRecommendation && row.SalesQty12Months > 0)
+            if (row.StockQty <= 0 && row.SoRemainingQty <= 0 && row.PoRemainingQty <= 0 && row.SalesQty12Months > 0)
                 return $"Tidak ada stock fisik dan tidak ada SO/PO aktif, namun ada penjualan {row.SalesQty12Months:N2} {row.Satuan} dalam {historyMonths} bulan analisa (rata-rata {row.AverageMonthlySales:N2}/bulan). Evaluasi kebutuhan pembelian ulang bila barang masih aktif laku.";
 
             if (row.HasPurchaseRecommendation)
