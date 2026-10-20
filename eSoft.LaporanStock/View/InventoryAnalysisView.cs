@@ -153,8 +153,8 @@ namespace eSoft.LaporanStock.View
                 "Slow Moving" => "Penjualan melambat. Pantau pemakaian dan batasi pembelian baru.",
                 "Stock Kosong - Ada SO" => "Stock fisik habis, namun ada SO aktif. Prioritaskan pemenuhan SO melalui pengadaan atau percepatan kedatangan PO.",
                 "Stock Habis - Tanpa Pesanan" => "Stock fisik habis dan tidak ada SO/PO aktif, namun item masih ada penjualan dalam periode analisa. Evaluasi kebutuhan pembelian ulang bila barang masih aktif laku.",
-                "Stock Kosong - Ada PO" => 
-                "Tidak ada stock" => "Tidak ada saldo fisik barang; cek kebutuhan pesanan bila ada permintaan customer.",
+                "Stock Kosong - Ada PO" => "Stock fisik habis, namun PO aktif sudah ada. Pantau jadwal kedatangan PO dan kebutuhan pesanan customer.",
+                "Tidak ada stock" =>
                 _ => isSparePart ? "Pantau jadwal pemakaian dan perawatan berkala." : "Persediaan dalam kondisi normal dan lancar."
             };
         }
