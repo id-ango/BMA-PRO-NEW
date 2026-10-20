@@ -183,7 +183,7 @@
                         <tr>
                             <th>Item</th><th>Jenis</th><th class="text-end">Stock</th><th class="text-end">Nilai Stock</th>
                             <th>Terakhir Keluar</th><th class="text-end">Umur</th><th class="text-end">Sisa SO</th><th class="text-end">Sisa PO</th>
-                            <th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th><th class="text-end">Rekom PO</th><th title="Total netto qty adjustment sampai tanggal analisa">Adj. Netto</th><th>Status</th><th>Alasan Analisa</th>
+                            <th title="Total netto qty adjustment sampai tanggal analisa">Adj. Netto</th><th class="text-end">Rekom PO</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -200,8 +200,8 @@
                                 <td class="text-end">@row.PoRemainingQty.ToString("N2")</td>
                                 <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
                                 <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
-                                <td class="text-end fw-bold text-primary">@row.RecommendedPoQty.ToString("N0")</td>
                                 <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
+                                <td class="text-end fw-bold text-primary">@row.RecommendedPoQty.ToString("N0")</td>
                                 <td><span class="badge @GetStatusClass(row.Status)">@row.Status</span></td>
                                 <td>
                                     <small>
