@@ -311,6 +311,36 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                     b.ToTable("IcItems");
                 });
 
+            modelBuilder.Entity("eSoft.Persediaan.Model.IcItemGroup", b =>
+                {
+                    b.Property<int>("ItemGroupId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ItemGroupId"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ItemGroupId");
+
+                    b.HasIndex("ParentId", "Code")
+                        .IsUnique()
+                        .HasFilter("[ParentId] IS NOT NULL");
+
+                    b.ToTable("IcItemGroup");
+                });
+
             modelBuilder.Entity("eSoft.Persediaan.Model.IcLokasi", b =>
                 {
                     b.Property<int>("IcLokasiId")
@@ -518,44 +548,24 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                     b.ToTable("IcTransHs");
                 });
 
-            modelBuilder.Entity("eSoft.Persediaan.Model.ItemGroup", b =>
-                {
-                    b.Property<int>("ItemGroupId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ItemGroupId"));
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int?>("ParentId")
-                        .HasColumnType("int");
-
-                    b.HasKey("ItemGroupId");
-
-                    b.HasIndex("ParentId", "Code")
-                        .IsUnique()
-                        .HasFilter("[ParentId] IS NOT NULL");
-
-                    b.ToTable("ItemGroup");
-                });
-
             modelBuilder.Entity("eSoft.Persediaan.Model.IcItem", b =>
                 {
-                    b.HasOne("eSoft.Persediaan.Model.ItemGroup", "ItemGroup")
+                    b.HasOne("eSoft.Persediaan.Model.IcItemGroup", "ItemGroup")
                         .WithMany("Items")
                         .HasForeignKey("ItemGroupId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ItemGroup");
+                });
+
+            modelBuilder.Entity("eSoft.Persediaan.Model.IcItemGroup", b =>
+                {
+                    b.HasOne("eSoft.Persediaan.Model.IcItemGroup", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Parent");
                 });
 
             modelBuilder.Entity("eSoft.Persediaan.Model.IcTransD", b =>
@@ -569,26 +579,16 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                     b.Navigation("IcTransH");
                 });
 
-            modelBuilder.Entity("eSoft.Persediaan.Model.ItemGroup", b =>
+            modelBuilder.Entity("eSoft.Persediaan.Model.IcItemGroup", b =>
                 {
-                    b.HasOne("eSoft.Persediaan.Model.ItemGroup", "Parent")
-                        .WithMany("Children")
-                        .HasForeignKey("ParentId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                    b.Navigation("Children");
 
-                    b.Navigation("Parent");
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("eSoft.Persediaan.Model.IcTransH", b =>
                 {
                     b.Navigation("IcTransDs");
-                });
-
-            modelBuilder.Entity("eSoft.Persediaan.Model.ItemGroup", b =>
-                {
-                    b.Navigation("Children");
-
-                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

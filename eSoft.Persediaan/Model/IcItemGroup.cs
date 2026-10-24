@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace eSoft.Persediaan.Model
 {
-    [Table("ItemGroup")]
-    public class ItemGroup
+    [Table("IcItemGroup")]
+    public class IcItemGroup
     {
         [Key]
         public int ItemGroupId { get; set; }
@@ -21,9 +21,9 @@ namespace eSoft.Persediaan.Model
         public int? ParentId { get; set; }
 
         [ForeignKey(nameof(ParentId))]
-        public ItemGroup? Parent { get; set; }
+        public IcItemGroup? Parent { get; set; }
 
-        public ICollection<ItemGroup> Children { get; set; } = new List<ItemGroup>();
+        public ICollection<IcItemGroup> Children { get; set; } = new List<IcItemGroup>();
 
         public ICollection<IcItem> Items { get; set; } = new List<IcItem>();
     }

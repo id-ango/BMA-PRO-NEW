@@ -24,13 +24,13 @@ namespace eSoft.Persediaan.Data
         public DbSet<IcTransH> IcTransHs { get; set; }
         public DbSet<IcTransD> IcTransDs { get; set; }
         public DbSet<IcStockCard> IcStockCards { get; set; }
-        public DbSet<ItemGroup> ItemGroups { get; set; }
+        public DbSet<IcItemGroup> IcItemGroups { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<ItemGroup>(entity =>
+            modelBuilder.Entity<IcItemGroup>(entity =>
             {
                 entity.HasOne(g => g.Parent)
                       .WithMany(g => g.Children)

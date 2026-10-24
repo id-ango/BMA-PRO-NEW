@@ -54,7 +54,7 @@ namespace eSoft.Persediaan.Model
         public string CurrencyCode { get; set; }
         public bool Disabled { get; set; }
         public int? ItemGroupId { get; set; }
-        public ItemGroup? ItemGroup { get; set; }
+        public IcItemGroup? ItemGroup { get; set; }
         [MaxLength(100)]
         public string? PartNumber { get; set; }
         [MaxLength(100)]

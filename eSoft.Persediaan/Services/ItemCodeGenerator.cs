@@ -42,14 +42,14 @@ namespace eSoft.Persediaan.Services
             return $"{prefix}{(maxSequence + 1).ToString($"D{SequenceDigits}")}";
         }
 
-        private async Task<List<ItemGroup>> GetAncestorChainAsync(int itemGroupId, CancellationToken cancellationToken)
+        private async Task<List<IcItemGroup>> GetAncestorChainAsync(int itemGroupId, CancellationToken cancellationToken)
         {
-            var chain = new List<ItemGroup>();
+            var chain = new List<IcItemGroup>();
             int? currentId = itemGroupId;
 
             while (currentId.HasValue)
             {
-                var group = await _db.ItemGroups
+                var group = await _db.IcItemGroups
                     .AsNoTracking()
                     .FirstOrDefaultAsync(g => g.ItemGroupId == currentId.Value, cancellationToken)
                     ?? throw new InvalidOperationException($"ItemGroup {currentId.Value} tidak ditemukan.");

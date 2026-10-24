@@ -69,13 +69,13 @@ namespace eSoft.Persediaan.Data
 
         private static async Task SeedNodeAsync(DbContextPersediaan db, Node node, int? parentId, CancellationToken cancellationToken)
         {
-            var group = await db.ItemGroups
+            var group = await db.IcItemGroups
                 .FirstOrDefaultAsync(g => g.ParentId == parentId && g.Code == node.Code, cancellationToken);
 
             if (group is null)
             {
-                group = new ItemGroup { Code = node.Code, Name = node.Name, ParentId = parentId };
-                db.ItemGroups.Add(group);
+                group = new IcItemGroup { Code = node.Code, Name = node.Name, ParentId = parentId };
+                db.IcItemGroups.Add(group);
                 await db.SaveChangesAsync(cancellationToken);
             }
 

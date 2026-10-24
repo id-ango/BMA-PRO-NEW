@@ -17,50 +17,50 @@ namespace eSoft.Persediaan.Repositories
             _db = db;
         }
 
-        public async Task<List<ItemGroup>> GetAllAsync(CancellationToken cancellationToken = default)
+        public async Task<List<IcItemGroup>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            return await _db.ItemGroups
+            return await _db.IcItemGroups
                 .AsNoTracking()
                 .OrderBy(g => g.Code)
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<ItemGroup?> GetByIdAsync(int itemGroupId, CancellationToken cancellationToken = default)
+        public async Task<IcItemGroup?> GetByIdAsync(int itemGroupId, CancellationToken cancellationToken = default)
         {
-            return await _db.ItemGroups
+            return await _db.IcItemGroups
                 .FirstOrDefaultAsync(g => g.ItemGroupId == itemGroupId, cancellationToken);
         }
 
-        public async Task<List<ItemGroup>> GetChildrenAsync(int? parentId, CancellationToken cancellationToken = default)
+        public async Task<List<IcItemGroup>> GetChildrenAsync(int? parentId, CancellationToken cancellationToken = default)
         {
-            return await _db.ItemGroups
+            return await _db.IcItemGroups
                 .AsNoTracking()
                 .Where(g => g.ParentId == parentId)
                 .OrderBy(g => g.Code)
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task AddAsync(ItemGroup itemGroup, CancellationToken cancellationToken = default)
+        public async Task AddAsync(IcItemGroup itemGroup, CancellationToken cancellationToken = default)
         {
-            _db.ItemGroups.Add(itemGroup);
+            _db.IcItemGroups.Add(itemGroup);
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task UpdateAsync(ItemGroup itemGroup, CancellationToken cancellationToken = default)
+        public async Task UpdateAsync(IcItemGroup itemGroup, CancellationToken cancellationToken = default)
         {
-            _db.ItemGroups.Update(itemGroup);
+            _db.IcItemGroups.Update(itemGroup);
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task DeleteAsync(ItemGroup itemGroup, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(IcItemGroup itemGroup, CancellationToken cancellationToken = default)
         {
-            _db.ItemGroups.Remove(itemGroup);
+            _db.IcItemGroups.Remove(itemGroup);
             await _db.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<bool> CodeExistsAsync(int? parentId, string code, int? excludeId = null, CancellationToken cancellationToken = default)
         {
-            return await _db.ItemGroups.AnyAsync(g =>
+            return await _db.IcItemGroups.AnyAsync(g =>
                 g.ParentId == parentId &&
                 g.Code == code &&
                 (!excludeId.HasValue || g.ItemGroupId != excludeId.Value), cancellationToken);
