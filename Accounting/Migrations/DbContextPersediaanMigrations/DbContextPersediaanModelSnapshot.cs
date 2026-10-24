@@ -17,10 +17,10 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.36")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("eSoft.Persediaan.Model.IcAcct", b =>
                 {
@@ -28,7 +28,7 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcAcctId"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcAcctId"));
 
                     b.Property<string>("Acct1")
                         .HasColumnType("nvarchar(max)");
@@ -65,7 +65,7 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcAltItemId"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcAltItemId"));
 
                     b.Property<string>("AcctSet")
                         .HasColumnType("nvarchar(max)");
@@ -147,7 +147,7 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcCatId"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcCatId"));
 
                     b.Property<string>("Cat1")
                         .HasColumnType("nvarchar(max)");
@@ -184,7 +184,7 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcDivId"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcDivId"));
 
                     b.Property<string>("Divisi")
                         .HasColumnType("nvarchar(max)");
@@ -203,7 +203,7 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcItemId"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcItemId"));
 
                     b.Property<string>("AcctSet")
                         .HasColumnType("nvarchar(max)");
@@ -247,8 +247,14 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                     b.Property<decimal>("HrgUsd")
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<bool>("IsAutoCode")
+                        .HasColumnType("bit");
+
                     b.Property<string>("ItemCode")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ItemGroupId")
+                        .HasColumnType("int");
 
                     b.Property<int>("JnsBrng")
                         .HasColumnType("int");
@@ -265,6 +271,10 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                     b.Property<string>("NamaLengkap")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PartNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<decimal>("Qty")
                         .HasColumnType("decimal(18,4)");
 
@@ -277,16 +287,26 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                     b.Property<string>("Satuan")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("SearchTags")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<bool>("SerialNo")
                         .HasColumnType("bit");
 
                     b.Property<decimal>("StdPrice")
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("SupplierCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime?>("TglPost")
                         .HasColumnType("datetime2");
 
                     b.HasKey("IcItemId");
+
+                    b.HasIndex("ItemGroupId");
 
                     b.ToTable("IcItems");
                 });
@@ -297,7 +317,7 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcLokasiId"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcLokasiId"));
 
                     b.Property<string>("Alamat")
                         .HasColumnType("nvarchar(max)");
@@ -325,7 +345,7 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcStockCardId"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcStockCardId"));
 
                     b.Property<decimal>("Cost")
                         .HasColumnType("decimal(18,4)");
@@ -395,7 +415,7 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcTransDId"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcTransDId"));
 
                     b.Property<string>("AcctSet")
                         .HasColumnType("nvarchar(max)");
@@ -461,7 +481,7 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcTransHId"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IcTransHId"));
 
                     b.Property<string>("AcctSet")
                         .HasColumnType("nvarchar(max)");
@@ -498,6 +518,46 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                     b.ToTable("IcTransHs");
                 });
 
+            modelBuilder.Entity("eSoft.Persediaan.Model.ItemGroup", b =>
+                {
+                    b.Property<int>("ItemGroupId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ItemGroupId"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ItemGroupId");
+
+                    b.HasIndex("ParentId", "Code")
+                        .IsUnique()
+                        .HasFilter("[ParentId] IS NOT NULL");
+
+                    b.ToTable("ItemGroup");
+                });
+
+            modelBuilder.Entity("eSoft.Persediaan.Model.IcItem", b =>
+                {
+                    b.HasOne("eSoft.Persediaan.Model.ItemGroup", "ItemGroup")
+                        .WithMany("Items")
+                        .HasForeignKey("ItemGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ItemGroup");
+                });
+
             modelBuilder.Entity("eSoft.Persediaan.Model.IcTransD", b =>
                 {
                     b.HasOne("eSoft.Persediaan.Model.IcTransH", "IcTransH")
@@ -509,9 +569,26 @@ namespace Accounting.Migrations.DbContextPersediaanMigrations
                     b.Navigation("IcTransH");
                 });
 
+            modelBuilder.Entity("eSoft.Persediaan.Model.ItemGroup", b =>
+                {
+                    b.HasOne("eSoft.Persediaan.Model.ItemGroup", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Parent");
+                });
+
             modelBuilder.Entity("eSoft.Persediaan.Model.IcTransH", b =>
                 {
                     b.Navigation("IcTransDs");
+                });
+
+            modelBuilder.Entity("eSoft.Persediaan.Model.ItemGroup", b =>
+                {
+                    b.Navigation("Children");
+
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

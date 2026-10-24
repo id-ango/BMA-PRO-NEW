@@ -20,6 +20,7 @@ using eSoft.Pembelian.Services;
 using eSoft.Penjualan.Data;
 using eSoft.Penjualan.Services;
 using eSoft.Persediaan.Data;
+using eSoft.Persediaan.Repositories;
 using eSoft.Persediaan.Services;
 using eSoft.Piutang.Data;
 using eSoft.Piutang.Services;
@@ -158,6 +159,9 @@ builder.Services.AddTransient<IPayableServices, PayableServices>();
 builder.Services.AddTransient<IPaymentApServices, PaymentApServices>();
 builder.Services.AddTransient<IPaymentApDpServices, PaymentApDpServices>();
 builder.Services.AddTransient<IInventoryServices, InventoryServices>();
+builder.Services.AddTransient<IItemCodeGenerator, ItemCodeGenerator>();
+builder.Services.AddTransient<IItemSearchService, ItemSearchService>();
+builder.Services.AddTransient<IItemGroupRepository, ItemGroupRepository>();
 builder.Services.AddTransient<IIcAdjustServices, IcAdjustServices>();
 builder.Services.AddTransient<IPurchaseServices, PurchaseServices>();
 builder.Services.AddTransient<ISalesDocumentNumberService, SalesDocumentNumberService>();
@@ -218,6 +222,11 @@ app.MapBlazorHub();
 //{
 //    options.Transports = HttpTransportType.WebSockets | HttpTransportType.LongPolling;
 //});
+app.MapPost("/admin/seed-item-groups", async (DbContextPersediaan db, CancellationToken cancellationToken) =>
+{
+    await ItemGroupSeeder.SeedAsync(db, cancellationToken);
+    return Results.Ok("ItemGroup seeded.");
+}).RequireAuthorization();
 app.MapFallbackToPage("/_Host");
 
 app.Run();

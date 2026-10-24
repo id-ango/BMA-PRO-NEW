@@ -24,5 +24,29 @@ namespace eSoft.Persediaan.Data
         public DbSet<IcTransH> IcTransHs { get; set; }
         public DbSet<IcTransD> IcTransDs { get; set; }
         public DbSet<IcStockCard> IcStockCards { get; set; }
+        public DbSet<ItemGroup> ItemGroups { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<ItemGroup>(entity =>
+            {
+                entity.HasOne(g => g.Parent)
+                      .WithMany(g => g.Children)
+                      .HasForeignKey(g => g.ParentId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(g => new { g.ParentId, g.Code }).IsUnique();
+            });
+
+            modelBuilder.Entity<IcItem>(entity =>
+            {
+                entity.HasOne(i => i.ItemGroup)
+                      .WithMany(g => g.Items)
+                      .HasForeignKey(i => i.ItemGroupId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
     }
 }

@@ -53,6 +53,15 @@ namespace eSoft.Persediaan.Model
         public string NamaLengkap { get; set; }
         public string CurrencyCode { get; set; }
         public bool Disabled { get; set; }
+        public int? ItemGroupId { get; set; }
+        public ItemGroup? ItemGroup { get; set; }
+        [MaxLength(100)]
+        public string? PartNumber { get; set; }
+        [MaxLength(100)]
+        public string? SupplierCode { get; set; }
+        [MaxLength(500)]
+        public string? SearchTags { get; set; }
+        public bool IsAutoCode { get; set; }
 
     }
 }
