@@ -1,0 +1,73 @@
+@page "/ModulePersediaan/SetupItemGroup"
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.Repositories
+
+@inject IItemGroupRepository ItemGroupRepository
+@inject NavigationManager NavigationManager
+
+<div class="container">
+    <h1>Setup Item Group</h1>
+</div>
+
+<br />
+
+<div class="container">
+    @if (_loading)
+    {
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Memuat data...</span>
+    }
+    else if (_groups.Count == 0)
+    {
+        <div class="alert alert-info">Belum ada Item Group.</div>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Parent</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var group in _groups)
+                {
+                    <tr>
+                        <td style="padding-left: @(_depth[group.ItemGroupId] * 20)px">@group.Code</td>
+                        <td>@group.Name</td>
+                        <td>@(group.Parent?.Name ?? "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private List<IcItemGroup> _groups = new();
+    private Dictionary<int, int> _depth = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var all = await ItemGroupRepository.GetAllAsync();
+        var byParent = all.ToLookup(g => g.ParentId);
+        _groups = new List<IcItemGroup>();
+        _depth = new Dictionary<int, int>();
+
+        void Walk(int? parentId, int depth)
+        {
+            foreach (var group in byParent[parentId].OrderBy(g => g.Code))
+            {
+                _depth[group.ItemGroupId] = depth;
+                _groups.Add(group);
+                Walk(group.ItemGroupId, depth + 1);
+            }
+        }
+
+        Walk(null, 0);
+        _loading = false;
+    }
+}

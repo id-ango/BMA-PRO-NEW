@@ -188,6 +188,15 @@ builder.Services.AddTransient<IFinancialServices, FinancialServices>();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var auditContext = scope.ServiceProvider.GetRequiredService<AuditContext>();
+    var persediaanDb = scope.ServiceProvider.GetRequiredService<DbContextPersediaan>();
+    using (auditContext.BeginSuppressAudit())
+    {
+        await ItemGroupSeeder.SeedAsync(persediaanDb);
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -222,11 +231,6 @@ app.MapBlazorHub();
 //{
 //    options.Transports = HttpTransportType.WebSockets | HttpTransportType.LongPolling;
 //});
-app.MapPost("/admin/seed-item-groups", async (DbContextPersediaan db, CancellationToken cancellationToken) =>
-{
-    await ItemGroupSeeder.SeedAsync(db, cancellationToken);
-    return Results.Ok("ItemGroup seeded.");
-}).RequireAuthorization();
 app.MapFallbackToPage("/_Host");
 
 app.Run();
