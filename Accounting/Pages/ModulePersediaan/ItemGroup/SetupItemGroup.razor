@@ -34,7 +34,7 @@
                 <tr>
                     <th>Code</th>
                     <th>Name</th>
-                    <th>Parent</th>
+                    <th>Path</th>
                     <th style="width: 180px;">Aksi</th>
                 </tr>
             </thead>
@@ -44,8 +44,9 @@
                     <tr>
                         <td style="padding-left: @(_depth[group.ItemGroupId] * 20)px">@group.Code</td>
                         <td>@group.Name</td>
-                        <td>@(group.Parent?.Name ?? "-")</td>
+                        <td>@GetPath(group)</td>
                         <td>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenChildForm(group)" disabled="@_saving">+ Sub</button>
                             <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenForm(group)" disabled="@_saving">Edit</button>
                             <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(group)" disabled="@_saving">Hapus</button>
                         </td>
@@ -72,7 +73,7 @@
                             <option value="" selected="@(_form.ParentId is null)">- (Root)</option>
                             @foreach (var option in _parentOptions)
                             {
-                                <option value="@option.ItemGroupId" selected="@(option.ItemGroupId == _form.ParentId)">@option.Name</option>
+                                <option value="@option.ItemGroupId" selected="@(option.ItemGroupId == _form.ParentId)">@Indent(option)@option.Name</option>
                             }
                         </select>
                     </div>
@@ -152,13 +153,13 @@
         }
 
         Walk(null, 0);
-        _parentOptions = _groups.ToList();
         _loading = false;
     }
 
     private void OpenForm(IcItemGroup? group)
     {
         _formError = null;
+        _parentOptions = _groups.Where(g => group is null || !IsDescendantOrSelf(g.ItemGroupId, group.ItemGroupId)).ToList();
         _form = group is null
             ? new FormModel()
             : new FormModel
@@ -170,6 +171,26 @@
             };
         _showForm = true;
     }
+
+    private void OpenChildForm(IcItemGroup parent)
+    {
+        OpenForm(null);
+        _form.ParentId = parent.ItemGroupId;
+    }
+
+    private string GetPath(IcItemGroup group)
+    {
+        var names = new List<string>();
+        IcItemGroup? current = group;
+        while (current is not null)
+        {
+            names.Insert(0, current.Name);
+            current = current.ParentId is int pid ? _groups.FirstOrDefault(g => g.ItemGroupId == pid) : null;
+        }
+        return string.Join(" > ", names);
+    }
+
+    private string Indent(IcItemGroup group) => new string('\u00A0', _depth.GetValueOrDefault(group.ItemGroupId) * 4);
 
     private void CloseForm()
     {
