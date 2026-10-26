@@ -20,6 +20,7 @@ namespace eSoft.Persediaan.View
         public string ItemCode { get; set; }
         public string Dokumen { get; set; }
         public string Divisi { get; set; }
+        public int? ItemGroupId { get; set; }
         public string ItemGroupPath { get; set; }
         public string KodeDivisi { get; set; }
         public string NamaItem { get; set; }

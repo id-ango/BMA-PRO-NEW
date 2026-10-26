@@ -4,9 +4,12 @@
 
 @using eSoft.Persediaan.View
 @using eSoft.Persediaan.Services
+@using eSoft.Persediaan.Model
+@using eSoft.Persediaan.Repositories
 
 @inject IInventoryServices serviceIC
 @inject IJSRuntime JSRuntime
+@inject IItemGroupRepository groupRepo
 
 <link rel="stylesheet" href="css/laporan-current-stock.css" />
 
@@ -32,6 +35,18 @@ else
 {
     <div class="report-table">
         <div class="report-title">Laporan Stock per Group</div>
+
+        <div class="dontprint mb-3" style="max-width:600px;">
+            <label class="form-label fw-bold">Filter Group</label>
+            <select class="form-select" value="@_selectedGroup" @onchange="OnGroupChanged">
+                <option value="">Semua Group</option>
+                <option value="0">Belum Ada Group</option>
+                @foreach (var option in _groupOptions)
+                {
+                    <option value="@option.Id">@option.Path</option>
+                }
+            </select>
+        </div>
 
         @if (_groups.Count > 0)
         {
@@ -107,26 +122,92 @@ else
 
         try
         {
-            var stock = await Task.Run(() => serviceIC.GetCurrentStock());
-            _groups = stock
-                .GroupBy(x => string.IsNullOrWhiteSpace(x.ItemGroupPath) ? "Belum Ada Group" : x.ItemGroupPath)
-                .OrderBy(g => g.Key)
-                .Select(g => new GroupSection
-                {
-                    Path = g.Key,
-                    Items = g.OrderBy(x => x.ItemCode).ToList()
-                })
+            _stock = await Task.Run(() => serviceIC.GetCurrentStock());
+            var allGroups = await groupRepo.GetAllAsync();
+            _groupLookup = allGroups.ToDictionary(g => g.ItemGroupId);
+            _groupOptions = allGroups
+                .Select(g => (Id: g.ItemGroupId, Path: GetGroupPath(g.ItemGroupId)))
+                .OrderBy(g => g.Path)
                 .ToList();
-
-            foreach (var group in _groups)
-            {
-                _expanded.Add(group.Path);
-            }
+            BuildGroups();
         }
         finally
         {
             _isLoadingReport = false;
         }
+    }
+
+    private List<IcStockCardView> _stock = new();
+    private Dictionary<int, IcItemGroup> _groupLookup = new();
+    private List<(int Id, string Path)> _groupOptions = new();
+    private string _selectedGroup = "";
+
+    private string GetGroupPath(int groupId)
+    {
+        var names = new List<string>();
+        int? id = groupId;
+        while (id.HasValue && _groupLookup.TryGetValue(id.Value, out var group))
+        {
+            names.Insert(0, group.Name);
+            id = group.ParentId;
+        }
+        return string.Join(" > ", names);
+    }
+
+    private HashSet<int> GetDescendantIds(int rootId)
+    {
+        var result = new HashSet<int>();
+        var pending = new Stack<int>();
+        pending.Push(rootId);
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            if (!result.Add(current))
+            {
+                continue;
+            }
+            foreach (var child in _groupLookup.Values.Where(g => g.ParentId == current))
+            {
+                pending.Push(child.ItemGroupId);
+            }
+        }
+        return result;
+    }
+
+    private void BuildGroups()
+    {
+        IEnumerable<IcStockCardView> items = _stock;
+        if (_selectedGroup == "0")
+        {
+            items = items.Where(x => x.ItemGroupId is null);
+        }
+        else if (int.TryParse(_selectedGroup, out var groupId))
+        {
+            var ids = GetDescendantIds(groupId);
+            items = items.Where(x => x.ItemGroupId.HasValue && ids.Contains(x.ItemGroupId.Value));
+        }
+
+        _groups = items
+            .GroupBy(x => string.IsNullOrWhiteSpace(x.ItemGroupPath) ? "Belum Ada Group" : x.ItemGroupPath)
+            .OrderBy(g => g.Key)
+            .Select(g => new GroupSection
+            {
+                Path = g.Key,
+                Items = g.OrderBy(x => x.ItemCode).ToList()
+            })
+            .ToList();
+
+        _expanded.Clear();
+        foreach (var group in _groups)
+        {
+            _expanded.Add(group.Path);
+        }
+    }
+
+    private void OnGroupChanged(ChangeEventArgs e)
+    {
+        _selectedGroup = e.Value?.ToString() ?? "";
+        BuildGroups();
     }
 
     private bool IsExpanded(string path) => _expanded.Contains(path);
