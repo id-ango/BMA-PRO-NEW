@@ -28,7 +28,7 @@
                 <option value="">&nbsp;&nbsp;---Select Item Group---&nbsp;&nbsp;</option>
                 @foreach (var group in ItemGroupSet)
                 {
-                    <option value="@group.ItemGroupId">@group.Name</option>
+                    <option value="@group.ItemGroupId">@GetGroupPath(group)</option>
                 }
             </InputSelect>
         </label>
@@ -212,6 +212,25 @@
     private List<IcCat> CategorySet;
     private List<IcDiv> DivisiSet;
     private List<IcItemGroup> ItemGroupSet = new();
+
+    private string GetGroupPath(IcItemGroup group)
+    {
+        var names = new List<string> { group.Name };
+        var parentId = group.ParentId;
+        while (parentId.HasValue)
+        {
+            var parent = ItemGroupSet.Find(g => g.ItemGroupId == parentId.Value);
+            if (parent is null)
+            {
+                break;
+            }
+
+            names.Insert(0, parent.Name);
+            parentId = parent.ParentId;
+        }
+
+        return string.Join(" > ", names);
+    }
 
     ElementReference fileDropContainer;
     InputFile inputFile;
