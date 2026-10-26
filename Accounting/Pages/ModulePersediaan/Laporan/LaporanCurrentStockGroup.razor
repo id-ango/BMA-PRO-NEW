@@ -44,31 +44,35 @@ else
                             <th class="col-name">Nama Barang</th>
                             <th class="col-unit">Satuan</th>
                             <th class="col-qty">Qty</th>
+                            <th class="col-po">PO</th>
+                            <th class="col-so">SO</th>
+                            <th class="col-total">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var group in _groups)
                         {
-                            <tr class="division-header">
-                                <td colspan="5">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary dontprint" @onclick="() => ToggleGroup(group.Path)">
-                                        @(IsExpanded(group.Path) ? "-" : "+")
-                                    </button>
+                            <tr class="division-header group-header" style="cursor:pointer;" @onclick="() => ToggleGroup(group.Path)">
+                                <td colspan="8">
+                                    <span class="group-toggle dontprint me-2">@(IsExpanded(group.Path) ? "▼" : "▶")</span>
                                     @group.Path
                                     <span class="ms-2">(@group.Items.Count item, Total Qty: @group.TotalQty.ToString("N"))</span>
                                 </td>
                             </tr>
                             @if (IsExpanded(group.Path))
                             {
-                                var no = 1;
-                                @foreach (var item in group.Items)
+                                @for (var i = 0; i < group.Items.Count; i++)
                                 {
+                                    var item = group.Items[i];
                                     <tr>
-                                        <td class="col-no">@no++</td>
+                                        <td class="col-no">@(i + 1)</td>
                                         <td class="col-code">@item.ItemCode</td>
                                         <td class="col-name">@item.NamaItem</td>
                                         <td class="col-unit">@item.Satuan</td>
                                         <td class="col-qty @item.QtyClass">@item.Qty.ToString("N")</td>
+                                        <td class="col-po">@item.QtyBeli.ToString("N")</td>
+                                        <td class="col-so">@item.QtyJual.ToString("N")</td>
+                                        <td class="col-total @item.QtyOrderClass">@item.QtyOrder.ToString("N")</td>
                                     </tr>
                                 }
                             }
@@ -105,7 +109,7 @@ else
         {
             var stock = await Task.Run(() => serviceIC.GetCurrentStock());
             _groups = stock
-                .GroupBy(x => string.IsNullOrWhiteSpace(x.ItemGroupPath) ? "(Tanpa Group)" : x.ItemGroupPath)
+                .GroupBy(x => string.IsNullOrWhiteSpace(x.ItemGroupPath) ? "Belum Ada Group" : x.ItemGroupPath)
                 .OrderBy(g => g.Key)
                 .Select(g => new GroupSection
                 {
