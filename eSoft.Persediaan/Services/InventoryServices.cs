@@ -52,6 +52,7 @@ namespace eSoft.Persediaan.Services
         {
             return _context.IcItems
                            .AsNoTracking()
+                           .Include(x => x.ItemGroup)
                            .Where(x => disabled || !x.Disabled)
                            .OrderBy(x => x.NamaItem)
                            .ToList();
@@ -61,6 +62,7 @@ namespace eSoft.Persediaan.Services
         {
             return await _context.IcItems
                            .AsNoTracking()
+                           .Include(x => x.ItemGroup)
                            .Where(x => disabled || !x.Disabled)
                            .OrderBy(x => x.NamaItem)
                            .ToListAsync();
@@ -76,14 +78,17 @@ namespace eSoft.Persediaan.Services
             return filter switch
             {
                 "active" => _context.IcItems
+                                    .Include(x => x.ItemGroup)
                                     .Where(x => !x.Disabled)
                                     .OrderBy(x => x.NamaItem)
                                     .ToList(),
                 "inactive" => _context.IcItems
+                                      .Include(x => x.ItemGroup)
                                       .Where(x => x.Disabled)
                                       .OrderBy(x => x.NamaItem)
                                       .ToList(),
                 _ => _context.IcItems  // "all"
+                             .Include(x => x.ItemGroup)
                              .OrderBy(x => x.NamaItem)
                              .ToList()
             };
@@ -152,7 +157,8 @@ namespace eSoft.Persediaan.Services
                     CostAwal = produk.CostAwal,
                     SaldoAwal = produk.SaldoAwal,
                     NamaLengkap = produk.NamaLengkap,
-                    Foto = produk.Foto
+                    Foto = produk.Foto,
+                    ItemGroupId = produk.ItemGroupId
 
                 };
 
@@ -187,6 +193,7 @@ namespace eSoft.Persediaan.Services
                     ExistingItem.CostAwal = produk.CostAwal;
                     ExistingItem.SaldoAwal = produk.SaldoAwal;
                     ExistingItem.Foto = produk.Foto;
+                    ExistingItem.ItemGroupId = produk.ItemGroupId;
 
                     _context.IcItems.Update(ExistingItem);
                     await _context.SaveChangesAsync();

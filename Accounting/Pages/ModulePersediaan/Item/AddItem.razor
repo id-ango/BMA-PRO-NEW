@@ -2,8 +2,11 @@
 @using eSoft.Persediaan.Model
 @using eSoft.Persediaan.View
 @using eSoft.Persediaan.Services
+@using eSoft.Persediaan.Repositories
 
 @inject IInventoryServices service
+@inject IItemGroupRepository ItemGroupRepository
+@inject IItemCodeGenerator ItemCodeGenerator
 @inject NavigationManager navigationmanager
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
@@ -19,7 +22,19 @@
         <div class="form-group">
             <label>
                 Item Code :
-                <InputText id="codeBank" class="form-control" @bind-Value="bank.ItemCode" style="text-transform:uppercase" @onfocusout="cekKode" />
+                <InputText id="codeBank" class="form-control" @bind-Value="bank.ItemCode" @bind-Value:after="() => _autoItemCode = false" style="text-transform:uppercase" @onfocusout="cekKode" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Item Group :
+                <InputSelect class="form-control" @bind-Value="bank.ItemGroupId" @bind-Value:after="OnItemGroupChangedAsync">
+                    <option value="">&nbsp;&nbsp;---Select Item Group---&nbsp;&nbsp;</option>
+                    @foreach (var group in ItemGroupSet)
+                    {
+                        <option value="@group.ItemGroupId">@group.Name</option>
+                    }
+                </InputSelect>
             </label>
         </div>
         <div class="form-group">
@@ -201,6 +216,8 @@
     private List<IcAcct> AkunSet;
     private List<IcCat> CategorySet;
     private List<IcDiv> DivisiSet;
+    private List<IcItemGroup> ItemGroupSet = new();
+    private bool _autoItemCode;
 
     ElementReference fileDropContainer;
     InputFile inputFile;
@@ -269,14 +286,32 @@
         }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        base.OnInitialized();
+        await base.OnInitializedAsync();
         LoadAkun();
         LoadDivisi();
         LoadKategory();
+        ItemGroupSet = await ItemGroupRepository.GetAllAsync();
         //   bank.GlTipe = 1;
 
+    }
+
+    private async Task OnItemGroupChangedAsync()
+    {
+        if (bank.ItemGroupId is int groupId)
+        {
+            if (string.IsNullOrWhiteSpace(bank.ItemCode) || _autoItemCode)
+            {
+                bank.ItemCode = await ItemCodeGenerator.GenerateAsync(groupId);
+                _autoItemCode = true;
+            }
+        }
+        else if (_autoItemCode)
+        {
+            bank.ItemCode = string.Empty;
+            _autoItemCode = false;
+        }
     }
 
     private void cekKode()

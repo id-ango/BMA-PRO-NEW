@@ -2,8 +2,10 @@
 @using eSoft.Persediaan.Model
 @using eSoft.Persediaan.View
 @using eSoft.Persediaan.Services
+@using eSoft.Persediaan.Repositories
 
 @inject IInventoryServices service
+@inject IItemGroupRepository ItemGroupRepository
 @inject NavigationManager navigationmanager
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
@@ -17,6 +19,18 @@
         <label>
             Item Code :
             <InputText id="codeBank" class="form-control" @bind-Value="bank.ItemCode" style="text-transform:uppercase" @onfocusout="cekKode" disabled="disabled" />
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Item Group :
+            <InputSelect class="form-control" @bind-Value="bank.ItemGroupId">
+                <option value="">&nbsp;&nbsp;---Select Item Group---&nbsp;&nbsp;</option>
+                @foreach (var group in ItemGroupSet)
+                {
+                    <option value="@group.ItemGroupId">@group.Name</option>
+                }
+            </InputSelect>
         </label>
     </div>
     <div class="form-group">
@@ -197,6 +211,7 @@
     private List<IcAcct> AkunSet;
     private List<IcCat> CategorySet;
     private List<IcDiv> DivisiSet;
+    private List<IcItemGroup> ItemGroupSet = new();
 
     ElementReference fileDropContainer;
     InputFile inputFile;
@@ -269,13 +284,19 @@
     }
 
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        base.OnInitialized();
+        await base.OnInitializedAsync();
         LoadBank();
         LoadAkun();
         LoadDivisi();
         LoadKategory();
+        await LoadItemGroupAsync();
+    }
+
+    async Task LoadItemGroupAsync()
+    {
+        ItemGroupSet = await ItemGroupRepository.GetAllAsync();
     }
 
     void LoadBank()
@@ -294,6 +315,7 @@
         bank.CostAwal = Bank.CostAwal;
         bank.SaldoAwal = Bank.SaldoAwal;
         bank.Foto = Bank.Foto;
+        bank.ItemGroupId = Bank.ItemGroupId;
         imageSources = Bank.Foto;
     }
 

@@ -61,7 +61,7 @@
     </section>
 
     <section class="setup-grid-card">
-        <DataGridComponent Items="SortedBanks" TotalJumlah="@((decimal)(Banks?.Count ?? 0))" TotalFormat="N0" Context="cbBank" GetFilterableText="@(item =>$"{item.NamaItem} {item.ItemCode} {item.Satuan} {item.Divisi} {item.AcctSet} {item.Category}" )">
+        <DataGridComponent Items="SortedBanks" TotalJumlah="@((decimal)(Banks?.Count ?? 0))" TotalFormat="N0" Context="cbBank" GetFilterableText="@(item =>$"{item.NamaItem} {item.ItemCode} {item.Satuan} {item.Divisi} {item.AcctSet} {item.Category} {item.ItemGroup?.Name}" )">
         <TableHeader>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.ItemCode)))" @onclick='() => ApplySort(nameof(IcItem.ItemCode))' title="Sort by Item Code">Item <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.ItemCode))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.NamaItem)))" @onclick='() => ApplySort(nameof(IcItem.NamaItem))' title="Sort by Item Name">Name <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.NamaItem))</span></button></th>
@@ -69,6 +69,7 @@
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.Divisi)))" @onclick='() => ApplySort(nameof(IcItem.Divisi))' title="Sort by Division">Divisi <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.Divisi))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.AcctSet)))" @onclick='() => ApplySort(nameof(IcItem.AcctSet))' title="Sort by Account Set">Account Set <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.AcctSet))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.Category)))" @onclick='() => ApplySort(nameof(IcItem.Category))' title="Sort by Category">Category <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.Category))</span></button></th>
+            <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass("ItemGroup"))" @onclick='() => ApplySort("ItemGroup")' title="Sort by Item Group">Group <span class="data-grid-sort-indicator">@GetSortIndicator("ItemGroup")</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.Qty)))" @onclick='() => ApplySort(nameof(IcItem.Qty))' title="Sort by Quantity">Qty <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.Qty))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.HrgUsd)))" @onclick='() => ApplySort(nameof(IcItem.HrgUsd))' title="Sort by Import Price">Hrg Import <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.HrgUsd))</span></button></th>
             <th scope="col"><button type="button" class="data-grid-sort-button @(GetSortButtonClass(nameof(IcItem.HrgNetto)))" @onclick='() => ApplySort(nameof(IcItem.HrgNetto))' title="Sort by Net Price">Hrg Net <span class="data-grid-sort-indicator">@GetSortIndicator(nameof(IcItem.HrgNetto))</span></button></th>
@@ -82,6 +83,7 @@
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Divisi</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.AcctSet</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Category</td>
+            <td class="@GetCellClass(cbBank.Disabled)">@cbBank.ItemGroup?.Name</td>
             <td class="@GetCellClass(cbBank.Disabled) text-end">@cbBank.Qty.ToString("N")</td>
             <td class="@GetCellClass(cbBank.Disabled) text-end">@(string.IsNullOrEmpty(cbBank.CurrencyCode) ? "" : cbBank.CurrencyCode) @cbBank.HrgUsd.ToString("N")</td>
             <td class="@GetCellClass(cbBank.Disabled) text-end">@cbBank.HrgNetto.ToString("N")</td>
@@ -226,6 +228,7 @@
             nameof(IcItem.Divisi) => OrderBy(source, x => x.Divisi),
             nameof(IcItem.AcctSet) => OrderBy(source, x => x.AcctSet),
             nameof(IcItem.Category) => OrderBy(source, x => x.Category),
+            "ItemGroup" => OrderBy(source, x => x.ItemGroup?.Name),
             nameof(IcItem.Qty) => sortAscending ? source.OrderBy(x => x.Qty) : source.OrderByDescending(x => x.Qty),
             nameof(IcItem.HrgUsd) => sortAscending ? source.OrderBy(x => x.HrgUsd) : source.OrderByDescending(x => x.HrgUsd),
             nameof(IcItem.HrgNetto) => sortAscending ? source.OrderBy(x => x.HrgNetto) : source.OrderByDescending(x => x.HrgNetto),

@@ -65,5 +65,11 @@ namespace eSoft.Persediaan.Repositories
                 g.Code == code &&
                 (!excludeId.HasValue || g.ItemGroupId != excludeId.Value), cancellationToken);
         }
+
+        public async Task<bool> IsInUseAsync(int itemGroupId, CancellationToken cancellationToken = default)
+        {
+            return await _db.IcItemGroups.AnyAsync(g => g.ParentId == itemGroupId, cancellationToken)
+                || await _db.IcItems.AnyAsync(i => i.ItemGroupId == itemGroupId, cancellationToken);
+        }
     }
 }

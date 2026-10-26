@@ -14,5 +14,6 @@ namespace eSoft.Persediaan.Repositories
         Task UpdateAsync(IcItemGroup itemGroup, CancellationToken cancellationToken = default);
         Task DeleteAsync(IcItemGroup itemGroup, CancellationToken cancellationToken = default);
         Task<bool> CodeExistsAsync(int? parentId, string code, int? excludeId = null, CancellationToken cancellationToken = default);
+        Task<bool> IsInUseAsync(int itemGroupId, CancellationToken cancellationToken = default);
     }
 }

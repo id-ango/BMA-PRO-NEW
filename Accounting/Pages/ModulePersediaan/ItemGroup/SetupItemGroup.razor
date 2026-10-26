@@ -3,15 +3,21 @@
 @using eSoft.Persediaan.Repositories
 
 @inject IItemGroupRepository ItemGroupRepository
-@inject NavigationManager NavigationManager
 
 <div class="container">
-    <h1>Setup Item Group</h1>
-</div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Setup Item Group</h1>
+        <button class="btn btn-primary" @onclick="() => OpenForm(null)" disabled="@_saving">Add Group</button>
+    </div>
 
-<br />
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="alert @_messageClass alert-dismissible">
+            @_message
+            <button type="button" class="btn-close" @onclick="() => _message = null"></button>
+        </div>
+    }
 
-<div class="container">
     @if (_loading)
     {
         <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -29,6 +35,7 @@
                     <th>Code</th>
                     <th>Name</th>
                     <th>Parent</th>
+                    <th style="width: 180px;">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -38,6 +45,10 @@
                         <td style="padding-left: @(_depth[group.ItemGroupId] * 20)px">@group.Code</td>
                         <td>@group.Name</td>
                         <td>@(group.Parent?.Name ?? "-")</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenForm(group)" disabled="@_saving">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(group)" disabled="@_saving">Hapus</button>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -45,13 +56,86 @@
     }
 </div>
 
+@if (_showForm)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.4)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_form.ItemGroupId == 0 ? "Tambah Item Group" : "Edit Item Group")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Parent</label>
+                        <select class="form-select" @onchange="OnParentChanged">
+                            <option value="" selected="@(_form.ParentId is null)">- (Root)</option>
+                            @foreach (var option in _parentOptions)
+                            {
+                                <option value="@option.ItemGroupId" selected="@(option.ItemGroupId == _form.ParentId)">@option.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Code</label>
+                        <input class="form-control" maxlength="20" @bind="_form.Code" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input class="form-control" maxlength="100" @bind="_form.Name" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(_formError))
+                    {
+                        <div class="alert alert-danger mb-0">@_formError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseForm" disabled="@_saving">Batal</button>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                            <span>Menyimpan...</span>
+                        }
+                        else
+                        {
+                            <span>Simpan</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<IcItemGroup> _groups = new();
+    private List<IcItemGroup> _parentOptions = new();
     private Dictionary<int, int> _depth = new();
     private bool _loading = true;
+    private bool _saving;
+    private bool _showForm;
+    private FormModel _form = new();
+    private string? _formError;
+    private string? _message;
+    private string _messageClass = "alert-success";
+
+    private sealed class FormModel
+    {
+        public int ItemGroupId { get; set; }
+        public int? ParentId { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+    }
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
         var all = await ItemGroupRepository.GetAllAsync();
         var byParent = all.ToLookup(g => g.ParentId);
         _groups = new List<IcItemGroup>();
@@ -68,6 +152,145 @@
         }
 
         Walk(null, 0);
+        _parentOptions = _groups.ToList();
         _loading = false;
+    }
+
+    private void OpenForm(IcItemGroup? group)
+    {
+        _formError = null;
+        _form = group is null
+            ? new FormModel()
+            : new FormModel
+            {
+                ItemGroupId = group.ItemGroupId,
+                ParentId = group.ParentId,
+                Code = group.Code,
+                Name = group.Name
+            };
+        _showForm = true;
+    }
+
+    private void CloseForm()
+    {
+        _showForm = false;
+        _formError = null;
+    }
+
+    private void OnParentChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        _form.ParentId = int.TryParse(value, out var id) ? id : null;
+    }
+
+    private bool IsDescendantOrSelf(int candidateParentId, int groupId)
+    {
+        var current = _groups.FirstOrDefault(g => g.ItemGroupId == candidateParentId);
+        while (current is not null)
+        {
+            if (current.ItemGroupId == groupId) return true;
+            current = current.ParentId is int pid ? _groups.FirstOrDefault(g => g.ItemGroupId == pid) : null;
+        }
+        return false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _formError = null;
+        var code = _form.Code.Trim();
+        var name = _form.Name.Trim();
+
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
+        {
+            _formError = "Code dan Name wajib diisi.";
+            return;
+        }
+
+        if (_form.ItemGroupId != 0 && _form.ParentId is int parentId && IsDescendantOrSelf(parentId, _form.ItemGroupId))
+        {
+            _formError = "Parent tidak boleh berupa group itu sendiri atau turunannya.";
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var excludeId = _form.ItemGroupId == 0 ? (int?)null : _form.ItemGroupId;
+            if (await ItemGroupRepository.CodeExistsAsync(_form.ParentId, code, excludeId))
+            {
+                _formError = "Code sudah digunakan pada parent yang sama.";
+                return;
+            }
+
+            if (_form.ItemGroupId == 0)
+            {
+                await ItemGroupRepository.AddAsync(new IcItemGroup
+                {
+                    Code = code,
+                    Name = name,
+                    ParentId = _form.ParentId
+                });
+                _message = "Item Group berhasil ditambahkan.";
+            }
+            else
+            {
+                var entity = await ItemGroupRepository.GetByIdAsync(_form.ItemGroupId);
+                if (entity is null)
+                {
+                    _formError = "Item Group tidak ditemukan.";
+                    return;
+                }
+                entity.Code = code;
+                entity.Name = name;
+                entity.ParentId = _form.ParentId;
+                await ItemGroupRepository.UpdateAsync(entity);
+                _message = "Item Group berhasil diperbarui.";
+            }
+
+            _messageClass = "alert-success";
+            _showForm = false;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _formError = $"Gagal menyimpan: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteAsync(IcItemGroup group)
+    {
+        _message = null;
+        _saving = true;
+        try
+        {
+            if (await ItemGroupRepository.IsInUseAsync(group.ItemGroupId))
+            {
+                _message = $"Group '{group.Name}' tidak dapat dihapus karena masih memiliki child group atau item.";
+                _messageClass = "alert-warning";
+                return;
+            }
+
+            var entity = await ItemGroupRepository.GetByIdAsync(group.ItemGroupId);
+            if (entity is not null)
+            {
+                await ItemGroupRepository.DeleteAsync(entity);
+            }
+            _message = $"Group '{group.Name}' berhasil dihapus.";
+            _messageClass = "alert-success";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _message = $"Gagal menghapus: {ex.Message}";
+            _messageClass = "alert-danger";
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 }
