@@ -956,6 +956,18 @@ namespace eSoft.Persediaan.Services
 
             var icStock = _context.IcItems.Where(x => x.Qty != 0).ToList();
             var divisi = _context.IcDivs.ToList();
+            var itemGroups = _context.IcItemGroups.AsNoTracking().ToDictionary(g => g.ItemGroupId);
+
+            string GetGroupPath(int? groupId)
+            {
+                var names = new List<string>();
+                while (groupId.HasValue && itemGroups.TryGetValue(groupId.Value, out var group))
+                {
+                    names.Insert(0, group.Name);
+                    groupId = group.ParentId;
+                }
+                return string.Join(" > ", names);
+            }
 
             if (icStock != null)
             {
@@ -971,6 +983,7 @@ namespace eSoft.Persediaan.Services
                         Qty = ic.Qty,
                         KodeDivisi = ic.Divisi,
                         Divisi = (from e in divisi where e.Divisi == ic.Divisi select e.NamaDiv).FirstOrDefault(),
+                                                ItemGroupPath = GetGroupPath(ic.ItemGroupId),
 
                     });
 

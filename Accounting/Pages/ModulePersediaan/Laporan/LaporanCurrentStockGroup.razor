@@ -1,0 +1,150 @@
+@layout PrintLayout
+
+@page "/ModulePersediaan/LaporanCurrentStockGroup"
+
+@using eSoft.Persediaan.View
+@using eSoft.Persediaan.Services
+
+@inject IInventoryServices serviceIC
+@inject IJSRuntime JSRuntime
+
+<link rel="stylesheet" href="css/laporan-current-stock.css" />
+
+<div class="dontprint" style="display:inline">
+    <br />
+    &emsp;
+    <button class="btn btn-warning btn-lg" @onclick="ToggleAllGroups">@(_expandAll ? "Collapse All" : "Expand All")</button>
+    &emsp;
+    <NavLink href="/" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
+    &emsp;
+    <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+    &emsp;
+</div>
+
+@if (_isLoadingReport)
+{
+    <div class="text-center p-4" role="status" aria-live="polite">
+        <div class="spinner-border text-primary" aria-hidden="true"></div>
+        <div class="mt-2">Laporan stock sedang diproses, mohon tunggu...</div>
+    </div>
+}
+else
+{
+    <div class="report-table">
+        <div class="report-title">Laporan Stock per Group</div>
+
+        @if (_groups.Count > 0)
+        {
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr class="header-row">
+                            <th class="col-no">No.</th>
+                            <th class="col-code">Kode</th>
+                            <th class="col-name">Nama Barang</th>
+                            <th class="col-unit">Satuan</th>
+                            <th class="col-qty">Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var group in _groups)
+                        {
+                            <tr class="division-header">
+                                <td colspan="5">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary dontprint" @onclick="() => ToggleGroup(group.Path)">
+                                        @(IsExpanded(group.Path) ? "-" : "+")
+                                    </button>
+                                    @group.Path
+                                    <span class="ms-2">(@group.Items.Count item, Total Qty: @group.TotalQty.ToString("N"))</span>
+                                </td>
+                            </tr>
+                            @if (IsExpanded(group.Path))
+                            {
+                                var no = 1;
+                                @foreach (var item in group.Items)
+                                {
+                                    <tr>
+                                        <td class="col-no">@no++</td>
+                                        <td class="col-code">@item.ItemCode</td>
+                                        <td class="col-name">@item.NamaItem</td>
+                                        <td class="col-unit">@item.Satuan</td>
+                                        <td class="col-qty @item.QtyClass">@item.Qty.ToString("N")</td>
+                                    </tr>
+                                }
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div style="margin-top: 20px;">
+        <p class="print-date">Tanggal cetak: @DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss")</p>
+    </div>
+}
+
+@code {
+    private sealed class GroupSection
+    {
+        public string Path { get; init; } = string.Empty;
+        public List<IcStockCardView> Items { get; init; } = new();
+        public decimal TotalQty => Items.Sum(x => x.Qty);
+    }
+
+    private List<GroupSection> _groups = new();
+    private readonly HashSet<string> _expanded = new();
+    private bool _expandAll = true;
+    private bool _isLoadingReport = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Yield();
+
+        try
+        {
+            var stock = await Task.Run(() => serviceIC.GetCurrentStock());
+            _groups = stock
+                .GroupBy(x => string.IsNullOrWhiteSpace(x.ItemGroupPath) ? "(Tanpa Group)" : x.ItemGroupPath)
+                .OrderBy(g => g.Key)
+                .Select(g => new GroupSection
+                {
+                    Path = g.Key,
+                    Items = g.OrderBy(x => x.ItemCode).ToList()
+                })
+                .ToList();
+
+            foreach (var group in _groups)
+            {
+                _expanded.Add(group.Path);
+            }
+        }
+        finally
+        {
+            _isLoadingReport = false;
+        }
+    }
+
+    private bool IsExpanded(string path) => _expanded.Contains(path);
+
+    private void ToggleGroup(string path)
+    {
+        if (!_expanded.Add(path))
+        {
+            _expanded.Remove(path);
+        }
+    }
+
+    private void ToggleAllGroups()
+    {
+        _expandAll = !_expandAll;
+        _expanded.Clear();
+        if (_expandAll)
+        {
+            foreach (var group in _groups)
+            {
+                _expanded.Add(group.Path);
+            }
+        }
+    }
+}
