@@ -30,7 +30,7 @@
                 Item Group :
                 <InputSelect class="form-control" @bind-Value="bank.ItemGroupId" @bind-Value:after="OnItemGroupChangedAsync">
                     <option value="">&nbsp;&nbsp;---Select Item Group---&nbsp;&nbsp;</option>
-                    @foreach (var group in ItemGroupSet)
+                    @foreach (var group in ItemGroupSet.OrderBy(GetGroupPath))
                     {
                         <option value="@group.ItemGroupId">@GetGroupPath(group)</option>
                     }
