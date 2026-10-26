@@ -13,6 +13,15 @@
 
 <link rel="stylesheet" href="css/laporan-current-stock.css" />
 
+<style>
+    @@media print {
+        .group-report .data-table tbody tr:not(.to-print):not(.separator-row) {
+            display: table-row !important;
+        }
+    }
+</style>
+
+
 <div class="dontprint" style="display:inline">
     <br />
     &emsp;
@@ -33,7 +42,7 @@
 }
 else
 {
-    <div class="report-table">
+    <div class="report-table group-report">
         <div class="report-title">Laporan Stock per Group</div>
 
         <div class="dontprint mb-3" style="max-width:600px;">
