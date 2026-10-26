@@ -64,6 +64,14 @@
                             Laporan Stock
                         </button>
                         <button type="button" class="btn btn-primary btn-sm" disabled="@isReportLoading"
+                                @onclick='() => OpenReportAsync("/ModulePersediaan/LaporanCurrentStockGroup", "Laporan Stock per Group")'>
+                            @if (loadingReportName == "Laporan Stock per Group")
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Laporan Stock per Group
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" disabled="@isReportLoading"
                                 @onclick='() => OpenReportAsync("/ModulePersediaan/LaporanPersediaan", "Laporan Persediaan")'>
                             @if (loadingReportName == "Laporan Persediaan")
                             {
