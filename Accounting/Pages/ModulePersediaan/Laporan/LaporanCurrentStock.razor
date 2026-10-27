@@ -47,6 +47,14 @@ else
     <div class="report-table" data-print-mode="@printMode">
         <div class="report-title">@Title</div>
 
+        <div class="dontprint mb-3" style="max-width:600px;">
+            <label class="form-label fw-bold">Cari Item</label>
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Kode, nama item, atau search tags" value="@_searchText" @oninput="OnSearchTextChanged" />
+                <button class="btn btn-outline-secondary" type="button" title="Hapus pencarian" @onclick="ClearSearch">x</button>
+            </div>
+        </div>
+
         @if (DisplayItems != null && DisplayItems.Count > 0)
         {
             <div class="data-table-container">
@@ -188,6 +196,8 @@ else
     // OPTIMIZATION: Control render cycles
     private bool _shouldRender = true;
     private bool _isLoadingReport = true;
+    private string _searchText = "";
+    private List<IcStockCardView> _allStock = new List<IcStockCardView>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -225,10 +235,40 @@ else
             item.QtyOrderClass = item.QtyOrder < 0 ? "qty-negative" : (item.QtyOrder == 0 ? "qty-zero" : "");
         }
 
-        // PHASE 2: Build display items with division headers for grouping
+        _allStock = TransDetail;
         BuildDisplayItems();
 
         _shouldRender = true;
+    }
+
+    private void OnSearchTextChanged(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? "";
+        ApplySearch();
+    }
+
+    private void ClearSearch()
+    {
+        _searchText = string.Empty;
+        ApplySearch();
+    }
+
+    private void ApplySearch()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            TransDetail = _allStock;
+        }
+        else
+        {
+            var terms = _searchText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            TransDetail = _allStock.Where(x => terms.All(term =>
+                (x.ItemCode?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (x.NamaItem?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (x.SearchTags?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false))).ToList();
+        }
+
+        BuildDisplayItems();
     }
 
     /// <summary>
