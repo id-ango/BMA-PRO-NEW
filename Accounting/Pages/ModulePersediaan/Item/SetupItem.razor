@@ -86,13 +86,31 @@
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.AcctSet</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Category</td>
             <td class="@GetCellClass(cbBank.Disabled)">
-                <select class="form-select form-select-sm" value="@(cbBank.ItemGroupId?.ToString() ?? "")" @onchange="e => ChangeItemGroup(cbBank, e.Value)">
-                    <option value="">Belum Ada Group</option>
-                    @foreach (var group in ItemGroupSet.OrderBy(GetGroupPath))
-                    {
-                        <option value="@group.ItemGroupId">@GetGroupPath(group)</option>
-                    }
-                </select>
+                @if (_editingItemId == cbBank.IcItemId)
+                {
+                    <div class="d-flex gap-1 align-items-center">
+                        <select class="form-select form-select-sm" value="@_editingGroupValue" @onchange="e => _editingGroupValue = e.Value?.ToString()">
+                            <option value="">Belum Ada Group</option>
+                            @foreach (var group in ItemGroupSet.OrderBy(GetGroupPath))
+                            {
+                                <option value="@group.ItemGroupId">@GetGroupPath(group)</option>
+                            }
+                        </select>
+                        <button type="button" class="btn btn-sm btn-success" @onclick="() => SaveItemGroup(cbBank)">Simpan</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelItemGroupEdit">Batal</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex justify-content-between align-items-center gap-1">
+                        <span>@cbBank.ItemGroup?.Name</span>
+                        <button type="button" class="setup-row-action setup-row-action-edit" title="Edit group" @onclick="() => BeginItemGroupEdit(cbBank)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z" />
+                            </svg>
+                        </button>
+                    </div>
+                }
             </td>
             <td class="@GetCellClass(cbBank.Disabled) text-end">@cbBank.Qty.ToString("N")</td>
             <td class="@GetCellClass(cbBank.Disabled) text-end">@(string.IsNullOrEmpty(cbBank.CurrencyCode) ? "" : cbBank.CurrencyCode) @cbBank.HrgUsd.ToString("N")</td>
@@ -172,6 +190,8 @@
 
     private List<IcItem> Banks;
     private List<IcItemGroup> ItemGroupSet = new();
+    private int? _editingItemId;
+    private string _editingGroupValue;
     private IcItem _bankToDelete;
     private string imaging;
     private string currentSortColumn = nameof(IcItem.ItemCode);
@@ -353,11 +373,24 @@
         return finish ? "table-warning" : string.Empty;
     }
 
-    private async Task ChangeItemGroup(IcItem bank, object value)
+    private void BeginItemGroupEdit(IcItem bank)
     {
-        int? itemGroupId = int.TryParse(value?.ToString(), out var id) ? id : null;
+        _editingItemId = bank.IcItemId;
+        _editingGroupValue = bank.ItemGroupId?.ToString() ?? string.Empty;
+    }
+
+    private void CancelItemGroupEdit()
+    {
+        _editingItemId = null;
+    }
+
+    private async Task SaveItemGroup(IcItem bank)
+    {
+        int? itemGroupId = int.TryParse(_editingGroupValue, out var id) ? id : null;
         await Services.UpdateItemGroup(bank.IcItemId, itemGroupId);
-        LoadGet();
+        bank.ItemGroupId = itemGroupId;
+        bank.ItemGroup = ItemGroupSet.Find(g => g.ItemGroupId == itemGroupId);
+        _editingItemId = null;
     }
 
     private string GetGroupPath(IcItemGroup group)
