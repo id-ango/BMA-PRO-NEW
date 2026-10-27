@@ -41,7 +41,7 @@
 }
 else
 {
-    <div class="report-table group-report">
+    <div class="report-table group-report" data-print-mode="@_printMode">
         <div class="report-title">@_title</div>
 
         <div class="dontprint mb-3" style="max-width:600px;">
@@ -53,6 +53,17 @@ else
                 {
                     <option value="@option.Id">@option.Path</option>
                 }
+            </select>
+        </div>
+
+        <div class="dontprint mb-3" style="max-width:600px;">
+            <label class="form-label fw-bold">Filter PO / SO</label>
+            <select class="form-select" value="@_orderFilter" @onchange="OnOrderFilterChanged">
+                <option value="">Semua Item</option>
+                <option value="po">Ada PO</option>
+                <option value="so">Ada SO</option>
+                <option value="any">Ada PO atau SO</option>
+                <option value="both">Ada PO dan SO</option>
             </select>
         </div>
 
@@ -71,6 +82,8 @@ else
                             <th class="col-po">PO</th>
                             <th class="col-so">SO</th>
                             <th class="col-total">Total</th>
+                            <th class="col-opname-result">Hasil Stock</th>
+                            <th class="col-opname-note">Keterangan</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -80,7 +93,7 @@ else
                                 <td class="dontprint text-center" @onclick:stopPropagation="true">
                                     <input type="checkbox" class="form-check-input" checked="@IsGroupSelected(group)" @onchange="() => ToggleGroupPrint(group)" />
                                 </td>
-                                <td colspan="8">
+                                <td colspan="10">
                                     <span class="group-toggle dontprint me-2">@(IsExpanded(group.Path) ? "▼" : "▶")</span>
                                     @group.Path
                                     <span class="ms-2">(@group.Items.Count item, Total Qty: @group.TotalQty.ToString("N"))</span>
@@ -100,9 +113,23 @@ else
                                         <td class="col-name">@item.NamaItem</td>
                                         <td class="col-unit">@item.Satuan</td>
                                         <td class="col-qty @item.QtyClass">@item.Qty.ToString("N")</td>
-                                        <td class="col-po"><button class="btn btn-link btn-sm p-0" @onclick="() => CicilanBeli(item.ItemCode)">@item.QtyBeli.ToString("N")</button></td>
-                                        <td class="col-so"><button class="btn btn-link btn-sm p-0" @onclick="() => CicilanJual(item.ItemCode)">@item.QtyJual.ToString("N")</button></td>
+                                        <td class="col-po">
+                                            @item.QtyBeli.ToString("N")
+                                            @if (item.HasPurchaseOrder)
+                                            {
+                                                <button class="dontprint btn btn-link btn-sm p-0 ms-1" title="Lihat detail PO" @onclick="() => CicilanBeli(item.ItemCode)">&#x1F50D;</button>
+                                            }
+                                        </td>
+                                        <td class="col-so">
+                                            @item.QtyJual.ToString("N")
+                                            @if (item.HasSalesOrder)
+                                            {
+                                                <button class="dontprint btn btn-link btn-sm p-0 ms-1" title="Lihat detail SO" @onclick="() => CicilanJual(item.ItemCode)">&#x1F50D;</button>
+                                            }
+                                        </td>
                                         <td class="col-total @item.QtyOrderClass">@item.QtyOrder.ToString("N")</td>
+                                        <td class="col-opname-result"></td>
+                                        <td class="col-opname-note"></td>
                                     </tr>
                                 }
                             }
@@ -161,11 +188,13 @@ else
 
         try
         {
-            _stock = await Task.Run(() => serviceIC.GetCurrentStock());
+            _stock = await Task.Run(() => serviceOrdJual.GetCurrentOrderJual(serviceIC.GetCurrentStock()));
             foreach (var item in _stock)
             {
                 item.IsSelectedForPrinting = true;
                 item.IsSubTitleSelectedForPrinting = true;
+                item.HasPurchaseOrder = item.QtyBeli != 0;
+                item.HasSalesOrder = item.QtyJual != 0;
             }
             var allGroups = await groupRepo.GetAllAsync();
             _groupLookup = allGroups.ToDictionary(g => g.ItemGroupId);
@@ -185,7 +214,9 @@ else
     private Dictionary<int, IcItemGroup> _groupLookup = new();
     private List<(int Id, string Path)> _groupOptions = new();
     private string _selectedGroup = "";
+    private string _orderFilter = "";
     private string _title = "Laporan Stock per Group";
+    private string _printMode = "normal";
     private List<IcStockCardView> TransParsial = new();
     private bool dispCicilan;
 
@@ -226,10 +257,13 @@ else
 
     private async Task PrintStockOpname()
     {
+        _printMode = "opname";
         _title = "STOCK OPNAME";
         StateHasChanged();
         await Task.Delay(200);
         await JSRuntime.InvokeVoidAsync("window.print");
+        await Task.Delay(500);
+        _printMode = "normal";
         _title = "Laporan Stock per Group";
         StateHasChanged();
     }
@@ -353,6 +387,15 @@ else
             items = items.Where(x => x.ItemGroupId.HasValue && ids.Contains(x.ItemGroupId.Value));
         }
 
+        items = _orderFilter switch
+        {
+            "po" => items.Where(x => x.HasPurchaseOrder),
+            "so" => items.Where(x => x.HasSalesOrder),
+            "any" => items.Where(x => x.HasPurchaseOrder || x.HasSalesOrder),
+            "both" => items.Where(x => x.HasPurchaseOrder && x.HasSalesOrder),
+            _ => items
+        };
+
         _groups = items
             .GroupBy(x => string.IsNullOrWhiteSpace(x.ItemGroupPath) ? "Belum Ada Group" : x.ItemGroupPath)
             .OrderBy(g => g.Key)
@@ -373,6 +416,12 @@ else
     private void OnGroupChanged(ChangeEventArgs e)
     {
         _selectedGroup = e.Value?.ToString() ?? "";
+        BuildGroups();
+    }
+
+    private void OnOrderFilterChanged(ChangeEventArgs e)
+    {
+        _orderFilter = e.Value?.ToString() ?? "";
         BuildGroups();
     }
 
