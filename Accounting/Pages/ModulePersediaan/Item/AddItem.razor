@@ -39,12 +39,6 @@
         </div>
         <div class="form-group">
             <label>
-                Search Tags :
-                <InputText class="form-control" @bind-Value="bank.SearchTags" />
-            </label>
-        </div>
-        <div class="form-group">
-            <label>
                 Item Name :
                 <InputText class="form-control" @bind-Value="bank.NamaItem" />
             </label>
@@ -155,6 +149,12 @@
 
                 </InputSelect>
                 @*<button class="btn btn-primary" type="button" @onclick="@(()=> SearchOpen = !SearchOpen)">Cari</button>*@
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                Search Tags :
+                <InputText class="form-control" @bind-Value="bank.SearchTags" />
             </label>
         </div>
         <br />
