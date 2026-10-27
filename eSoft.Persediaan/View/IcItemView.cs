@@ -45,6 +45,8 @@ namespace eSoft.Persediaan.View
         public string AcctSet { get; set; }
         public string Category { get; set; }
         public int? ItemGroupId { get; set; }
+        [StringLength(500)]
+        public string SearchTags { get; set; }
         public bool SerialNo { get; set; }
         [Required]
         public costMethod CostMethod { get; set; } = costMethod.Moving_Avg;

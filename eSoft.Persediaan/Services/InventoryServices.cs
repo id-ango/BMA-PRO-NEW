@@ -41,8 +41,34 @@ namespace eSoft.Persediaan.Services
             if (existingItem != null)
             {
                 existingItem.ItemGroupId = itemGroupId;
+                existingItem.SearchTags = await BuildGroupSearchTagsAsync(itemGroupId) ?? existingItem.SearchTags;
                 await _context.SaveChangesAsync();
             }
+        }
+
+        private async Task<string?> BuildGroupSearchTagsAsync(int? itemGroupId)
+        {
+            if (!itemGroupId.HasValue)
+            {
+                return null;
+            }
+
+            var names = new List<string>();
+            int? currentId = itemGroupId;
+            while (currentId.HasValue)
+            {
+                var group = await _context.IcItemGroups.AsNoTracking()
+                    .FirstOrDefaultAsync(g => g.ItemGroupId == currentId.Value);
+                if (group is null)
+                {
+                    break;
+                }
+                names.Add(group.Name);
+                currentId = group.ParentId;
+            }
+
+            var tags = string.Join(" ", names.Distinct(StringComparer.OrdinalIgnoreCase));
+            return tags.Length <= 500 ? tags : tags[..500];
         }
         public bool CekKdItem(string item)
         {
@@ -168,7 +194,8 @@ namespace eSoft.Persediaan.Services
                     SaldoAwal = produk.SaldoAwal,
                     NamaLengkap = produk.NamaLengkap,
                     Foto = produk.Foto,
-                    ItemGroupId = produk.ItemGroupId
+                    ItemGroupId = produk.ItemGroupId,
+                    SearchTags = produk.SearchTags
 
                 };
 
@@ -204,6 +231,7 @@ namespace eSoft.Persediaan.Services
                     ExistingItem.SaldoAwal = produk.SaldoAwal;
                     ExistingItem.Foto = produk.Foto;
                     ExistingItem.ItemGroupId = produk.ItemGroupId;
+                    ExistingItem.SearchTags = produk.SearchTags;
 
                     _context.IcItems.Update(ExistingItem);
                     await _context.SaveChangesAsync();

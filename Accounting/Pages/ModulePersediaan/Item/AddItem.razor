@@ -39,6 +39,12 @@
         </div>
         <div class="form-group">
             <label>
+                Search Tags :
+                <InputText class="form-control" @bind-Value="bank.SearchTags" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
                 Item Name :
                 <InputText class="form-control" @bind-Value="bank.NamaItem" />
             </label>
@@ -238,6 +244,31 @@
         return string.Join(" > ", names);
     }
 
+    private string GetGroupSearchTags(int groupId)
+    {
+        var group = ItemGroupSet.Find(g => g.ItemGroupId == groupId);
+        if (group is null)
+        {
+            return string.Empty;
+        }
+
+        var names = new List<string>();
+        int? currentId = group.ItemGroupId;
+        while (currentId.HasValue)
+        {
+            var current = ItemGroupSet.Find(g => g.ItemGroupId == currentId.Value);
+            if (current is null)
+            {
+                break;
+            }
+
+            names.Add(current.Name);
+            currentId = current.ParentId;
+        }
+
+        return string.Join(" ", names.Distinct(StringComparer.OrdinalIgnoreCase));
+    }
+
     ElementReference fileDropContainer;
     InputFile inputFile;
 
@@ -320,6 +351,7 @@
     {
         if (bank.ItemGroupId is int groupId)
         {
+            bank.SearchTags = GetGroupSearchTags(groupId);
             if (string.IsNullOrWhiteSpace(bank.ItemCode) || _autoItemCode)
             {
                 bank.ItemCode = await ItemCodeGenerator.GenerateAsync(groupId);

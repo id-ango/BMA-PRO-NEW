@@ -24,13 +24,19 @@
     <div class="form-group">
         <label>
             Item Group :
-            <InputSelect class="form-control" @bind-Value="bank.ItemGroupId">
+            <InputSelect class="form-control" @bind-Value="bank.ItemGroupId" @bind-Value:after="OnItemGroupChanged">
                 <option value="">&nbsp;&nbsp;---Select Item Group---&nbsp;&nbsp;</option>
                 @foreach (var group in ItemGroupSet.OrderBy(GetGroupPath))
                 {
                     <option value="@group.ItemGroupId">@GetGroupPath(group)</option>
                 }
             </InputSelect>
+        </label>
+    </div>
+    <div class="form-group">
+        <label>
+            Search Tags :
+            <InputText class="form-control" @bind-Value="bank.SearchTags" />
         </label>
     </div>
     <div class="form-group">
@@ -335,7 +341,41 @@
         bank.SaldoAwal = Bank.SaldoAwal;
         bank.Foto = Bank.Foto;
         bank.ItemGroupId = Bank.ItemGroupId;
+        bank.SearchTags = Bank.SearchTags;
         imageSources = Bank.Foto;
+    }
+
+    private void OnItemGroupChanged()
+    {
+        if (bank.ItemGroupId is int groupId)
+        {
+            bank.SearchTags = GetGroupSearchTags(groupId);
+        }
+    }
+
+    private string GetGroupSearchTags(int groupId)
+    {
+        var group = ItemGroupSet.Find(g => g.ItemGroupId == groupId);
+        if (group is null)
+        {
+            return string.Empty;
+        }
+
+        var names = new List<string>();
+        int? currentId = group.ItemGroupId;
+        while (currentId.HasValue)
+        {
+            var current = ItemGroupSet.Find(g => g.ItemGroupId == currentId.Value);
+            if (current is null)
+            {
+                break;
+            }
+
+            names.Add(current.Name);
+            currentId = current.ParentId;
+        }
+
+        return string.Join(" ", names.Distinct(StringComparer.OrdinalIgnoreCase));
     }
 
     private void cekKode()
