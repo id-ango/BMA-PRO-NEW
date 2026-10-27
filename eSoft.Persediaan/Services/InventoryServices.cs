@@ -1023,6 +1023,7 @@ namespace eSoft.Persediaan.Services
                         Divisi = (from e in divisi where e.Divisi == ic.Divisi select e.NamaDiv).FirstOrDefault(),
                                                 ItemGroupId = ic.ItemGroupId,
                                                 ItemGroupPath = GetGroupPath(ic.ItemGroupId),
+                        SearchTags = ic.SearchTags,
 
                     });
 

@@ -22,6 +22,7 @@ namespace eSoft.Persediaan.View
         public string Divisi { get; set; }
         public int? ItemGroupId { get; set; }
         public string ItemGroupPath { get; set; }
+        public string SearchTags { get; set; }
         public string KodeDivisi { get; set; }
         public string NamaItem { get; set; }
         public string Satuan { get; set; }
