@@ -2,8 +2,10 @@
 @using eSoft.Persediaan.Model
 @using eSoft.Persediaan.View
 @using eSoft.Persediaan.Services
+@using eSoft.Persediaan.Repositories
 
 @inject IInventoryServices Services
+@inject IItemGroupRepository groupRepo
 @implements IDisposable
 @inject NavigationManager navigationmanager
 
@@ -83,7 +85,15 @@
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Divisi</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.AcctSet</td>
             <td class="@GetCellClass(cbBank.Disabled)">@cbBank.Category</td>
-            <td class="@GetCellClass(cbBank.Disabled)">@cbBank.ItemGroup?.Name</td>
+            <td class="@GetCellClass(cbBank.Disabled)">
+                <select class="form-select form-select-sm" value="@(cbBank.ItemGroupId?.ToString() ?? "")" @onchange="e => ChangeItemGroup(cbBank, e.Value)">
+                    <option value="">Belum Ada Group</option>
+                    @foreach (var group in ItemGroupSet.OrderBy(GetGroupPath))
+                    {
+                        <option value="@group.ItemGroupId">@GetGroupPath(group)</option>
+                    }
+                </select>
+            </td>
             <td class="@GetCellClass(cbBank.Disabled) text-end">@cbBank.Qty.ToString("N")</td>
             <td class="@GetCellClass(cbBank.Disabled) text-end">@(string.IsNullOrEmpty(cbBank.CurrencyCode) ? "" : cbBank.CurrencyCode) @cbBank.HrgUsd.ToString("N")</td>
             <td class="@GetCellClass(cbBank.Disabled) text-end">@cbBank.HrgNetto.ToString("N")</td>
@@ -161,6 +171,7 @@
 @code {
 
     private List<IcItem> Banks;
+    private List<IcItemGroup> ItemGroupSet = new();
     private IcItem _bankToDelete;
     private string imaging;
     private string currentSortColumn = nameof(IcItem.ItemCode);
@@ -179,11 +190,11 @@
     public bool DeleteDialogOpen { get; set; }
     public bool NullDialogOpen { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        base.OnInitialized();
+        await base.OnInitializedAsync();
+        ItemGroupSet = await groupRepo.GetAllAsync();
         LoadGet();
-
     }
 
     private void LoadGet()
@@ -340,6 +351,32 @@
     private string GetCellClass(bool finish)
     {
         return finish ? "table-warning" : string.Empty;
+    }
+
+    private async Task ChangeItemGroup(IcItem bank, object value)
+    {
+        int? itemGroupId = int.TryParse(value?.ToString(), out var id) ? id : null;
+        await Services.UpdateItemGroup(bank.IcItemId, itemGroupId);
+        LoadGet();
+    }
+
+    private string GetGroupPath(IcItemGroup group)
+    {
+        var names = new List<string> { group.Name };
+        var parentId = group.ParentId;
+        while (parentId.HasValue)
+        {
+            var parent = ItemGroupSet.Find(g => g.ItemGroupId == parentId.Value);
+            if (parent is null)
+            {
+                break;
+            }
+
+            names.Insert(0, parent.Name);
+            parentId = parent.ParentId;
+        }
+
+        return string.Join(" > ", names);
     }
     public void Dispose()
     {

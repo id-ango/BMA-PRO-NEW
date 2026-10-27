@@ -34,6 +34,16 @@ namespace eSoft.Persediaan.Services
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task UpdateItemGroup(int icItemId, int? itemGroupId)
+        {
+            var existingItem = await _context.IcItems.FindAsync(icItemId);
+            if (existingItem != null)
+            {
+                existingItem.ItemGroupId = itemGroupId;
+                await _context.SaveChangesAsync();
+            }
+        }
         public bool CekKdItem(string item)
         {
             if (item != null)

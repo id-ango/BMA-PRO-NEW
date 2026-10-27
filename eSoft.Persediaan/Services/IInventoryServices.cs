@@ -19,6 +19,7 @@ namespace eSoft.Persediaan.Services
         Task<List<IcItem>> GetIcItemAsync(bool disabled = false);
         List<IcItem> GetIcItemByStatus(string filter = "all");
         Task UpdateProject(IcItem project);
+        Task UpdateItemGroup(int icItemId, int? itemGroupId);
         List<IcAltItem> GetIcAltItem();
         IcItem GetIcItemId(int itemKode);
         IcItem GetIcItemProduk(string produk);
