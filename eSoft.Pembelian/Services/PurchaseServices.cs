@@ -453,6 +453,23 @@ namespace eSoft.Pembelian.Services
             }
         }
 
+        public void UpdateKeterangan(int id, string keterangan)
+        {
+            var trans = _context.IrTransHs.FirstOrDefault(x => x.IrTransHId == id);
+            if (trans == null)
+                return;
+
+            trans.Keterangan = keterangan;
+            _context.SaveChanges();
+
+            var hutang = _contextAp.ApHutangs.FirstOrDefault(x => x.Kode == "IR" && x.Dokumen == trans.NoLpb);
+            if (hutang != null)
+            {
+                hutang.Keterangan = keterangan;
+                _contextAp.SaveChanges();
+            }
+        }
+
         public bool CekHutang(IrTransH trans)
         {
             return _contextAp.ApHutangs

@@ -23,6 +23,7 @@ namespace eSoft.Pembelian.Services
         Task<bool> DelTransH(int id);
         Task<bool> EditTransH(IrTransHView trans);
         IrTransH AddTransHRetur(IrTransHView trans);
+        void UpdateKeterangan(int id, string keterangan);
         List<IrTransH> Laporan1(DateTime tgl1, DateTime tgl2);
         List<IrTransD> Detail1(int xKdHeader);
         List<IrTrans> Detail2(string xKdHeader, DateTime tgl1, DateTime tgl2);
