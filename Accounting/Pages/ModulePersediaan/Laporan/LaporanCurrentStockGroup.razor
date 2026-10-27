@@ -6,20 +6,15 @@
 @using eSoft.Persediaan.Services
 @using eSoft.Persediaan.Model
 @using eSoft.Persediaan.Repositories
+@using eSoft.Order.Services
+@using ClosedXML.Excel
 
 @inject IInventoryServices serviceIC
 @inject IJSRuntime JSRuntime
 @inject IItemGroupRepository groupRepo
+@inject IOrderSalesServices serviceOrdJual
 
 <link rel="stylesheet" href="css/laporan-current-stock.css" />
-
-<style>
-    @@media print {
-        .group-report .data-table tbody tr:not(.to-print):not(.separator-row) {
-            display: table-row !important;
-        }
-    }
-</style>
 
 
 <div class="dontprint" style="display:inline">
@@ -30,6 +25,10 @@
     <NavLink href="/" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
     &emsp;
     <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
+    &emsp;
+    <button class="btn btn-info btn-lg" @onclick="PrintStockOpname">&nbsp; Stock Opname &nbsp;</button>
+    &emsp;
+    <button class="btn btn-secondary btn-lg" @onclick="ExportToExcel">&nbsp; Export Excel &nbsp;</button>
     &emsp;
 </div>
 
@@ -43,7 +42,7 @@
 else
 {
     <div class="report-table group-report">
-        <div class="report-title">Laporan Stock per Group</div>
+        <div class="report-title">@_title</div>
 
         <div class="dontprint mb-3" style="max-width:600px;">
             <label class="form-label fw-bold">Filter Group</label>
@@ -63,6 +62,7 @@ else
                 <table class="data-table">
                     <thead>
                         <tr class="header-row">
+                            <th class="dontprint" style="width: 40px;"></th>
                             <th class="col-no">No.</th>
                             <th class="col-code">Kode</th>
                             <th class="col-name">Nama Barang</th>
@@ -76,7 +76,10 @@ else
                     <tbody>
                         @foreach (var group in _groups)
                         {
-                            <tr class="division-header group-header" style="cursor:pointer;" @onclick="() => ToggleGroup(group.Path)">
+                            <tr class="division-header group-header to-print" style="cursor:pointer;" @onclick="() => ToggleGroup(group.Path)">
+                                <td class="dontprint text-center" @onclick:stopPropagation="true">
+                                    <input type="checkbox" class="form-check-input" checked="@IsGroupSelected(group)" @onchange="() => ToggleGroupPrint(group)" />
+                                </td>
                                 <td colspan="8">
                                     <span class="group-toggle dontprint me-2">@(IsExpanded(group.Path) ? "▼" : "▶")</span>
                                     @group.Path
@@ -88,14 +91,17 @@ else
                                 @for (var i = 0; i < group.Items.Count; i++)
                                 {
                                     var item = group.Items[i];
-                                    <tr>
+                                    <tr class="@(item.IsSelectedForPrinting ? "to-print" : "")">
+                                        <td class="dontprint text-center">
+                                            <input type="checkbox" class="form-check-input" checked="@item.IsSelectedForPrinting" @onchange="() => TogglePrintRow(item)" />
+                                        </td>
                                         <td class="col-no">@(i + 1)</td>
                                         <td class="col-code">@item.ItemCode</td>
                                         <td class="col-name">@item.NamaItem</td>
                                         <td class="col-unit">@item.Satuan</td>
                                         <td class="col-qty @item.QtyClass">@item.Qty.ToString("N")</td>
-                                        <td class="col-po">@item.QtyBeli.ToString("N")</td>
-                                        <td class="col-so">@item.QtyJual.ToString("N")</td>
+                                        <td class="col-po"><button class="btn btn-link btn-sm p-0" @onclick="() => CicilanBeli(item.ItemCode)">@item.QtyBeli.ToString("N")</button></td>
+                                        <td class="col-so"><button class="btn btn-link btn-sm p-0" @onclick="() => CicilanJual(item.ItemCode)">@item.QtyJual.ToString("N")</button></td>
                                         <td class="col-total @item.QtyOrderClass">@item.QtyOrder.ToString("N")</td>
                                     </tr>
                                 }
@@ -110,6 +116,30 @@ else
     <div style="margin-top: 20px;">
         <p class="print-date">Tanggal cetak: @DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss")</p>
     </div>
+}
+
+@if (dispCicilan)
+{
+    <ModalSearchComponent OnClose="OnSearchClose" Items="TransParsial" Context="transaksi2">
+        <TableHeader>
+            <th scope="col">Vendor</th>
+            <th scope="col">Tanggal</th>
+            <th scope="col">No. PO</th>
+            <th scope="col">Keterangan</th>
+            <th scope="col">Qty</th>
+            <th scope="col">Harga</th>
+            <th></th>
+        </TableHeader>
+        <RowTemplate>
+            <td>@transaksi2.NamaVendor</td>
+            <td>@transaksi2.Tanggal.ToString("dd-MM-yyyy")</td>
+            <td>@transaksi2.NoLpb</td>
+            <td>@transaksi2.Keterangan</td>
+            <td>@transaksi2.Qty</td>
+            <td>@transaksi2.Harga</td>
+            <td></td>
+        </RowTemplate>
+    </ModalSearchComponent>
 }
 
 @code {
@@ -132,6 +162,11 @@ else
         try
         {
             _stock = await Task.Run(() => serviceIC.GetCurrentStock());
+            foreach (var item in _stock)
+            {
+                item.IsSelectedForPrinting = true;
+                item.IsSubTitleSelectedForPrinting = true;
+            }
             var allGroups = await groupRepo.GetAllAsync();
             _groupLookup = allGroups.ToDictionary(g => g.ItemGroupId);
             _groupOptions = allGroups
@@ -150,6 +185,128 @@ else
     private Dictionary<int, IcItemGroup> _groupLookup = new();
     private List<(int Id, string Path)> _groupOptions = new();
     private string _selectedGroup = "";
+    private string _title = "Laporan Stock per Group";
+    private List<IcStockCardView> TransParsial = new();
+    private bool dispCicilan;
+
+    private bool IsGroupSelected(GroupSection group) => group.Items.Count > 0 && group.Items.All(x => x.IsSelectedForPrinting);
+
+    private void ToggleGroupPrint(GroupSection group)
+    {
+        var newState = !IsGroupSelected(group);
+        foreach (var item in group.Items)
+        {
+            item.IsSelectedForPrinting = newState;
+            item.IsSubTitleSelectedForPrinting = newState;
+        }
+    }
+
+    private void TogglePrintRow(IcStockCardView item)
+    {
+        item.IsSelectedForPrinting = !item.IsSelectedForPrinting;
+        item.IsSubTitleSelectedForPrinting = item.IsSelectedForPrinting;
+    }
+
+    private void CicilanBeli(string itemCode)
+    {
+        TransParsial = serviceOrdJual.GetListOrderAktif(itemCode, "71");
+        dispCicilan = true;
+    }
+
+    private void CicilanJual(string itemCode)
+    {
+        TransParsial = serviceOrdJual.GetListOrderAktif(itemCode, "76");
+        dispCicilan = true;
+    }
+
+    private void OnSearchClose(bool accepted)
+    {
+        dispCicilan = false;
+    }
+
+    private async Task PrintStockOpname()
+    {
+        _title = "STOCK OPNAME";
+        StateHasChanged();
+        await Task.Delay(200);
+        await JSRuntime.InvokeVoidAsync("window.print");
+        _title = "Laporan Stock per Group";
+        StateHasChanged();
+    }
+
+    private async Task ExportToExcel()
+    {
+        using var excelStream = GenerateExcelWorkbook();
+        string fileName = $"LaporanStockGroup_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        using var streamRef = new DotNetStreamReference(stream: excelStream);
+        await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+
+    private MemoryStream GenerateExcelWorkbook()
+    {
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Stock Report");
+
+        int rowNum = 1;
+        var titleRange = worksheet.Range(rowNum, 1, rowNum, 8);
+        titleRange.Merge();
+        titleRange.Value = _title;
+        titleRange.Style.Font.Bold = true;
+        titleRange.Style.Font.FontSize = 14;
+        titleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        rowNum += 2;
+
+        string[] headers = { "No.", "Kode", "Nama Barang", "Satuan", "Qty", "PO", "SO", "Total" };
+        for (int col = 0; col < headers.Length; col++)
+        {
+            worksheet.Cell(rowNum, col + 1).Value = headers[col];
+        }
+        var headerRange = worksheet.Range(rowNum, 1, rowNum, 8);
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        headerRange.Style.Fill.BackgroundColor = XLColor.DarkGray;
+        headerRange.Style.Font.FontColor = XLColor.White;
+        headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+        rowNum++;
+
+        foreach (var group in _groups)
+        {
+            var selected = group.Items.Where(x => x.IsSelectedForPrinting).ToList();
+            if (selected.Count == 0)
+            {
+                continue;
+            }
+
+            var groupRange = worksheet.Range(rowNum, 1, rowNum, 8);
+            groupRange.Merge();
+            groupRange.Value = $"{group.Path} ({selected.Count} item, Total Qty: {selected.Sum(x => x.Qty):N})";
+            groupRange.Style.Font.Bold = true;
+            groupRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+            rowNum++;
+
+            int no = 1;
+            foreach (var item in selected)
+            {
+                worksheet.Cell(rowNum, 1).Value = no++;
+                worksheet.Cell(rowNum, 2).Value = item.ItemCode;
+                worksheet.Cell(rowNum, 3).Value = item.NamaItem;
+                worksheet.Cell(rowNum, 4).Value = item.Satuan;
+                worksheet.Cell(rowNum, 5).Value = item.Qty;
+                worksheet.Cell(rowNum, 6).Value = item.QtyBeli;
+                worksheet.Cell(rowNum, 7).Value = item.QtyJual;
+                worksheet.Cell(rowNum, 8).Value = item.QtyOrder;
+                rowNum++;
+            }
+        }
+
+        worksheet.Columns().AdjustToContents();
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        return stream;
+    }
 
     private string GetGroupPath(int groupId)
     {
