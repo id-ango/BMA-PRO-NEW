@@ -88,5 +88,10 @@ namespace eSoft.Persediaan.View
         public bool IsDivisionHeader { get; set; }      // Marks row as division header vs data row
         public int RowNumber { get; set; }              // Sequential row number within division
 
+        // Stock per location (loaded once with the report, shown via expandable badge)
+        public List<IcLocationQtyView> LocationQtys { get; set; }
+        public bool HasLocationQty { get; set; }
+        public bool ShowLocationQty { get; set; }       // Toggle state for location detail row
+
     }
 }
