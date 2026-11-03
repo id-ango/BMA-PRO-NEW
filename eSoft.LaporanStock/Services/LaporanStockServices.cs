@@ -2115,7 +2115,7 @@ namespace eSoft.LaporanStock.Services
             progress?.Report("Menghitung penjualan periode target tahun lalu (YoY musiman)...");
             await Task.Yield();
             var futurePeriodLastYearStart = asOfDate.Date.AddDays(1).AddMonths(-12);
-            var futurePeriodLastYearEnd = asOfDate.Date.AddMonths(effectiveCoverageMonths).AddMonths(-12);
+            var futurePeriodLastYearEnd = asOfDate.Date.AddMonths(report.CoverageMonths).AddMonths(-12);
             var salesFuturePeriodLastYear = _contextOE.OeTransDs
                 .AsNoTracking()
                 .Where(x => x.Tanggal.Date >= futurePeriodLastYearStart && x.Tanggal.Date <= futurePeriodLastYearEnd && x.Kode == "94")
@@ -2145,12 +2145,12 @@ namespace eSoft.LaporanStock.Services
                 const decimal minLastYearSalesForSeasonal = 12m;
                 var hasReliableSeasonalData = salesLastYearQty >= minLastYearSalesForSeasonal && salesFuturePeriodLastYearQty > 0;
                 var seasonalIndex = hasReliableSeasonalData && averageMonthlySalesLastYear > 0
-                    ? Math.Min(Math.Max((salesFuturePeriodLastYearQty / effectiveCoverageMonths) / averageMonthlySalesLastYear, 0), maxSeasonalIndex)
+                    ? Math.Min(Math.Max((salesFuturePeriodLastYearQty / report.CoverageMonths) / averageMonthlySalesLastYear, 0), maxSeasonalIndex)
                     : (hasReliableSeasonalData ? 1m : 0m);
                 var seasonalAverageMonthlySales = averageMonthlySales * seasonalIndex;
                 var seasonalDemandCoverageQty = hasReliableSeasonalData
-                    ? Math.Min(seasonalAverageMonthlySales * effectiveCoverageMonths, salesFuturePeriodLastYearQty)
-                    : seasonalAverageMonthlySales * effectiveCoverageMonths;
+                    ? Math.Min(seasonalAverageMonthlySales * report.CoverageMonths, salesFuturePeriodLastYearQty)
+                    : seasonalAverageMonthlySales * report.CoverageMonths;
                 var seasonalTargetQty = seasonalDemandCoverageQty + soQty;
                 var seasonalDeficitQty = Math.Max(seasonalTargetQty - Math.Max(item.Qty, 0) - poQty, 0);
                 var seasonalRecommendedPoQty = seasonalIndex > 0 ? Math.Ceiling(Math.Round(seasonalDeficitQty, 6)) : 0;
@@ -2191,7 +2191,7 @@ namespace eSoft.LaporanStock.Services
                     row.Status = "Rekomendasi PO";
 
                 row.Recommendation = InventoryAnalysisClassification.GetRecommendation(row.Status, row.IsSparePart);
-                row.DemandAnalysisReason = BuildDemandAnalysisReason(row, effectiveCoverageMonths, report.SalesHistoryMonths);
+                row.DemandAnalysisReason = BuildDemandAnalysisReason(row, effectiveCoverageMonths, report.CoverageMonths, report.SalesHistoryMonths);
                 report.Rows.Add(row);
             }
 
@@ -2205,7 +2205,7 @@ namespace eSoft.LaporanStock.Services
             return report;
         }
 
-        private static string BuildDemandAnalysisReason(InventoryAnalysisRow row, int effectiveCoverageMonths, int historyMonths)
+        private static string BuildDemandAnalysisReason(InventoryAnalysisRow row, int effectiveCoverageMonths, int coverageMonths, int historyMonths)
         {
             if (row.Status == "Alokasi SO (Siap Kirim)")
                 return $"Stock ({row.StockQty:N2} {row.Satuan}) telah terikat pesanan pelanggan (SO: {row.SoRemainingQty:N2} {row.Satuan}). Segera proses pengiriman (Surat Jalan/DO). Tidak direkomendasikan clearance/promo.";
@@ -2220,17 +2220,17 @@ namespace eSoft.LaporanStock.Services
                 return $"Tidak ada stock fisik dan tidak ada SO/PO aktif, namun ada penjualan {row.SalesQty12Months:N2} {row.Satuan} dalam {historyMonths} bulan analisa (rata-rata {row.AverageMonthlySales:N2}/bulan). Evaluasi kebutuhan pembelian ulang bila barang masih aktif laku.";
 
             if (row.HasPurchaseRecommendation)
-                return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; target persediaan {effectiveCoverageMonths} bulan: {row.DemandCoverageQty:N2}; ditambah sisa pesanan customer (SO): {row.SoRemainingQty:N2}; tersedia dari stock dan pesanan supplier (PO): {(row.StockQty + row.PoRemainingQty):N2}; saran order PO (dibulatkan): {row.RecommendedPoQty:N0}." + BuildSeasonalReasonSuffix(row, effectiveCoverageMonths);
+                return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; target persediaan {effectiveCoverageMonths} bulan: {row.DemandCoverageQty:N2}; ditambah sisa pesanan customer (SO): {row.SoRemainingQty:N2}; tersedia dari stock dan pesanan supplier (PO): {(row.StockQty + row.PoRemainingQty):N2}; saran order PO (dibulatkan): {row.RecommendedPoQty:N0}." + BuildSeasonalReasonSuffix(row, coverageMonths);
 
-            return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; target persediaan {effectiveCoverageMonths} bulan dan sisa pesanan customer (SO) masih tertutup oleh stock {row.StockQty:N2} serta pesanan supplier (PO) aktif {row.PoRemainingQty:N2}." + BuildSeasonalReasonSuffix(row, effectiveCoverageMonths);
+            return $"Penjualan {historyMonths} bulan: {row.SalesQty12Months:N2}; rata-rata: {row.AverageMonthlySales:N2}/bulan; target persediaan {effectiveCoverageMonths} bulan dan sisa pesanan customer (SO) masih tertutup oleh stock {row.StockQty:N2} serta pesanan supplier (PO) aktif {row.PoRemainingQty:N2}." + BuildSeasonalReasonSuffix(row, coverageMonths);
         }
 
-        private static string BuildSeasonalReasonSuffix(InventoryAnalysisRow row, int effectiveCoverageMonths)
+        private static string BuildSeasonalReasonSuffix(InventoryAnalysisRow row, int coverageMonths)
         {
             if (!row.HasSeasonalData)
                 return " Perbandingan YoY: tidak ada penjualan pada periode yang sama tahun lalu.";
 
-            var suffix = $" Perbandingan YoY (musiman): penjualan bulan yang sama tahun lalu {row.SalesSameMonthLastYearQty:N2}; penjualan {effectiveCoverageMonths} bulan periode target tahun lalu {row.SalesFuturePeriodLastYearQty:N2} (indeks musiman {row.SeasonalIndex:N2}, dibatasi maks 3,00, dari rata-rata tahun lalu {row.AverageMonthlySalesLastYear:N2}/bulan).";
+            var suffix = $" Perbandingan YoY (musiman): penjualan bulan yang sama tahun lalu {row.SalesSameMonthLastYearQty:N2}; penjualan {coverageMonths} bulan periode target (coverage) tahun lalu {row.SalesFuturePeriodLastYearQty:N2} (indeks musiman {row.SeasonalIndex:N2}, dibatasi maks 3,00, dari rata-rata tahun lalu {row.AverageMonthlySalesLastYear:N2}/bulan).";
             if (row.SeasonalIndex > 0)
                 suffix += $" Saran PO alternatif penyesuaian musiman: {row.SeasonalRecommendedPoQty:N0} (target musiman {row.SeasonalDemandCoverageQty:N2}, dibatasi tidak melebihi penjualan periode target tahun lalu).";
             else
