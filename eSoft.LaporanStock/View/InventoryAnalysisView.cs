@@ -77,6 +77,16 @@ namespace eSoft.LaporanStock.View
         public decimal DemandCoverageQty { get; set; }
         public decimal RecommendedPoQty { get; set; }
         public decimal RecommendedPoValue => RecommendedPoQty * UnitCost;
+        public decimal SalesSameMonthLastYearQty { get; set; }
+        public decimal SalesFuturePeriodLastYearQty { get; set; }
+        public decimal AverageMonthlySalesLastYear { get; set; }
+        public decimal SeasonalIndex { get; set; }
+        public decimal SeasonalAverageMonthlySales { get; set; }
+        public decimal SeasonalDemandCoverageQty { get; set; }
+        public decimal SeasonalRecommendedPoQty { get; set; }
+        public decimal SeasonalRecommendedPoValue => SeasonalRecommendedPoQty * UnitCost;
+        public bool HasSeasonalData => SalesSameMonthLastYearQty > 0 || SalesFuturePeriodLastYearQty > 0 || AverageMonthlySalesLastYear > 0;
+        public bool HasSeasonalRecommendation => SeasonalRecommendedPoQty > 0;
         public string DemandAnalysisReason { get; set; }
         public bool HasPurchaseRecommendation => RecommendedPoQty > 0;
         public string Status { get; set; }

@@ -76,6 +76,7 @@
                     </div>
                     <div class="col-md-3">
                         <small class="text-dark">Saran order PO dihitung dari penjualan 12 bulan, target persediaan, waktu tunggu supplier, cadangan aman, stock gudang, pesanan supplier (PO), dan pesanan pelanggan (SO).</small>
+                        <small class="d-block text-dark mt-1">Rekom PO Musiman adalah alternatif yang menyesuaikan rata-rata penjualan dengan indeks musiman YoY (penjualan periode target tahun lalu dibanding rata-rata tahun lalu), dilengkapi penjualan bulan yang sama tahun lalu sebagai pembanding.</small>
                         <small class="d-block text-muted mt-1">Adjustment netto hanya informasi jumlah bersih penambahan/pengurangan dan tidak menjadi dasar penjualan atau rekomendasi PO.</small>
                     </div>
                 </div>
@@ -185,6 +186,9 @@
                             <th>Terakhir Keluar</th><th class="text-end">Umur</th><th class="text-end">Sisa SO</th><th class="text-end">Sisa PO</th>
                             <th class="text-end">Jual 12 Bln</th><th class="text-end">Rata2/Bln</th>
                             <th title="Total netto qty adjustment sampai tanggal analisa" class="text-end">Adj. Netto</th><th class="text-end">Rekom PO</th>
+                            <th title="Penjualan bulan yang sama tahun lalu" class="text-end">YoY Bln Sama</th>
+                            <th title="Penjualan periode target (coverage) tahun lalu" class="text-end">YoY Periode Target</th>
+                            <th title="Saran PO alternatif dengan penyesuaian musiman (YoY)" class="text-end">Rekom PO Musiman</th>
                             <th>Status</th><th>Alasan Analisa</th>
                         </tr>
                     </thead>
@@ -204,6 +208,9 @@
                                 <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
                                 <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
                                 <td class="text-end fw-bold text-primary">@row.RecommendedPoQty.ToString("N0")</td>
+                                <td class="text-end">@row.SalesSameMonthLastYearQty.ToString("N2")</td>
+                                <td class="text-end">@row.SalesFuturePeriodLastYearQty.ToString("N2")<br /><small class="text-muted">idx @row.SeasonalIndex.ToString("N2")</small></td>
+                                <td class="text-end fw-bold text-success">@row.SeasonalRecommendedPoQty.ToString("N0")</td>
                                 <td><span class="badge @GetStatusClass(row.Status)">@row.Status</span></td>
                                 <td>
                                     <small>
@@ -289,6 +296,9 @@
                                         <th class="text-end" style="width: 5%;">Jual 12 Bln</th>
                                         <th class="text-end" style="width: 5%;">Rata2/Bln</th>
                                         <th class="text-end" style="width: 5%;">Rekom PO</th>
+                                        <th class="text-end" style="width: 5%;">YoY Bln Sama</th>
+                                        <th class="text-end" style="width: 5%;">YoY Periode Target</th>
+                                        <th class="text-end" style="width: 5%;">Rekom PO Musiman</th>
                                         <th style="width: 7%;">Adj. Netto</th>
                                         <th style="width: 6%;">Status</th>
                                         <th style="width: 17%;">Alasan Analisa</th>
@@ -309,6 +319,9 @@
                                             <td class="text-end">@row.SalesQty12Months.ToString("N0")</td>
                                             <td class="text-end">@row.AverageMonthlySales.ToString("N1")</td>
                                             <td class="text-end fw-bold text-primary">@row.RecommendedPoQty.ToString("N0")</td>
+                                            <td class="text-end">@row.SalesSameMonthLastYearQty.ToString("N0")</td>
+                                            <td class="text-end">@row.SalesFuturePeriodLastYearQty.ToString("N0")<br /><small class="text-muted">idx @row.SeasonalIndex.ToString("N2")</small></td>
+                                            <td class="text-end fw-bold text-success">@row.SeasonalRecommendedPoQty.ToString("N0")</td>
                                             <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
                                             <td><span class="badge @GetStatusClass(row.Status)">@row.Status</span></td>
                                             <td>
@@ -362,7 +375,10 @@
                                     <th class="text-end">Jual 12 Bln</th>
                                     <th class="text-end">Rata-rata/Bln</th>
                                     <th class="text-end">Adj. Netto</th>
+                                    <th class="text-end">YoY Bln Sama</th>
+                                    <th class="text-end">YoY Periode Target</th>
                                     <th class="text-end">Rekom PO</th>
+                                    <th class="text-end">Rekom PO Musiman</th>
                                     <th>Alasan</th>
                                 </tr>
                             </thead>
@@ -375,7 +391,10 @@
                                         <td class="text-end">@row.SalesQty12Months.ToString("N2")</td>
                                         <td class="text-end">@row.AverageMonthlySales.ToString("N2")</td>
                                         <td class="text-end">@FormatNetAdjustment(row.NetAdjustmentQty)</td>
+                                        <td class="text-end">@row.SalesSameMonthLastYearQty.ToString("N2")</td>
+                                        <td class="text-end">@row.SalesFuturePeriodLastYearQty.ToString("N2")</td>
                                         <td class="text-end text-danger fw-bold">@row.RecommendedPoQty.ToString("N0")</td>
+                                        <td class="text-end fw-bold">@row.SeasonalRecommendedPoQty.ToString("N0")</td>
                                         <td>@row.DemandAnalysisReason</td>
                                     </tr>
                                 }
@@ -537,7 +556,7 @@
             summary.Column(4).Width = 18;
 
             var detail = workbook.Worksheets.Add("Detail Analysis");
-            var headers = new[] { "Item Code", "Nama Item", "Jenis", "Satuan", "Stock", "Nilai Stock", "Terakhir Keluar", "Umur Hari", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata-rata/Bln", "Coverage Qty", "Rekom PO", "Nilai Rekom PO", "Adjustment Netto Qty", "Status", "Rekomendasi", "Alasan Analisa" };
+            var headers = new[] { "Item Code", "Nama Item", "Jenis", "Satuan", "Stock", "Nilai Stock", "Terakhir Keluar", "Umur Hari", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata-rata/Bln", "Coverage Qty", "Rekom PO", "Nilai Rekom PO", "YoY Jual Bln Sama", "YoY Jual Periode Target", "Indeks Musiman", "Rekom PO Musiman", "Nilai Rekom PO Musiman", "Adjustment Netto Qty", "Status", "Rekomendasi", "Alasan Analisa" };
             for (var column = 0; column < headers.Length; column++)
                 detail.Cell(1, column + 1).Value = headers[column];
 
@@ -559,10 +578,15 @@
                 detail.Cell(detailRow, 13).Value = row.DemandCoverageQty;
                 detail.Cell(detailRow, 14).Value = row.RecommendedPoQty;
                 detail.Cell(detailRow, 15).Value = row.RecommendedPoValue;
-                detail.Cell(detailRow, 16).Value = row.NetAdjustmentQty;
-                detail.Cell(detailRow, 17).Value = row.Status;
-                detail.Cell(detailRow, 18).Value = row.Recommendation;
-                detail.Cell(detailRow, 19).Value = row.DemandAnalysisReason;
+                detail.Cell(detailRow, 16).Value = row.SalesSameMonthLastYearQty;
+                detail.Cell(detailRow, 17).Value = row.SalesFuturePeriodLastYearQty;
+                detail.Cell(detailRow, 18).Value = row.SeasonalIndex;
+                detail.Cell(detailRow, 19).Value = row.SeasonalRecommendedPoQty;
+                detail.Cell(detailRow, 20).Value = row.SeasonalRecommendedPoValue;
+                detail.Cell(detailRow, 21).Value = row.NetAdjustmentQty;
+                detail.Cell(detailRow, 22).Value = row.Status;
+                detail.Cell(detailRow, 23).Value = row.Recommendation;
+                detail.Cell(detailRow, 24).Value = row.DemandAnalysisReason;
                 detailRow++;
             }
 
@@ -577,8 +601,8 @@
             detailRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             detailRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
             detail.Range(2, 2, Math.Max(detailRow - 1, 2), 2).Style.Alignment.WrapText = true;
-            detail.Range(2, 16, Math.Max(detailRow - 1, 2), 16).Style.Alignment.WrapText = true;
-            detail.Range(2, 18, Math.Max(detailRow - 1, 2), 19).Style.Alignment.WrapText = true;
+            detail.Range(2, 21, Math.Max(detailRow - 1, 2), 21).Style.Alignment.WrapText = true;
+            detail.Range(2, 23, Math.Max(detailRow - 1, 2), 24).Style.Alignment.WrapText = true;
             if (detailRow > 2)
             {
                 detail.Range(2, 5, detailRow - 1, 6).Style.NumberFormat.Format = "#,##0";
@@ -588,8 +612,13 @@
                 detail.Range(2, 14, detailRow - 1, 15).Style.NumberFormat.Format = "#,##0";
                 detail.Range(2, 14, detailRow - 1, 14).Style.Font.FontColor = XLColor.Red;
                 detail.Range(2, 14, detailRow - 1, 14).Style.Font.Bold = true;
+                detail.Range(2, 16, detailRow - 1, 17).Style.NumberFormat.Format = "#,##0";
+                detail.Range(2, 18, detailRow - 1, 18).Style.NumberFormat.Format = "#,##0.00";
+                detail.Range(2, 19, detailRow - 1, 20).Style.NumberFormat.Format = "#,##0";
+                detail.Range(2, 19, detailRow - 1, 19).Style.Font.FontColor = XLColor.DarkGreen;
+                detail.Range(2, 19, detailRow - 1, 19).Style.Font.Bold = true;
             }
-            var widths = new[] { 14, 38, 13, 10, 11, 16, 16, 11, 11, 11, 13, 15, 15, 13, 17, 22, 25, 45, 78 };
+            var widths = new[] { 14, 38, 13, 10, 11, 16, 16, 11, 11, 11, 13, 15, 15, 13, 17, 15, 18, 13, 15, 18, 22, 25, 45, 78 };
             for (var column = 0; column < widths.Length; column++)
                 detail.Column(column + 1).Width = widths[column];
             detail.Range(1, 1, Math.Max(detailRow - 1, 1), headers.Length).SetAutoFilter();

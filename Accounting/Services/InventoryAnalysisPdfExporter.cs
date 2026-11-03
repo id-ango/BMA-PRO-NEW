@@ -126,17 +126,19 @@ public static class InventoryAnalysisPdfExporter
                 columns.RelativeColumn(1.2f); columns.RelativeColumn(1); columns.RelativeColumn(1);
                 columns.RelativeColumn(1); columns.RelativeColumn(1); columns.RelativeColumn(1);
                 columns.RelativeColumn(1); columns.RelativeColumn(1); columns.RelativeColumn(1);
+                columns.RelativeColumn(1); columns.RelativeColumn(1); columns.RelativeColumn(1);
                 columns.RelativeColumn(1.6f); columns.RelativeColumn(3);
             });
-            Header(table, "Item / Nama", "Jenis", "Stock", "Nilai", "Terakhir Keluar", "Umur", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata2/Bln", "Rekom PO", "Adj. Netto", "Status", "Alasan Analisa");
+            Header(table, "Item / Nama", "Jenis", "Stock", "Nilai", "Terakhir Keluar", "Umur", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata2/Bln", "Rekom PO", "YoY Bln Sama", "YoY Periode Target (idx)", "Rekom PO Musiman", "Adj. Netto", "Status", "Alasan Analisa");
             foreach (var item in rows)
             {
                 Cells(table,
                     $"{item.ItemCode} / {item.NamaItem}", item.JenisItem, item.StockQty.ToString("N2"), item.StockValue.ToString("N0"),
                     item.LastOutDate?.ToString("dd-MM-yyyy") ?? "-", item.DaysSinceLastOut?.ToString() ?? "-",
                     item.SoRemainingQty.ToString("N2"), item.PoRemainingQty.ToString("N2"), item.SalesQty12Months.ToString("N2"),
-                    item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N2"), FormatAdjustment(item.NetAdjustmentQty),
-                    item.Status, item.DemandAnalysisReason);
+                    item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N2"),
+                    item.SalesSameMonthLastYearQty.ToString("N2"), $"{item.SalesFuturePeriodLastYearQty:N2} ({item.SeasonalIndex:N2})", item.SeasonalRecommendedPoQty.ToString("N0"),
+                    FormatAdjustment(item.NetAdjustmentQty), item.Status, item.DemandAnalysisReason);
             }
         });
     }
@@ -207,12 +209,14 @@ public static class InventoryAnalysisPdfExporter
             {
                 columns.RelativeColumn(1.5f); columns.RelativeColumn(3); columns.RelativeColumn(1);
                 columns.RelativeColumn(1); columns.RelativeColumn(1); columns.RelativeColumn(1);
-                columns.RelativeColumn(1);
+                columns.RelativeColumn(1); columns.RelativeColumn(1); columns.RelativeColumn(1);
                 columns.RelativeColumn(5);
             });
-            Header(table, "Kode Item", "Nama Item", "Stock Saat Ini", "Jual 12 Bln", "Rata-rata/Bln", "Rekom PO", "Adj. Netto", "Alasan");
+            Header(table, "Kode Item", "Nama Item", "Stock Saat Ini", "Jual 12 Bln", "Rata-rata/Bln", "Rekom PO", "YoY Bln Sama", "YoY Periode Target (idx)", "Rekom PO Musiman", "Adj. Netto", "Alasan");
             foreach (var item in recommendations)
-                Cells(table, item.ItemCode, item.NamaItem, item.StockQty.ToString("N2"), item.SalesQty12Months.ToString("N2"), item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N0"), FormatAdjustment(item.NetAdjustmentQty), item.DemandAnalysisReason);
+                Cells(table, item.ItemCode, item.NamaItem, item.StockQty.ToString("N2"), item.SalesQty12Months.ToString("N2"), item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N0"),
+                    item.SalesSameMonthLastYearQty.ToString("N2"), $"{item.SalesFuturePeriodLastYearQty:N2} ({item.SeasonalIndex:N2})", item.SeasonalRecommendedPoQty.ToString("N0"),
+                    FormatAdjustment(item.NetAdjustmentQty), item.DemandAnalysisReason);
         });
     }
 
@@ -229,15 +233,16 @@ public static class InventoryAnalysisPdfExporter
                 columns.RelativeColumn(1); columns.RelativeColumn(1); columns.RelativeColumn(1);
                 columns.RelativeColumn(1.6f); columns.RelativeColumn(3);
             });
-            Header(table, "Item / Nama", "Jenis", "Stock", "Nilai", "Terakhir Keluar", "Umur", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata2/Bln", "Rekom PO", "Adj. Netto", "Status", "Alasan Analisa");
+            Header(table, "Item / Nama", "Jenis", "Stock", "Nilai", "Terakhir Keluar", "Umur", "Sisa SO", "Sisa PO", "Jual 12 Bln", "Rata2/Bln", "Rekom PO", "YoY Bln Sama", "YoY Periode Target (idx)", "Rekom PO Musiman", "Adj. Netto", "Status", "Alasan Analisa");
             foreach (var item in report.Rows.OrderBy(row => row.Status).ThenByDescending(row => row.StockValue))
             {
                 Cells(table,
                     $"{item.ItemCode} / {item.NamaItem}", item.JenisItem, item.StockQty.ToString("N2"), item.StockValue.ToString("N0"),
                     item.LastOutDate?.ToString("dd-MM-yyyy") ?? "-", item.DaysSinceLastOut?.ToString() ?? "-",
                     item.SoRemainingQty.ToString("N2"), item.PoRemainingQty.ToString("N2"), item.SalesQty12Months.ToString("N2"),
-                    item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N2"), FormatAdjustment(item.NetAdjustmentQty),
-                    item.Status, item.DemandAnalysisReason);
+                    item.AverageMonthlySales.ToString("N2"), item.RecommendedPoQty.ToString("N2"),
+                    item.SalesSameMonthLastYearQty.ToString("N2"), $"{item.SalesFuturePeriodLastYearQty:N2} ({item.SeasonalIndex:N2})", item.SeasonalRecommendedPoQty.ToString("N0"),
+                    FormatAdjustment(item.NetAdjustmentQty), item.Status, item.DemandAnalysisReason);
             }
         });
     }
