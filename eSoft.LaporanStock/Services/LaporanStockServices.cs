@@ -2138,17 +2138,22 @@ namespace eSoft.LaporanStock.Services
                 var demandCoverageQty = averageMonthlySales * effectiveCoverageMonths;
                 var targetQty = demandCoverageQty + soQty;
                 var deficitQty = Math.Max(targetQty - Math.Max(item.Qty, 0) - poQty, 0);
-                var recommendedPoQty = Math.Ceiling(deficitQty);
+                var recommendedPoQty = Math.Ceiling(Math.Round(deficitQty, 6));
 
                 var averageMonthlySalesLastYear = salesLastYearQty / report.SalesHistoryMonths;
-                var seasonalIndex = averageMonthlySalesLastYear > 0
-                    ? Math.Max((salesFuturePeriodLastYearQty / effectiveCoverageMonths) / averageMonthlySalesLastYear, 0)
-                    : 0;
+                const decimal maxSeasonalIndex = 3m;
+                const decimal minLastYearSalesForSeasonal = 12m;
+                var hasReliableSeasonalData = salesLastYearQty >= minLastYearSalesForSeasonal && salesFuturePeriodLastYearQty > 0;
+                var seasonalIndex = hasReliableSeasonalData && averageMonthlySalesLastYear > 0
+                    ? Math.Min(Math.Max((salesFuturePeriodLastYearQty / effectiveCoverageMonths) / averageMonthlySalesLastYear, 0), maxSeasonalIndex)
+                    : (hasReliableSeasonalData ? 1m : 0m);
                 var seasonalAverageMonthlySales = averageMonthlySales * seasonalIndex;
-                var seasonalDemandCoverageQty = seasonalAverageMonthlySales * effectiveCoverageMonths;
+                var seasonalDemandCoverageQty = hasReliableSeasonalData
+                    ? Math.Min(seasonalAverageMonthlySales * effectiveCoverageMonths, salesFuturePeriodLastYearQty)
+                    : seasonalAverageMonthlySales * effectiveCoverageMonths;
                 var seasonalTargetQty = seasonalDemandCoverageQty + soQty;
                 var seasonalDeficitQty = Math.Max(seasonalTargetQty - Math.Max(item.Qty, 0) - poQty, 0);
-                var seasonalRecommendedPoQty = seasonalIndex > 0 ? Math.Ceiling(seasonalDeficitQty) : 0;
+                var seasonalRecommendedPoQty = seasonalIndex > 0 ? Math.Ceiling(Math.Round(seasonalDeficitQty, 6)) : 0;
 
                 var row = new InventoryAnalysisRow
                 {
@@ -2225,9 +2230,11 @@ namespace eSoft.LaporanStock.Services
             if (!row.HasSeasonalData)
                 return " Perbandingan YoY: tidak ada penjualan pada periode yang sama tahun lalu.";
 
-            var suffix = $" Perbandingan YoY (musiman): penjualan bulan yang sama tahun lalu {row.SalesSameMonthLastYearQty:N2}; penjualan {effectiveCoverageMonths} bulan periode target tahun lalu {row.SalesFuturePeriodLastYearQty:N2} (indeks musiman {row.SeasonalIndex:N2} dari rata-rata tahun lalu {row.AverageMonthlySalesLastYear:N2}/bulan).";
+            var suffix = $" Perbandingan YoY (musiman): penjualan bulan yang sama tahun lalu {row.SalesSameMonthLastYearQty:N2}; penjualan {effectiveCoverageMonths} bulan periode target tahun lalu {row.SalesFuturePeriodLastYearQty:N2} (indeks musiman {row.SeasonalIndex:N2}, dibatasi maks 3,00, dari rata-rata tahun lalu {row.AverageMonthlySalesLastYear:N2}/bulan).";
             if (row.SeasonalIndex > 0)
-                suffix += $" Saran PO alternatif penyesuaian musiman: {row.SeasonalRecommendedPoQty:N0} (target musiman {row.SeasonalDemandCoverageQty:N2}).";
+                suffix += $" Saran PO alternatif penyesuaian musiman: {row.SeasonalRecommendedPoQty:N0} (target musiman {row.SeasonalDemandCoverageQty:N2}, dibatasi tidak melebihi penjualan periode target tahun lalu).";
+            else
+                suffix += " Data penjualan tahun lalu terlalu sedikit (< 12/tahun) sehingga penyesuaian musiman tidak dipakai.";
             return suffix;
         }
 
