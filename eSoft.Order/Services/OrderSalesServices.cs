@@ -108,7 +108,7 @@ namespace eSoft.Order.Services
                         if (stockCard.Find(x => x.ItemCode == stockCardView.ItemCode) != null)
                         {
                             if(stockCardView.Kode == "76")
-                                stockCard.Find(x => x.ItemCode == stockCardView.ItemCode).QtyJual -= stockCardView.Qty;
+                                stockCard.Find(x => x.ItemCode == stockCardView.ItemCode).QtyJual -= (stockCardView.Qty - stockCardView.QtyBo);
                             if (stockCardView.Kode == "71")
                             {
                                 stockCard.Find(x => x.ItemCode == stockCardView.ItemCode).QtyBeli += stockCardView.Qty;
@@ -126,8 +126,8 @@ namespace eSoft.Order.Services
                                     NamaItem = GetItemKode(stockCardView.ItemCode).NamaItem,
                                     Foto = GetItemKode(stockCardView.ItemCode).Foto,
                                     Satuan = stockCardView.Satuan,
-                                    QtyJual = -1 * stockCardView.Qty,
-                                   
+                                    QtyJual = -1 * (stockCardView.Qty - stockCardView.QtyBo),
+
                                     KodeDivisi = GetDivisiKode(stockCardView.ItemCode).Divisi,
                                     Divisi = GetDivisiKode(stockCardView.ItemCode).NamaDiv
 
