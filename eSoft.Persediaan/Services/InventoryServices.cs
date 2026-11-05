@@ -1077,7 +1077,6 @@ namespace eSoft.Persediaan.Services
                     Lokasi = loc.Lokasi,
                     NamaLokasi = loc.NamaLokasi
                 }));
-                locations.Where(x => x.Lokasi == "P1").First().Qty += item.SaldoAwal;
 
                 itembyLocationQty.Add(new IcItemQtyByLocationView
                 {
@@ -1104,6 +1103,20 @@ namespace eSoft.Persediaan.Services
                         }
                     }
                 }
+            }
+
+            // P1 menyerap sisa yang tidak teralokasi ke lokasi lain (misal saldo awal)
+            // agar total per lokasi selalu sama dengan IcItem.Qty.
+            foreach (var itemQty in itembyLocationQty)
+            {
+                var virtualLocation = itemQty.Locations.FirstOrDefault(x => x.Lokasi == "P1");
+                if (virtualLocation == null)
+                    continue;
+
+                var otherLocationsQty = itemQty.Locations
+                    .Where(x => x.Lokasi != "P1")
+                    .Sum(x => x.Qty);
+                virtualLocation.Qty = itemQty.Qty - otherLocationsQty;
             }
 
 
@@ -1206,26 +1219,40 @@ namespace eSoft.Persediaan.Services
                     x => x.Key,
                     x => x.Sum(y => y.Qty));
 
-            return items.Select(item => new IcItemQtyByLocationView
+            return items.Select(item =>
             {
-                ItemCode = item.ItemCode,
-                NamaItem = item.NamaItem,
-                Satuan = item.Satuan,
-                Divisi = item.Divisi,
-                NamaDivisi = divisions.TryGetValue(item.Divisi, out var divisionName)
-                    ? divisionName
-                    : item.Divisi,
-                Qty = item.Qty,
-                Locations = locations.Select(location => new IcLocationQtyView
+                var itemLocations = locations.Select(location => new IcLocationQtyView
                 {
                     Lokasi = location.Lokasi,
                     NamaLokasi = location.NamaLokasi,
-                    Qty = (stockByItemLocation.TryGetValue((NormalizeStockOpnameKey(item.ItemCode), NormalizeStockOpnameKey(location.Lokasi)), out var qty)
+                    Qty = stockByItemLocation.TryGetValue((NormalizeStockOpnameKey(item.ItemCode), NormalizeStockOpnameKey(location.Lokasi)), out var qty)
                         ? qty
-                        : 0) + (string.Equals(location.Lokasi, "P1", StringComparison.OrdinalIgnoreCase)
-                            ? item.SaldoAwal
-                            : 0)
-                }).ToList()
+                        : 0
+                }).ToList();
+
+                // P1 menyerap sisa yang tidak teralokasi ke lokasi lain (misal saldo awal)
+                // agar total per lokasi selalu sama dengan IcItem.Qty.
+                var virtualLocation = itemLocations.FirstOrDefault(x => string.Equals(x.Lokasi, "P1", StringComparison.OrdinalIgnoreCase));
+                if (virtualLocation != null)
+                {
+                    var otherLocationsQty = itemLocations
+                        .Where(x => !string.Equals(x.Lokasi, "P1", StringComparison.OrdinalIgnoreCase))
+                        .Sum(x => x.Qty);
+                    virtualLocation.Qty = item.Qty - otherLocationsQty;
+                }
+
+                return new IcItemQtyByLocationView
+                {
+                    ItemCode = item.ItemCode,
+                    NamaItem = item.NamaItem,
+                    Satuan = item.Satuan,
+                    Divisi = item.Divisi,
+                    NamaDivisi = divisions.TryGetValue(item.Divisi, out var divisionName)
+                        ? divisionName
+                        : item.Divisi,
+                    Qty = item.Qty,
+                    Locations = itemLocations
+                };
             }).ToList();
         }
 
