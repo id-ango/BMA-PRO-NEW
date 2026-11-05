@@ -230,6 +230,28 @@
                 }).ToList()
             };
 
+            // Bila total fisik per item = total sistem, selisih antar lokasi adalah
+            // pemindahan murni -> buat mutasi (kode 90) agar qty total dan kartu stok
+            // tidak berubah. Selain itu (ada selisih riil) -> adjustment seperti biasa.
+            var mutation = BuildPureLocationMutation(opname);
+
+            if (mutation != null)
+            {
+                var mutationResult = InventoryService.AddTransH(mutation);
+                Message = $"Selisih hanya pemindahan lokasi. Transaksi mutasi {mutationResult.NoFaktur} berhasil dibuat dengan {mutationResult.IcTransDs.Count} baris; qty total tidak berubah.";
+                Rows = InventoryService.GetStockOpnameItemsByLocation();
+                foreach (var row in Rows)
+                {
+                    foreach (var location in Locations)
+                    {
+                        var qty = row.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
+                        PhysicalQuantities[CellKey(row.ItemCode, location.Lokasi)] = qty == 0 ? null : qty;
+                    }
+                }
+
+                return;
+            }
+
             var transaction = AdjustmentService.CreateStockOpname(opname);
             if (transaction == null)
             {
@@ -388,6 +410,76 @@
         {
             IsExporting = false;
         }
+    }
+
+    private IcTransHView BuildPureLocationMutation(IcStockOpnameView opname)
+    {
+        var byItem = opname.Lines.GroupBy(x => x.ItemCode, StringComparer.OrdinalIgnoreCase);
+        var mutations = new List<(string ItemCode, string FromLokasi, string ToLokasi, decimal Qty)>();
+
+        foreach (var itemGroup in byItem)
+        {
+            var diffs = itemGroup
+                .Select(line => (line.Lokasi, Diff: line.QtyFisik - line.QtySistem))
+                .Where(x => x.Diff != 0)
+                .ToList();
+
+            if (diffs.Count == 0)
+                continue;
+
+            // Bukan pemindahan murni bila total selisih item tidak nol (ada selisih riil)
+            if (diffs.Sum(x => x.Diff) != 0)
+                return null;
+
+            var sources = diffs.Where(x => x.Diff < 0)
+                .Select(x => (x.Lokasi, Remaining: -x.Diff))
+                .ToList();
+            var destinations = new Queue<(string Lokasi, decimal Remaining)>(
+                diffs.Where(x => x.Diff > 0).Select(x => (x.Lokasi, x.Diff)));
+
+            foreach (var destination in destinations)
+            {
+                var remaining = destination.Remaining;
+                for (var i = 0; i < sources.Count && remaining > 0; i++)
+                {
+                    var source = sources[i];
+                    if (source.Remaining <= 0)
+                        continue;
+
+                    var moveQty = Math.Min(source.Remaining, remaining);
+                    mutations.Add((itemGroup.Key, source.Lokasi, destination.Lokasi, moveQty));
+                    sources[i] = (source.Lokasi, source.Remaining - moveQty);
+                    remaining -= moveQty;
+                }
+            }
+        }
+
+        if (mutations.Count == 0)
+            return null;
+
+        var fromLokasi = mutations.First().FromLokasi;
+        var toLokasi = mutations.First().ToLokasi;
+
+        var itemsByCode = Rows.ToDictionary(x => x.ItemCode, StringComparer.OrdinalIgnoreCase);
+        var grouped = mutations
+            .GroupBy(x => x.ItemCode, StringComparer.OrdinalIgnoreCase)
+            .Select(x => new IcTransDView
+            {
+                ItemCode = x.Key,
+                NamaItem = itemsByCode.TryGetValue(x.Key, out var row) ? row.NamaItem : x.Key,
+                Satuan = itemsByCode.TryGetValue(x.Key, out var row2) ? row2.Satuan : null,
+                QtyShp = x.Sum(m => m.Qty)
+            })
+            .ToList();
+
+        return new IcTransHView
+        {
+            Tanggal = opname.Tanggal,
+            Keterangan = $"Mutasi lokasi dari stock opname: {opname.Keterangan}",
+            Lokasi = fromLokasi,
+            Lokasi2 = toLokasi,
+            IcTransDs = grouped
+        };
     }
 
     private bool IsVirtualLocation(string lokasi) =>
