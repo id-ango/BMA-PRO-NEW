@@ -60,7 +60,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="form-text mt-2">Isi jumlah fisik pada setiap item-lokasi yang diperiksa. Kolom kosong akan diproses sebagai 0.</div>
+                <div class="form-text mt-2">Isi jumlah fisik pada setiap item-lokasi yang diperiksa. Kolom kosong diproses sebagai 0. Khusus lokasi virtual (P1): bila stok sistem P1 = 0, fisik dianggap 0 (tidak diubah); bila ada stok sistem di P1 (misal saldo awal) dan kolomnya dikosongkan, fisik P1 otomatis diisi sisa stok yang tidak teralokasi ke lokasi lain agar total per lokasi sama dengan total sistem.</div>
             </div>
         </div>
 
@@ -193,18 +193,41 @@
             {
                 Tanggal = Tanggal,
                 Keterangan = Keterangan,
-                Lines = Rows.SelectMany(row => Locations.Select(location =>
+                Lines = Rows.SelectMany(row =>
                 {
-                    var key = CellKey(row.ItemCode, location.Lokasi);
-                    var systemQty = row.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
-                    return new IcStockOpnameLineView
+                    // Sisa yang tidak teralokasi ke lokasi fisik (misal saldo awal)
+                    // otomatis ditempatkan ke lokasi virtual P1 bila kolomnya kosong.
+                    var physicalByLocation = Locations.ToDictionary(
+                        location => location.Lokasi,
+                        location => PhysicalQuantities[CellKey(row.ItemCode, location.Lokasi)]);
+
+                    var virtualLocation = Locations.FirstOrDefault(x => IsVirtualLocation(x.Lokasi));
+                    if (virtualLocation != null && physicalByLocation[virtualLocation.Lokasi] == null)
                     {
-                        ItemCode = row.ItemCode,
-                        Lokasi = location.Lokasi,
-                        QtySistem = systemQty,
-                        QtyFisik = PhysicalQuantities[key] ?? 0
-                    };
-                })).ToList()
+                        var systemVirtualQty = row.Locations.First(x => IsVirtualLocation(x.Lokasi)).Qty;
+                        if (systemVirtualQty != 0)
+                        {
+                            var allocated = physicalByLocation
+                                .Where(x => !IsVirtualLocation(x.Key))
+                                .Sum(x => x.Value ?? 0);
+                            var remainder = row.Qty - allocated;
+                            if (remainder != 0)
+                                physicalByLocation[virtualLocation.Lokasi] = remainder;
+                        }
+                    }
+
+                    return Locations.Select(location =>
+                    {
+                        var systemQty = row.Locations.First(x => x.Lokasi == location.Lokasi).Qty;
+                        return new IcStockOpnameLineView
+                        {
+                            ItemCode = row.ItemCode,
+                            Lokasi = location.Lokasi,
+                            QtySistem = systemQty,
+                            QtyFisik = physicalByLocation[location.Lokasi] ?? 0
+                        };
+                    });
+                }).ToList()
             };
 
             var transaction = AdjustmentService.CreateStockOpname(opname);
@@ -366,6 +389,9 @@
             IsExporting = false;
         }
     }
+
+    private bool IsVirtualLocation(string lokasi) =>
+        string.Equals(lokasi, "P1", StringComparison.OrdinalIgnoreCase);
 
     private static string CellKey(string itemCode, string lokasi) => $"{itemCode}::{lokasi}";
 
