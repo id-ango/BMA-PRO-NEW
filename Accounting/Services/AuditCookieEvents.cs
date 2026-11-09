@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 
 namespace Accounting.Services;
 
@@ -10,6 +11,11 @@ public sealed class AuditCookieEvents : CookieAuthenticationEvents
     public AuditCookieEvents(AuditService auditService)
     {
         _auditService = auditService;
+    }
+
+    public override Task ValidatePrincipal(CookieValidatePrincipalContext context)
+    {
+        return SecurityStampValidator.ValidatePrincipalAsync(context);
     }
 
     public override async Task SigningIn(CookieSigningInContext context)

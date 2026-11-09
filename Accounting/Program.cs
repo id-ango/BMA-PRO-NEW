@@ -32,6 +32,8 @@ using eSoft.Financial.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
@@ -75,6 +77,10 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => {
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.ConfigureApplicationCookie(options => options.EventsType = typeof(AuditCookieEvents));
+builder.Services.AddAuthorization(options =>
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build());
 
 
 
@@ -214,12 +220,28 @@ else
 app.UseHttpsRedirection();
 
 
-app.UseStaticFiles();
+app.UseWhen(context => !context.Request.Path.StartsWithSegments("/PDFKontrak"),
+    branch => branch.UseStaticFiles());
 
 app.UseRouting();
 
- app.UseAuthentication();
- app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/PDFKontrak"), branch =>
+{
+    branch.Use(async (context, next) =>
+    {
+        if (context.User.Identity?.IsAuthenticated != true)
+        {
+            await context.ChallengeAsync();
+            return;
+        }
+
+        await next();
+    });
+    branch.UseStaticFiles();
+});
 
 app.MapRazorPages();
 app.MapControllers();
