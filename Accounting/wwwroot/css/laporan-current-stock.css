@@ -1,5 +1,70 @@
 /* Laporan Persediaan - Current Stock Report Styling */
 
+.stock-toolbar {
+    padding: 20px;
+    background: #f5f8fc;
+    border-bottom: 1px solid #dce4ee;
+}
+
+.stock-toolbar-heading h1 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.stock-toolbar-heading p {
+    margin: 4px 0 14px;
+    color: #596a7b;
+}
+
+.stock-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.stock-search {
+    max-width: 600px;
+    margin-bottom: 1rem;
+}
+
+.stock-search small {
+    display: block;
+    margin-top: 6px;
+}
+
+.stock-empty {
+    padding: 24px;
+    text-align: center;
+    color: #596a7b;
+    background: #f5f8fc;
+    border-radius: 4px;
+}
+
+.stock-detail-button {
+    margin: 2px;
+}
+
+.stock-history-modal {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.stock-history-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+}
+
+.stock-history-filters > div {
+    flex: 1 1 180px;
+}
+
+.stock-history-table th,
+.stock-history-table td {
+    vertical-align: middle;
+}
+
 /* Table Container & Layout */
 .report-table {
     padding: 20px;
@@ -126,6 +191,7 @@
 
 .qty-zero {
     color: #ffc107;
+    }
     font-weight: bold;
 }
 
@@ -380,12 +446,23 @@
         background-color: transparent !important;
     }
 
-    /* But keep text visible */
-    color: #000 !important;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .stock-toolbar,
+    .report-table {
+        padding: 12px;
+    }
+
+    .stock-toolbar-actions .btn {
+        flex: 1 1 auto;
+    }
+
+    .data-table {
+        min-width: 750px;
+    }
+
     .col-name,
     .col-code {
         width: auto;

@@ -13,26 +13,25 @@
 
 @inject IInventoryServices serviceIC
 @inject IOrderSalesServices serviceOrdJual
+@inject ILaporanStockServices serviceLaporanStock
 @inject NavigationManager navigationmanager
 @inject IJSRuntime JSRuntime
 
 <link rel="stylesheet" href="css/laporan-current-stock.css" />
 
-<div class="dontprint" style="display:inline">
-    <br />
-    &emsp;
-    <button class="btn btn-warning btn-lg" style="background-color: @BackgroundColor" @onclick="TogglePrintAll">Toggle Print All</button>
-    &emsp;
-    <NavLink href="/" class="btn btn-primary btn-lg">&nbsp;Back&nbsp;</NavLink>
-    &emsp;
-    <NavLink class="btn btn-success btn-lg" onclick="window.print()">&nbsp; Cetak &nbsp;</NavLink>
-    &emsp;
-    <button class="btn btn-info btn-lg" @onclick="PrintStockOpname">&nbsp; Stock Opname &nbsp;</button>
-    &emsp;
-        <NavLink class="btn btn-primary btn-lg" href="/ModulePersediaan/LaporanStockOpname">&nbsp; Opname per Lokasi &nbsp;</NavLink>
-        &emsp;
-    <button class="btn btn-secondary btn-lg" @onclick="ExportToExcel">&nbsp; Export Excel &nbsp;</button>
-    &emsp;
+<div class="dontprint stock-toolbar">
+    <div class="stock-toolbar-heading">
+        <h1>Laporan Current Stock</h1>
+        <p>Periksa stok, pesanan aktif, dan mutasi barang.</p>
+    </div>
+    <div class="stock-toolbar-actions">
+        <NavLink href="/" class="btn btn-outline-primary">Kembali</NavLink>
+        <button type="button" class="btn btn-outline-warning" disabled="@(_isLoadingReport || TransDetail.Count == 0)" aria-pressed="@printAllSelected" @onclick="TogglePrintAll">@(printAllSelected ? "Batalkan Pilihan Cetak yang Ditampilkan" : "Pilih Semua yang Ditampilkan")</button>
+        <button type="button" class="btn btn-success" disabled="@_isLoadingReport" onclick="window.print()">Cetak</button>
+        <button type="button" class="btn btn-info" disabled="@_isLoadingReport" @onclick="PrintStockOpname">Stock Opname</button>
+        <NavLink class="btn btn-outline-primary" href="/ModulePersediaan/LaporanStockOpname">Opname per Lokasi</NavLink>
+        <button type="button" class="btn btn-secondary" disabled="@_isLoadingReport" @onclick="ExportToExcel">Export Excel</button>
+    </div>
 </div>
 
 @if (_isLoadingReport)
@@ -47,12 +46,38 @@ else
     <div class="report-table" data-print-mode="@printMode">
         <div class="report-title">@Title</div>
 
-        <div class="dontprint mb-3" style="max-width:600px;">
-            <label class="form-label fw-bold">Cari Item</label>
+        <div class="dontprint stock-search">
+            <label for="stock-search" class="form-label fw-bold">Cari Item</label>
             <div class="input-group">
-                <input type="text" class="form-control" placeholder="Kode, nama item, atau search tags" value="@_searchText" @oninput="OnSearchTextChanged" />
-                <button class="btn btn-outline-secondary" type="button" title="Hapus pencarian" @onclick="ClearSearch">x</button>
+                <input id="stock-search" type="text" class="form-control" placeholder="Kode, nama item, atau search tags" value="@_searchText" @oninput="OnSearchTextChanged" />
+                <button class="btn btn-outline-secondary" type="button" title="Hapus pencarian" aria-label="Hapus pencarian" @onclick="ClearSearch">&times;</button>
             </div>
+            <div class="row g-2 mt-1">
+                <div class="col-sm-6">
+                    <label for="stock-order-filter" class="form-label fw-bold">Filter PO / SO</label>
+                    <select id="stock-order-filter" class="form-select" value="@_orderFilter" @onchange="OnOrderFilterChanged">
+                        <option value="">Semua item</option>
+                        <option value="po">Ada PO</option>
+                        <option value="so">Ada SO</option>
+                        <option value="any">Ada PO atau SO</option>
+                        <option value="both">Ada PO dan SO</option>
+                        <option value="po-only">Hanya PO, tanpa SO</option>
+                        <option value="so-only">Hanya SO, tanpa PO</option>
+                        <option value="none">Tanpa PO dan SO</option>
+                    </select>
+                </div>
+                <div class="col-sm-6">
+                    <label for="stock-qty-filter" class="form-label fw-bold">Filter Qty Stok</label>
+                    <select id="stock-qty-filter" class="form-select" value="@_qtyFilter" @onchange="OnQtyFilterChanged">
+                        <option value="">Semua qty</option>
+                        <option value="positive">Qty lebih dari 0</option>
+                        <option value="zero">Qty 0</option>
+                        <option value="negative">Qty minus</option>
+                        <option value="non-positive">Qty 0 atau minus</option>
+                    </select>
+                </div>
+            </div>
+            <small class="text-muted">@TransDetail.Count item ditampilkan. Gunakan ikon detail untuk melihat transaksi.</small>
         </div>
 
         @if (DisplayItems != null && DisplayItems.Count > 0)
@@ -82,7 +107,7 @@ else
                                 <td colspan="10">
                                     @item.Divisi
                                     <span class="dontprint">
-                                        <button type="button" class="btn btn-primary btn-sm @(item.IsSelectedForPrinting ? "btn-marked" : "")" @onclick="@(() => ToggleRowsWithSameDivision(item.KodeDivisi))">Cetak</button>
+                                        <button type="button" class="btn btn-primary btn-sm @(item.IsSelectedForPrinting ? "btn-marked" : "")" title="Pilih atau batalkan cetak divisi" @onclick="@(() => ToggleRowsWithSameDivision(item.KodeDivisi))">Cetak</button>
                                     </span>
                                 </td>
                             </tr>
@@ -93,23 +118,16 @@ else
                                 <td class="col-no">
                                     @item.RowNumber
                                     <span class="dontprint">
-                                        <button type="button" class="btn btn-sm @(item.IsSelectedForPrinting ? "btn-marked btn-success" : "btn-outline-secondary")" @onclick="@(() => TogglePrintRow(item))">✓</button>
+                                        <button type="button" class="btn btn-sm @(item.IsSelectedForPrinting ? "btn-marked btn-success" : "btn-outline-secondary")" aria-label="Pilih @item.ItemCode untuk cetak" aria-pressed="@item.IsSelectedForPrinting" @onclick="@(() => TogglePrintRow(item))">✓</button>
                                     </span>
                                 </td>
                                  <td class="col-code">
                                     @item.ItemCode
-                                    <button class="dontprint btn btn-info btn-sm" @onclick="@(() => CetakStockCard(item.ItemCode,item.NamaItem,item.Satuan))">Kartu</button>
+                                    <button type="button" class="dontprint btn btn-info btn-sm" title="Cetak kartu stok kosong" aria-label="Cetak kartu stok kosong @item.ItemCode" @onclick="@(() => CetakStockCard(item.ItemCode,item.NamaItem,item.Satuan))"><span class="oi oi-print" aria-hidden="true"></span></button>
+                                    <button type="button" class="dontprint btn btn-outline-primary btn-sm stock-detail-button" title="Lihat riwayat mutasi stok" aria-label="Lihat riwayat mutasi stok @item.ItemCode" @onclick="@(() => OpenStockHistory(item))"><span class="oi oi-list" aria-hidden="true"></span></button>
                                 </td>
                                 <td class="col-name" title="@item.Keterangan">
                                     @item.NamaItem
-                                    @if (item.HasPurchaseOrder)
-                                    {
-                                        <button class="dontprint btn btn-success btn-sm" @onclick="@(() => CicilanBeli(item.ItemCode))">PO</button>
-                                    }
-                                    @if (item.HasSalesOrder)
-                                    {
-                                        <button class="dontprint btn btn-info btn-sm" @onclick="@(() => CicilanJual(item.ItemCode))">SO</button>
-                                    }
                                 </td>
                                         <td class="col-unit">@item.Satuan</td>
                                         <td class="col-qty @item.QtyClass">
@@ -119,8 +137,20 @@ else
                                                 <button type="button" class="dontprint btn-lokasi @(item.ShowLocationQty ? "btn-lokasi-active" : "")" title="Lihat qty per lokasi" @onclick="@(() => ToggleLocationQty(item))">Lok</button>
                                             }
                                         </td>
-                                        <td class="col-po">@item.QtyBeli.ToString("N")</td>
-                                        <td class="col-so">@item.QtyJual.ToString("N")</td>
+                                        <td class="col-po">
+                                            @item.QtyBeli.ToString("N")
+                                            @if (item.HasPurchaseOrder)
+                                            {
+                                                <button type="button" class="dontprint btn btn-link btn-sm p-0 ms-1" title="Lihat detail PO" aria-label="Lihat detail PO aktif @item.ItemCode" @onclick="@(() => CicilanBeli(item.ItemCode))">&#x1F50D;</button>
+                                            }
+                                        </td>
+                                        <td class="col-so">
+                                            @item.QtyJual.ToString("N")
+                                            @if (item.HasSalesOrder)
+                                            {
+                                                <button type="button" class="dontprint btn btn-link btn-sm p-0 ms-1" title="Lihat detail SO" aria-label="Lihat detail SO aktif @item.ItemCode" @onclick="@(() => CicilanJual(item.ItemCode))">&#x1F50D;</button>
+                                            }
+                                        </td>
                                         <td class="col-total @item.QtyOrderClass">@item.QtyOrder.ToString("N")</td>
                                         <td class="col-opname-result"></td>
                                         <td class="col-opname-note"></td>
@@ -154,13 +184,61 @@ else
     </div>
 }
 
+@if (_historyItem != null)
+{
+    <div class="modal fade show stock-history-modal dontprint" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="stock-history-title" style="display:block">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="stock-history-title">Riwayat Mutasi Stok</h5>
+                        <small class="text-muted">@_historyItem.ItemCode — @_historyItem.NamaItem</small>
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Tutup" disabled="@_isLoadingHistory" @onclick="CloseStockHistory"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="stock-history-filters">
+                        <div><label for="history-from" class="form-label">Dari tanggal</label><input id="history-from" type="date" class="form-control" @bind="_historyFrom" @bind:format="yyyy-MM-dd" disabled="@_isLoadingHistory" /></div>
+                        <div><label for="history-to" class="form-label">Sampai tanggal</label><input id="history-to" type="date" class="form-control" @bind="_historyTo" @bind:format="yyyy-MM-dd" disabled="@_isLoadingHistory" /></div>
+                        <button type="button" class="btn btn-primary" disabled="@_isLoadingHistory" @onclick="LoadStockHistory">Tampilkan</button>
+                    </div>
+                    @if (_isLoadingHistory)
+                    {
+                        <div class="text-center p-4" role="status" aria-live="polite"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span> Memuat riwayat mutasi...</div>
+                    }
+                    else if (!string.IsNullOrEmpty(_historyError))
+                    {
+                        <div class="alert alert-danger mt-3" role="alert">@_historyError</div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mt-3" role="status">Riwayat periode @_loadedHistoryFrom.ToString("dd-MM-yyyy") s.d. @_loadedHistoryTo.ToString("dd-MM-yyyy"): @_stockHistory.Count baris, termasuk saldo awal.</p>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover stock-history-table">
+                                <thead><tr><th>Tanggal</th><th>Dokumen</th><th>Keterangan</th><th class="text-end">Qty</th><th class="text-end">Saldo</th></tr></thead>
+                                <tbody>
+                                    @foreach (var transaction in _stockHistory)
+                                    {
+                                        <tr><td>@transaction.Tanggal.ToString("dd-MM-yyyy")</td><td>@transaction.Dokumen</td><td>@transaction.Keterangan</td><td class="text-end">@transaction.Qty.ToString("N")</td><td class="text-end">@transaction.Jumlah.ToString("N")</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" disabled="@_isLoadingHistory" @onclick="CloseStockHistory">Tutup</button></div>
+            </div>
+        </div>
+    </div>
+}
+
 @if (dispCicilan)
 {
-    <ModalSearchComponent OnClose="OnSearchClose" Items="TransParsial" Context="transaksi2">
+    <ModalSearchComponent OnClose="OnSearchClose" Items="TransParsial" Context="transaksi2" Title="@_orderDetailTitle" GetFilterableText="@(item => $"{item.NamaVendor} {item.NoLpb} {item.Keterangan}")">
         <TableHeader>
             <th scope="col">Vendor</th>
             <th scope="col">Tanggal</th>
-            <th scope="col">No. PO</th>
+            <th scope="col">No. @_orderDetailType</th>
             <th scope="col">Keterangan</th>
             <th scope="col">Qty</th>
             <th scope="col">Harga</th>
@@ -207,15 +285,26 @@ else
     private string printMode = "normal"; // "normal" or "opname"
 
     private bool dispCicilan { get; set; }
+    private string _orderDetailType;
+    private string _orderDetailTitle;
 
     private bool printAllSelected = true;
-    private string BackgroundColor = "";
 
     // OPTIMIZATION: Control render cycles
     private bool _shouldRender = true;
     private bool _isLoadingReport = true;
     private string _searchText = "";
+    private string _orderFilter = "";
+    private string _qtyFilter = "";
     private List<IcStockCardView> _allStock = new List<IcStockCardView>();
+    private IcStockCardView _historyItem;
+    private List<IcStockCardView> _stockHistory = new List<IcStockCardView>();
+    private DateTime _historyFrom = new DateTime(DateTime.Today.Year, 1, 1);
+    private DateTime _historyTo = DateTime.Today;
+    private DateTime _loadedHistoryFrom;
+    private DateTime _loadedHistoryTo;
+    private bool _isLoadingHistory;
+    private string _historyError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -283,20 +372,44 @@ else
         ApplySearch();
     }
 
+    private void OnOrderFilterChanged(ChangeEventArgs e)
+    {
+        _orderFilter = e.Value?.ToString() ?? "";
+        ApplySearch();
+    }
+
+    private void OnQtyFilterChanged(ChangeEventArgs e)
+    {
+        _qtyFilter = e.Value?.ToString() ?? "";
+        ApplySearch();
+    }
+
     private void ApplySearch()
     {
-        if (string.IsNullOrWhiteSpace(_searchText))
-        {
-            TransDetail = _allStock;
-        }
-        else
-        {
-            var terms = _searchText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            TransDetail = _allStock.Where(x => terms.All(term =>
+        var terms = _searchText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        TransDetail = _allStock.Where(x => terms.All(term =>
                 (x.ItemCode?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
                 (x.NamaItem?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (x.SearchTags?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false))).ToList();
-        }
+                (x.SearchTags?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (_orderFilter switch
+            {
+                "po" => x.HasPurchaseOrder,
+                "so" => x.HasSalesOrder,
+                "any" => x.HasPurchaseOrder || x.HasSalesOrder,
+                "both" => x.HasPurchaseOrder && x.HasSalesOrder,
+                "po-only" => x.HasPurchaseOrder && !x.HasSalesOrder,
+                "so-only" => x.HasSalesOrder && !x.HasPurchaseOrder,
+                "none" => !x.HasPurchaseOrder && !x.HasSalesOrder,
+                _ => true
+            }) &&
+            (_qtyFilter switch
+            {
+                "positive" => x.Qty > 0,
+                "zero" => x.Qty == 0,
+                "negative" => x.Qty < 0,
+                "non-positive" => x.Qty <= 0,
+                _ => true
+            })).ToList();
 
         BuildDisplayItems();
 
@@ -313,6 +426,7 @@ else
     private void BuildDisplayItems()
     {
         DisplayItems = new List<IcStockCardView>();
+        printAllSelected = TransDetail != null && TransDetail.Count > 0 && TransDetail.All(x => x.IsSelectedForPrinting);
         string lastDivision = null;
         int rowNumber = 1;
 
@@ -361,9 +475,57 @@ else
         _shouldRender = false;
     }
 
+    private async Task OpenStockHistory(IcStockCardView item)
+    {
+        _historyItem = item;
+        await LoadStockHistory();
+    }
+
+    private async Task LoadStockHistory()
+    {
+        _shouldRender = true;
+        if (_historyFrom.Date > _historyTo.Date)
+        {
+            _historyError = "Tanggal awal tidak boleh melebihi tanggal akhir.";
+            return;
+        }
+
+        _historyError = null;
+        _isLoadingHistory = true;
+        StateHasChanged();
+        await Task.Delay(50);
+
+        try
+        {
+            _stockHistory = serviceLaporanStock.CetakMutasi(_historyFrom, _historyTo, _historyItem.ItemCode);
+            _loadedHistoryFrom = _historyFrom;
+            _loadedHistoryTo = _historyTo;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Gagal memuat mutasi stok: {ex}");
+            _historyError = "Riwayat mutasi tidak dapat dimuat. Silakan coba lagi.";
+        }
+        finally
+        {
+            _isLoadingHistory = false;
+            _shouldRender = true;
+        }
+    }
+
+    private void CloseStockHistory()
+    {
+        _historyItem = null;
+        _stockHistory.Clear();
+        _historyError = null;
+        _shouldRender = true;
+    }
+
     private void CicilanBeli(string itemcode)
     {
         TransParsial = serviceOrdJual.GetListOrderAktif(itemcode, "71");
+        _orderDetailType = "PO";
+        _orderDetailTitle = $"Detail PO Aktif — {itemcode}";
 
         _shouldRender = true;
         dispCicilan = true;
@@ -374,6 +536,8 @@ else
     private void CicilanJual(string itemcode)
     {
         TransParsial = serviceOrdJual.GetListOrderAktif(itemcode, "76");
+        _orderDetailType = "SO";
+        _orderDetailTitle = $"Detail SO Aktif — {itemcode}";
 
         _shouldRender = true;
         dispCicilan = true;
@@ -419,6 +583,10 @@ else
         // Toggle print state for this individual row
         item.IsSelectedForPrinting = !item.IsSelectedForPrinting;
         item.IsSubTitleSelectedForPrinting = item.IsSelectedForPrinting;
+        printAllSelected = TransDetail.Count > 0 && TransDetail.All(x => x.IsSelectedForPrinting);
+        var divisionHeader = DisplayItems.FirstOrDefault(x => x.IsDivisionHeader && x.KodeDivisi == item.KodeDivisi);
+        if (divisionHeader != null)
+            divisionHeader.IsSelectedForPrinting = TransDetail.Any(x => x.KodeDivisi == item.KodeDivisi && x.IsSelectedForPrinting);
 
         _shouldRender = true;
         StateHasChanged();
@@ -443,6 +611,7 @@ else
         {
             item.IsSelectedForPrinting = newState;
         }
+        printAllSelected = TransDetail.Count > 0 && TransDetail.All(x => x.IsSelectedForPrinting);
 
         _shouldRender = true;
         StateHasChanged();
@@ -464,8 +633,6 @@ else
         {
             item.IsSelectedForPrinting = printAllSelected;
         }
-
-        BackgroundColor = printAllSelected ? "yellow" : "";
 
         _shouldRender = true;
         StateHasChanged();

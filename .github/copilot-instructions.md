@@ -12,6 +12,7 @@
 - Preserve existing UI/UX styling, programming techniques, and established project patterns when continuing work in the same repository, rather than introducing different approaches.
 - For the Executive Dashboard, use a fixed exchange rate of 2700 for PO values since the company's POs use CNY; do not use the empty header PO exchange rate as a conversion factor. Use the field `IcItem.Cost` directly for inventory values, as Cost already represents the total inventory value; do not multiply Cost by Qty to avoid duplicating the value.
 - On the TransOrderBeli page, use the term PO (Purchase Order) instead of SO (Sales Order); the term SO should only be used for TransOrderJual.
+- On LaporanCurrentStock, remove the message 'Tidak ada data stok untuk ditampilkan' that appears in the item row, display the card button as an icon, and place a magnifying glass icon for PO/SO details in each column like in LaporanCurrentStockGroup.
 
 ## Inventory Analysis Guidelines
 - When classifying inventory analysis status, do not label an item as Risiko Over Stock solely because PO quantity exceeds current stock; consider current stock age/last-out movement and a defined demand or coverage threshold. A recent last-out date such as 38 days should not be treated as dead/overstock without additional evidence.
