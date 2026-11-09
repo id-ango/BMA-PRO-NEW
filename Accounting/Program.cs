@@ -1,6 +1,7 @@
 using Accounting.Areas.Identity;
 using Accounting.Data;
 using Accounting.Services;
+using Accounting.Services.Asisten;
 
 using eSoft.Asset.Data;
 using eSoft.Asset.Services;
@@ -64,6 +65,10 @@ builder.Services.Configure<AuditOptions>(builder.Configuration.GetSection("Audit
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 builder.Services.AddScoped<AuditCookieEvents>();
+builder.Services.AddSingleton<BmaReadOnlyContextFactory>();
+builder.Services.AddScoped<HasilToolCollector>();
+builder.Services.AddScoped<BosTools>();
+builder.Services.AddScoped<AsistenBosService>();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -78,9 +83,20 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => {
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.ConfigureApplicationCookie(options => options.EventsType = typeof(AuditCookieEvents));
 builder.Services.AddAuthorization(options =>
+{
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
-        .Build());
+        .Build();
+    options.AddPolicy(AsistenBosService.PolicyName, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context =>
+        {
+            var role = builder.Configuration["AI:Role"];
+            return !string.IsNullOrWhiteSpace(role) && context.User.IsInRole(role.Trim());
+        });
+    });
+});
 
 
 

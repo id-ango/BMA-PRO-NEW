@@ -1,0 +1,194 @@
+@page "/asisten"
+@attribute [Authorize(Policy = AsistenBosService.PolicyName)]
+@implements IAsyncDisposable
+@using Accounting.Services.Asisten
+@using Markdig
+@using Markdig.Parsers.Inlines
+@inject AsistenBosService Asisten
+@inject IJSRuntime JS
+
+<PageTitle>Asisten Bos</PageTitle>
+
+<div class="asisten-page">
+    <div class="asisten-header">
+        <h1>Asisten Bos</h1>
+        <p>Tanyakan stok, penjualan, piutang, pembelian, atau kas/bank. Untuk saran pembelian, sertakan kode barang.</p>
+    </div>
+
+    <div class="asisten-chat" @ref="_chatBox" aria-label="Percakapan Asisten Bos" aria-live="polite">
+        @if (_pesan.Count == 0)
+        {
+            <div class="asisten-suggestions">
+                <p>Coba tanyakan:</p>
+                @foreach (var saran in _saran)
+                {
+                    <button type="button" class="btn btn-outline-primary btn-sm" disabled="@_loading" @onclick="() => KirimAsync(saran)">@saran</button>
+                }
+            </div>
+        }
+
+        @foreach (var pesan in _pesan)
+        {
+            <div class="asisten-message @(pesan.DariPengguna ? "asisten-user" : "asisten-bot")">
+                @if (pesan.DariPengguna)
+                {
+                    <div class="asisten-user-text">@pesan.Teks</div>
+                }
+                else
+                {
+                    <div class="asisten-markdown">@((MarkupString)Markdown.ToHtml(pesan.Teks, MarkdownAman))</div>
+                    @foreach (var tabel in pesan.Tabel)
+                    {
+                        <div class="asisten-table">
+                            <h2>@tabel.Judul</h2>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped table-bordered">
+                                    <thead>
+                                        <tr>
+                                            @foreach (var kolom in tabel.Kolom)
+                                            {
+                                                <th scope="col">@kolom</th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var baris in tabel.Baris)
+                                        {
+                                            <tr>
+                                                @foreach (var nilai in baris)
+                                                {
+                                                    <td>@nilai</td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            @if (tabel.Baris.Count == 0)
+                            {
+                                <p class="text-muted mb-0">Tidak ada baris untuk ditampilkan.</p>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        }
+
+        @if (_loading)
+        {
+            <div class="asisten-message asisten-bot" role="status">
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                Sedang mengecek data...
+            </div>
+        }
+    </div>
+
+    <form class="asisten-input" @onsubmit="KirimInputAsync" @onsubmit:preventDefault>
+        <label class="visually-hidden" for="asisten-pertanyaan">Pertanyaan</label>
+        <input id="asisten-pertanyaan" class="form-control" type="text" placeholder="Tulis pertanyaan..."
+               @bind="_input" @bind:event="oninput" disabled="@_loading" />
+        <button type="submit" class="btn btn-primary" disabled="@(_loading || string.IsNullOrWhiteSpace(_input))">Kirim</button>
+    </form>
+</div>
+
+@code {
+    private sealed record PesanChat(bool DariPengguna, string Teks, List<TabelHasil> Tabel);
+
+    private static readonly MarkdownPipeline MarkdownAman = BuatMarkdownAman();
+    private readonly List<PesanChat> _pesan = new();
+    private readonly List<RiwayatAsisten> _riwayat = new();
+    private readonly CancellationTokenSource _cancellation = new();
+    private readonly string[] _saran =
+    {
+        "Barang apa yang stoknya menipis?",
+        "Barang apa yang minimum stoknya nol?",
+        "Bagaimana penjualan bulan ini dibandingkan periode sebelumnya?",
+        "Piutang apa yang sudah lewat jatuh tempo?",
+        "Cari kas bank dengan keterangan listrik"
+    };
+    private ElementReference _chatBox;
+    private IJSObjectReference _scrollModule;
+    private string _input = string.Empty;
+    private bool _loading;
+    private bool _perluGulir;
+
+    private static MarkdownPipeline BuatMarkdownAman()
+    {
+        var builder = new MarkdownPipelineBuilder().DisableHtml();
+        builder.InlineParsers.TryRemove<LinkInlineParser>();
+        builder.InlineParsers.TryRemove<AutolinkInlineParser>();
+        return builder.Build();
+    }
+
+    private Task KirimInputAsync() => KirimAsync(_input);
+
+    private async Task KirimAsync(string teks)
+    {
+        if (_loading || string.IsNullOrWhiteSpace(teks))
+        {
+            return;
+        }
+
+        teks = teks.Trim();
+        _input = string.Empty;
+        _pesan.Add(new PesanChat(true, teks, new List<TabelHasil>()));
+        _loading = true;
+        _perluGulir = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        try
+        {
+            var jawaban = await Asisten.TanyaAsync(teks, _riwayat, _cancellation.Token);
+            _pesan.Add(new PesanChat(false, jawaban.Teks, jawaban.Tabel));
+            if (jawaban.Berhasil)
+            {
+                _riwayat.Add(new RiwayatAsisten(true, teks));
+                _riwayat.Add(new RiwayatAsisten(false, jawaban.Teks));
+            }
+        }
+        catch (Exception)
+        {
+            _pesan.Add(new PesanChat(false, "Maaf, Asisten Bos belum dapat memeriksa data. Silakan coba lagi.", new List<TabelHasil>()));
+        }
+        finally
+        {
+            _loading = false;
+            _perluGulir = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_perluGulir)
+        {
+            return;
+        }
+
+        _perluGulir = false;
+        try
+        {
+            _scrollModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Js/asistenChat.js");
+            await _scrollModule.InvokeVoidAsync("scrollToBottom", _chatBox);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _cancellation.Cancel();
+        _cancellation.Dispose();
+        if (_scrollModule is not null)
+        {
+            try
+            {
+                await _scrollModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

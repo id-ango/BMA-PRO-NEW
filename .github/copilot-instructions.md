@@ -21,6 +21,7 @@
 
 ## Customer Receivable Analysis Guidelines
 - For customer receivable analysis, evaluate payment behavior across all invoices and advances: distinguish active installment/payment cadence from a single old outstanding invoice, use approximately 60 days as the concerning inactivity threshold, and allow customers with historically good purchases/payments within two months to be classified as sufficiently good when current net exposure is covered and no severe recent delinquency exists.
+- Report missing receivable due dates separately.
 
 ## Service Refactoring Guidelines
 - When refactoring `OrderPurchaseServices`, preserve original intent: `AddTransH` passes header currency (`trans.Currency`) to item price updates; `EditTransH` originally also passed `trans.Currency`, so helpers should allow an explicit currency override.
@@ -29,4 +30,10 @@
 ## Export Formatting Guidelines
 - When user requests Excel formatting changes, apply them to the export used by LaporanCurrentStock if explicitly specified, not to other report exports.
 - For the Excel export 'Harga Jual Import' in CheckingPrice, the calculation uses the unit price per item and does not multiply by Qty; the goal is to analyze all items based on markup, not to calculate the total transaction based on quantity.
+- Cash-bank CbTransD.Terima/Bayar can be mixed currencies: identify their currency from CbTransH.Kurs, group totals by that currency, and never aggregate amounts with missing currency codes.
+- Search both header and detail descriptions, counting each matching document once and totaling all its detail lines. 
+- For sales, OeTransH.Jumlah and receivable ArPiutng.Sisa are always IDR; sales compare code 94 less 95 and show no percentage when previous net sales are nonpositive.
+
+## API Setup Guidelines
+- For the user's OpenAI restricted API-key dialog, use Request permission (not Write) when guiding the setup of Asisten Bos.
 
