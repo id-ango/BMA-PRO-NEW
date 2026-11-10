@@ -250,7 +250,30 @@ public sealed class AsistenBosService
                 ]
             };
 
-            await client.GetResponseAsync(messages, options, timeout.Token);
+            var dicobaUlang = false;
+            for (var percobaan = 1; ; percobaan++)
+            {
+                try
+                {
+                    await client.GetResponseAsync(messages, options, timeout.Token);
+                    break;
+                }
+                catch (ClientResultException ex) when ((ex.Status == 503 || ex.Status == 429) && percobaan <= 2)
+                {
+                    _collector.Bersihkan();
+                    ringkasan.Clear();
+                    dicobaUlang = true;
+                    var jedaDetik = ex.Status == 429 ? AmbilJedaRetry(ex, 10) : 5;
+                    _logger.LogWarning("Asisten Bos: waktu UTC {WaktuUtc}, user {User}, API {Status}, percobaan {Percobaan} dari 3, jeda {JedaDetik} detik", DateTimeOffset.UtcNow, userName, ex.Status, percobaan, jedaDetik);
+                    await Task.Delay(TimeSpan.FromSeconds(jedaDetik), timeout.Token);
+                }
+            }
+
+            if (dicobaUlang)
+            {
+                _logger.LogInformation("Asisten Bos: waktu UTC {WaktuUtc}, user {User}, API berhasil setelah percobaan ulang", DateTimeOffset.UtcNow, userName);
+            }
+
             if (toolGagal)
             {
                 _collector.Bersihkan();
@@ -296,6 +319,24 @@ public sealed class AsistenBosService
             }
             _logger.LogInformation("Asisten Bos: waktu UTC {WaktuUtc}, user {User}, durasi permintaan {DurasiMs} ms", DateTimeOffset.UtcNow, userName, stopwatch.ElapsedMilliseconds);
         }
+    }
+
+    private int AmbilJedaRetry(ClientResultException exception, int bawaan)
+    {
+        try
+        {
+            var isi = exception.GetRawResponse()?.Content.ToString();
+            var cocok = isi is null ? Match.Empty : Regex.Match(isi, @"retry in ([\d.]+)s", RegexOptions.IgnoreCase);
+            if (cocok.Success && double.TryParse(cocok.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var detik))
+            {
+                return Math.Clamp((int)Math.Ceiling(detik), 1, 30);
+            }
+        }
+        catch (Exception)
+        {
+        }
+
+        return bawaan;
     }
 
     private string RingkasResponsError(ClientResultException exception)
