@@ -2,7 +2,9 @@ using System.ClientModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.AI;
@@ -274,6 +276,12 @@ public sealed class AsistenBosService
         {
             return Gagal("Pemeriksaan dibatalkan atau melewati batas waktu. Silakan coba lagi.");
         }
+        catch (ClientResultException ex)
+        {
+            var respons = RingkasResponsError(ex);
+            _logger.LogWarning("Asisten Bos: waktu UTC {WaktuUtc}, user {User}, API gagal dengan status {Status}, respons {Respons}", DateTimeOffset.UtcNow, userName, ex.Status, respons);
+            return Gagal("Maaf, Asisten Bos belum dapat memeriksa data. Silakan coba lagi.");
+        }
         catch (Exception ex)
         {
             _logger.LogWarning("Asisten Bos: waktu UTC {WaktuUtc}, user {User}, permintaan gagal ({Jenis})", DateTimeOffset.UtcNow, userName, ex.GetType().Name);
@@ -288,6 +296,35 @@ public sealed class AsistenBosService
             }
             _logger.LogInformation("Asisten Bos: waktu UTC {WaktuUtc}, user {User}, durasi permintaan {DurasiMs} ms", DateTimeOffset.UtcNow, userName, stopwatch.ElapsedMilliseconds);
         }
+    }
+
+    private string RingkasResponsError(ClientResultException exception)
+    {
+        const string disembunyikan = "[DIRAHASIAKAN]";
+        string respons;
+        try
+        {
+            respons = exception.GetRawResponse()?.Content.ToString() ?? string.Empty;
+        }
+        catch (Exception)
+        {
+            respons = string.Empty;
+        }
+
+        if (respons.Length == 0)
+        {
+            respons = exception.Message;
+        }
+
+        var apiKey = _configuration["AI:ApiKey"];
+        if (!string.IsNullOrEmpty(apiKey))
+        {
+            respons = respons.Replace(apiKey, disembunyikan, StringComparison.Ordinal);
+        }
+
+        respons = Regex.Replace(respons, @"(?i)(bearer\s+|api[_-]?key[""'=:\s]*)(?![""'=:\s]*\[dirahasiakan\])[^\s"",}]+", $"$1{disembunyikan}");
+        respons = respons.Replace('\r', ' ').Replace('\n', ' ');
+        return respons.Length > 1000 ? respons[..1000] : respons;
     }
 
     private static JawabanAgent Gagal(string teks) => new(teks, new List<TabelHasil>(), false);

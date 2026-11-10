@@ -2,7 +2,7 @@
 
 ## Tahap 4
 
-Halaman `/asisten` menyediakan tool stok menipis, penjualan, piutang jatuh tempo, rekomendasi pembelian, dan pencarian kas/bank. Semua query menggunakan connection string terpisah `BmaReadOnly`; pendaftaran DbContext modul lain tidak diubah. Setiap daftar dibatasi maksimal 20 baris, sedangkan total dan jumlah dokumen mencakup semua hasil yang cocok.
+Halaman `/asisten` menyediakan tool stok menipis, penjualan, piutang jatuh tempo, rekomendasi pembelian, dan pencarian kas/bank. Query menggunakan connection string `BmaReadOnly` jika tersedia. Jika kosong dan `AI:UseDefaultConnection` bernilai `true`, query menggunakan `DefaultConnection`; pendaftaran DbContext modul lain tidak diubah. Setiap daftar dibatasi maksimal 20 baris, sedangkan total dan jumlah dokumen mencakup semua hasil yang cocok.
 
 Stok dibandingkan dengan `MinQty` yang tidak nol. Barang dengan `MinQty` nol dihitung dan ditampilkan terpisah. Masing-masing daftar dibatasi 20 baris, diurutkan berdasarkan kode barang, dan menyertakan status aktif/nonaktif. Rata-rata penjualan per minggu adalah jumlah `Qty` kode `94` selama 28 hari kalender termasuk hari ini, dibagi empat; retur tidak dikurangi. Lead time dihitung dari tanggal hari ini sampai tanggal yang sama setelah `AI:LeadTimeMonths` bulan kalender, dengan default tiga bulan.
 
@@ -26,6 +26,8 @@ dotnet user-secrets set "AI:Model" "<nama-model>" --project .\Accounting\Account
 ```
 
 Jangan memasukkan nilai contoh secara harfiah. Perhatikan bahwa shell dapat menyimpan perintah dan nilainya dalam riwayat; gunakan mekanisme rahasia yang sesuai dengan lingkungan. Untuk production, gunakan secret store atau environment variables yang aman.
+
+Konfigurasi saat ini mengaktifkan `AI:UseDefaultConnection` agar Asisten Bos menggunakan autentikasi Windows yang sama dengan aplikasi apabila `BmaReadOnly` belum diisi. Akun aplikasi dapat memiliki hak tulis; query tanpa tracking tidak membatasi hak akun tersebut. Untuk perlindungan database, siapkan akun khusus read-only seperti di bawah, isi `BmaReadOnly`, dan nonaktifkan `AI:UseDefaultConnection`.
 
 `AI:Provider` saat ini mendukung `OpenAI`. Untuk endpoint yang kompatibel, atur `AI:Endpoint` secara opsional; endpoint harus menggunakan HTTPS, kecuali HTTP pada alamat lokal. Untuk provider lain, sesuaikan pembuatan `IChatClient` di `AsistenBosService`. `AI:Role` menentukan role yang boleh mengakses halaman dan menu; nilainya saat ini `Admin`, dan jika kosong akses ditolak. `AI:MaxToolCalls` dan `AI:TimeoutSeconds` membatasi setiap permintaan.
 

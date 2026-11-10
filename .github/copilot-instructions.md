@@ -35,5 +35,5 @@
 - For sales, OeTransH.Jumlah and receivable ArPiutng.Sisa are always IDR; sales compare code 94 less 95 and show no percentage when previous net sales are nonpositive.
 
 ## API Setup Guidelines
-- For the user's OpenAI restricted API-key dialog, use Request permission (not Write) when guiding the setup of Asisten Bos.
+- For the user's Gemini restricted API-key dialog, use Request permission (not Write) when guiding the setup of Asisten Bos.
 

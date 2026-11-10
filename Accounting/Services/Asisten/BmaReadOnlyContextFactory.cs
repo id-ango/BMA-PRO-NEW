@@ -54,9 +54,14 @@ public sealed class BmaReadOnlyContextFactory
     private string GetConnectionString()
     {
         var connectionString = _configuration.GetConnectionString("BmaReadOnly");
+        if (string.IsNullOrWhiteSpace(connectionString) && _configuration.GetValue<bool>("AI:UseDefaultConnection"))
+        {
+            connectionString = _configuration.GetConnectionString("DefaultConnection");
+        }
+
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException("ConnectionStrings:BmaReadOnly belum dikonfigurasi.");
+            throw new InvalidOperationException("Koneksi database Asisten Bos belum dikonfigurasi.");
         }
 
         return connectionString;
