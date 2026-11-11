@@ -96,7 +96,20 @@ namespace eSoft.Order.Services
         {
             List<PoTransH> PoTrans = new List<PoTransH>();
             PoTrans = _context.PoTransHs.Include(t =>t.PoTransDs).OrderByDescending(x => x.Tanggal.Date).Where(x => x.Cek == "1").ToList();
-          
+
+            var itemGroups = _contextIc.IcItemGroups.AsNoTracking().ToDictionary(g => g.ItemGroupId);
+
+            string GetGroupPath(int? groupId)
+            {
+                var names = new List<string>();
+                while (groupId.HasValue && itemGroups.TryGetValue(groupId.Value, out var group))
+                {
+                    names.Insert(0, group.Name);
+                    groupId = group.ParentId;
+                }
+                return string.Join(" > ", names);
+            }
+
 
             if (PoTrans != null)
             {
@@ -118,18 +131,21 @@ namespace eSoft.Order.Services
                         }
                         else
                         {
+                            var icItem = GetItemKode(stockCardView.ItemCode);
                             if (stockCardView.Kode == "76")
                             {
                                 stockCard.Add(new IcStockCardView
                                 {
                                     ItemCode = stockCardView.ItemCode,
-                                    NamaItem = GetItemKode(stockCardView.ItemCode).NamaItem,
-                                    Foto = GetItemKode(stockCardView.ItemCode).Foto,
+                                    NamaItem = icItem.NamaItem,
+                                    Foto = icItem.Foto,
                                     Satuan = stockCardView.Satuan,
                                     QtyJual = -1 * (stockCardView.Qty - stockCardView.QtyBo),
 
                                     KodeDivisi = GetDivisiKode(stockCardView.ItemCode).Divisi,
-                                    Divisi = GetDivisiKode(stockCardView.ItemCode).NamaDiv
+                                    Divisi = GetDivisiKode(stockCardView.ItemCode).NamaDiv,
+                                    ItemGroupId = icItem.ItemGroupId,
+                                    ItemGroupPath = GetGroupPath(icItem.ItemGroupId)
 
                                 });
                             }
@@ -138,13 +154,15 @@ namespace eSoft.Order.Services
                                 stockCard.Add(new IcStockCardView
                                 {
                                     ItemCode = stockCardView.ItemCode,
-                                    NamaItem = GetItemKode(stockCardView.ItemCode).NamaItem,
-                                    Foto = GetItemKode(stockCardView.ItemCode).Foto,
+                                    NamaItem = icItem.NamaItem,
+                                    Foto = icItem.Foto,
                                     Satuan = stockCardView.Satuan,
                                     QtyBeli = stockCardView.Qty,
                                     Keterangan = item.NoPrj,
                                     KodeDivisi = GetDivisiKode(stockCardView.ItemCode).Divisi,
-                                    Divisi = GetDivisiKode(stockCardView.ItemCode).NamaDiv
+                                    Divisi = GetDivisiKode(stockCardView.ItemCode).NamaDiv,
+                                    ItemGroupId = icItem.ItemGroupId,
+                                    ItemGroupPath = GetGroupPath(icItem.ItemGroupId)
 
                                 });
                             }

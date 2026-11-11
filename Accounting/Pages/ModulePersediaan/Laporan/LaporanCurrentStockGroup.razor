@@ -45,15 +45,28 @@ else
         <div class="report-title">@_title</div>
 
         <div class="dontprint mb-3" style="max-width:600px;">
-            <label class="form-label fw-bold">Filter Group</label>
-            <select class="form-select" value="@_selectedGroup" @onchange="OnGroupChanged">
-                <option value="">Semua Group</option>
+            <label class="form-label fw-bold">Filter Group (bisa pilih lebih dari satu)</label>
+            <select class="form-select" value="" @onchange="OnGroupChanged">
+                <option value="">-- Pilih Group --</option>
                 <option value="0">Belum Ada Group</option>
                 @foreach (var option in _groupOptions)
                 {
                     <option value="@option.Id">@option.Path</option>
                 }
             </select>
+            @if (_selectedGroups.Count > 0)
+            {
+                <div class="mt-2 d-flex flex-wrap gap-2">
+                    @foreach (var filter in _selectedGroups)
+                    {
+                        <span class="badge bg-primary d-inline-flex align-items-center">
+                            @filter.Label
+                            <button type="button" class="btn-close btn-close-white ms-2" style="font-size:0.6rem;" title="Hapus filter" @onclick="() => RemoveGroupFilter(filter.Key)"></button>
+                        </span>
+                    }
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ClearGroupFilters">Hapus Semua</button>
+                </div>
+            }
         </div>
 
         <div class="dontprint mb-3" style="max-width:600px;">
@@ -221,7 +234,7 @@ else
     private List<IcStockCardView> _stock = new();
     private Dictionary<int, IcItemGroup> _groupLookup = new();
     private List<(int Id, string Path)> _groupOptions = new();
-    private string _selectedGroup = "";
+    private readonly List<(string Key, string Label)> _selectedGroups = new();
     private string _orderFilter = "";
     private string _searchText = "";
     private string _title = "Laporan Stock per Group";
@@ -386,14 +399,21 @@ else
     private void BuildGroups()
     {
         IEnumerable<IcStockCardView> items = _stock;
-        if (_selectedGroup == "0")
+        if (_selectedGroups.Count > 0)
         {
-            items = items.Where(x => x.ItemGroupId is null);
-        }
-        else if (int.TryParse(_selectedGroup, out var groupId))
-        {
-            var ids = GetDescendantIds(groupId);
-            items = items.Where(x => x.ItemGroupId.HasValue && ids.Contains(x.ItemGroupId.Value));
+            var includeNoGroup = _selectedGroups.Any(x => x.Key == "0");
+            var selectedIds = _selectedGroups
+                .Select(x => x.Key)
+                .Where(k => k != "0")
+                .Select(k => int.Parse(k))
+                .ToList();
+            var includedIds = selectedIds.Count > 0
+                ? selectedIds.SelectMany(GetDescendantIds).ToHashSet()
+                : new HashSet<int>();
+
+            items = items.Where(x =>
+                (includeNoGroup && x.ItemGroupId is null) ||
+                (x.ItemGroupId.HasValue && includedIds.Contains(x.ItemGroupId.Value)));
         }
 
         if (!string.IsNullOrWhiteSpace(_searchText))
@@ -433,7 +453,29 @@ else
 
     private void OnGroupChanged(ChangeEventArgs e)
     {
-        _selectedGroup = e.Value?.ToString() ?? "";
+        var value = e.Value?.ToString() ?? "";
+        if (string.IsNullOrEmpty(value) || _selectedGroups.Any(x => x.Key == value))
+        {
+            return;
+        }
+
+        var label = value == "0"
+            ? "Belum Ada Group"
+            : _groupOptions.FirstOrDefault(o => o.Id.ToString() == value).Path ?? value;
+
+        _selectedGroups.Add((value, label));
+        BuildGroups();
+    }
+
+    private void RemoveGroupFilter(string key)
+    {
+        _selectedGroups.RemoveAll(x => x.Key == key);
+        BuildGroups();
+    }
+
+    private void ClearGroupFilters()
+    {
+        _selectedGroups.Clear();
         BuildGroups();
     }
 
