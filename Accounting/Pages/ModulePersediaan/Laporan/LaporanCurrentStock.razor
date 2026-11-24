@@ -67,13 +67,16 @@ else
                     </select>
                 </div>
                 <div class="col-sm-6">
-                    <label for="stock-qty-filter" class="form-label fw-bold">Filter Qty Stok</label>
+                    <label for="stock-qty-filter" class="form-label fw-bold">Filter Qty Stok / Total</label>
                     <select id="stock-qty-filter" class="form-select" value="@_qtyFilter" @onchange="OnQtyFilterChanged">
                         <option value="">Semua qty</option>
                         <option value="positive">Qty lebih dari 0</option>
                         <option value="zero">Qty 0</option>
                         <option value="negative">Qty minus</option>
                         <option value="non-positive">Qty 0 atau minus</option>
+                        <option value="total-zero">Total qty 0</option>
+                        <option value="total-negative">Total qty minus</option>
+                        <option value="total-non-positive">Total qty 0 atau minus</option>
                     </select>
                 </div>
             </div>
@@ -408,6 +411,9 @@ else
                 "zero" => x.Qty == 0,
                 "negative" => x.Qty < 0,
                 "non-positive" => x.Qty <= 0,
+                "total-zero" => x.QtyOrder == 0,
+                "total-negative" => x.QtyOrder < 0,
+                "total-non-positive" => x.QtyOrder <= 0,
                 _ => true
             })).ToList();
 
