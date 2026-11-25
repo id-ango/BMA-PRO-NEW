@@ -4,9 +4,11 @@
 @using Accounting.Services
 @using eSoft.Pembelian.Data
 @using eSoft.Penjualan.Data
+@using eSoft.Persediaan.Data
 @using Microsoft.EntityFrameworkCore
 @inject DbContextOptions<DbContextJual> DatabaseOptions
 @inject DbContextOptions<DbContextBeli> PurchaseDatabaseOptions
+@inject DbContextOptions<DbContextPersediaan> InventoryDatabaseOptions
 @inject ILogger<LaporanGrafikPenjualan> Logger
 @inject IJSRuntime JS
 
@@ -19,14 +21,14 @@
             <p class="text-muted mb-0">Penjualan bersih bulanan (penjualan dikurangi retur), dalam IDR.</p>
         </div>
         <div class="sales-chart-actions">
-            <button class="btn btn-outline-primary" @onclick="ExportPdfAsync" disabled="@(isLoading || isExporting || !loadedDate.HasValue || !string.IsNullOrEmpty(errorMessage))">
+            <button class="btn btn-outline-primary" @onclick="ExportPdfAsync" disabled="@(isLoading || isGroupLoading || isExporting || !loadedDate.HasValue || !string.IsNullOrEmpty(errorMessage))">
                 @if (isExporting)
                 {
                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                 }
                 Simpan PDF
             </button>
-            <button class="btn btn-primary" @onclick="LoadAsync" disabled="@(isLoading || isExporting)">
+            <button class="btn btn-primary" @onclick="LoadAsync" disabled="@(isLoading || isGroupLoading || isExporting)">
                 @if (isLoading)
                 {
                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
@@ -62,7 +64,7 @@
             <div class="sales-chart-controls">
                 <div>
                     <label for="comparisonYears" class="form-label">Tahun pembanding</label>
-                    <select id="comparisonYears" class="form-select" @bind="comparisonYears" @bind:after="ClearExportStatus" disabled="@isExporting">
+                    <select id="comparisonYears" class="form-select" @bind="comparisonYears" @bind:after="OnComparisonYearsChanged" disabled="@(isExporting || isGroupLoading)">
                         <option value="0">Tanpa pembanding</option>
                         <option value="1">1 tahun sebelumnya</option>
                         <option value="2">2 tahun sebelumnya</option>
@@ -188,6 +190,103 @@
         </div>
 
         <div class="sales-chart-panel mt-3">
+            <h2>Analisis Penjualan per Group</h2>
+            <p class="text-muted">Nilai dan jumlah bersih: penjualan dikurangi retur. Pilih tahun lalu muat analisis untuk melihat group yang paling banyak terjual.</p>
+            <div class="sales-chart-controls">
+                <div>
+                    <label for="groupYear" class="form-label">Tahun analisis</label>
+                    <select id="groupYear" class="form-select" @bind="groupYear" @bind:after="OnGroupYearChanged" disabled="@(isGroupLoading || isExporting)">
+                        @foreach (var year in SelectedYears)
+                        {
+                            <option value="@year">@year</option>
+                        }
+                    </select>
+                </div>
+                <button class="btn btn-outline-primary" @onclick="LoadGroupAsync" disabled="@(isGroupLoading || isExporting)">
+                    @if (isGroupLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Muat Analisis Group
+                </button>
+            </div>
+            @if (isGroupLoading)
+            {
+                <div class="alert alert-info mt-3" role="status">Memuat dan menghitung penjualan per group, mohon tunggu...</div>
+            }
+            else if (!string.IsNullOrEmpty(groupError))
+            {
+                <div class="alert alert-danger mt-3" role="alert">@groupError</div>
+            }
+            else if (groupResult is not null)
+            {
+                var groupScale = new SalesChartScale(groupResult.Values.Select(x => x.Amount));
+                <div class="alert alert-success mt-3" role="status">Analisis group tahun @groupResult.Year selesai dimuat hingga @groupResult.Through.ToString("dd MMMM yyyy", IndonesianCulture).</div>
+                @if (groupResult.HeaderTotal != YearTotal(groupResult.Year))
+                {
+                    <div class="alert alert-warning" role="alert">Total transaksi berubah sejak grafik dimuat. Refresh Data dan muat ulang analisis agar periode yang sama dapat dibandingkan.</div>
+                }
+                <h3 class="h6 mt-3">Peringkat berdasarkan nilai penjualan bersih (IDR)</h3>
+                @if (groupResult.Values.Count == 0)
+                {
+                    <p class="text-muted">Tidak ada transaksi dalam periode ini.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle">
+                            <thead><tr><th scope="col">Group</th><th scope="col">Grafik nilai</th><th scope="col" class="text-end">Nilai bersih (IDR)</th></tr></thead>
+                            <tbody>
+                                @foreach (var entry in groupResult.Values)
+                                {
+                                    <tr>
+                                        <th scope="row">@entry.Group</th>
+                                        <td>
+                                            <div class="group-value-chart" aria-hidden="true">
+                                                <div class="group-value-zero" style="left:@CssPercent(groupScale.ZeroPosition)%"></div>
+                                                @if (entry.Amount != 0)
+                                                {
+                                                    <div class="group-value-bar @(entry.Amount < 0 ? "negative" : "")" style="@GroupBarStyle(entry.Amount, groupScale)"></div>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="text-end">@DetailedNumber(entry.Amount)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot><tr><th scope="row" colspan="2">Total</th><th class="text-end">@DetailedNumber(groupResult.HeaderTotal)</th></tr></tfoot>
+                        </table>
+                    </div>
+                }
+                <h3 class="h6 mt-3">Peringkat berdasarkan jumlah bersih per satuan</h3>
+                @if (groupResult.Quantities.Count == 0)
+                {
+                    <p class="text-muted">Tidak ada detail jumlah dengan satuan dalam periode ini.</p>
+                }
+                @foreach (var unitGroup in groupResult.Quantities.GroupBy(x => x.Unit))
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle">
+                            <caption class="caption-top">Satuan: @unitGroup.Key</caption>
+                            <thead><tr><th scope="col">Group</th><th scope="col" class="text-end">Jumlah bersih</th></tr></thead>
+                            <tbody>
+                                @foreach (var entry in unitGroup)
+                                {
+                                    <tr><th scope="row">@entry.Group</th><td class="text-end">@DetailedNumber(entry.Quantity)</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                @if (groupResult.HasUnknownUnitQuantities)
+                {
+                    <div class="alert alert-warning" role="alert">Jumlah pada detail tanpa satuan tidak dimasukkan dalam peringkat jumlah. Periksa satuan pada transaksi terkait.</div>
+                }
+                <small class="text-muted">Total faktur dialokasikan sesuai proporsi nilai detail; retur dikurangi. Group mengikuti master item saat ini. Satuan berbeda tidak dijumlahkan. Faktur dengan detail kosong atau total detail nol: @groupResult.UnallocatedDocuments.</small>
+            }
+        </div>
+
+        <div class="sales-chart-panel mt-3">
             <h2>Selisih Penjualan dan Pembelian</h2>
             <p class="text-muted mb-0">Penjualan bersih dikurangi pembelian bersih per bulan (IDR); selisih ini bukan laba.</p>
             <div class="chart-legend" aria-label="Keterangan tahun">
@@ -307,6 +406,7 @@
 </div>
 
 @code {
+#nullable enable
     private static readonly CultureInfo IndonesianCulture = CultureInfo.GetCultureInfo("id-ID");
     private static readonly string[] MonthNames = { "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des" };
     private Dictionary<(int Year, int Month), decimal> monthlySales = new();
@@ -314,11 +414,15 @@
     private DateTime? loadedDate;
     private int currentYear = DateTime.Today.Year;
     private int comparisonYears;
+    private int groupYear;
     private bool isLoading;
+    private bool isGroupLoading;
     private bool isExporting;
     private bool exportFailed;
     private string? errorMessage;
     private string exportMessage = string.Empty;
+    private string? groupError;
+    private SalesGroupResult? groupResult;
 
     private IEnumerable<int> SelectedYears => Enumerable.Range(0, comparisonYears + 1).Select(offset => currentYear - offset);
     private IEnumerable<decimal> VisibleValues => SelectedYears.SelectMany(year => Enumerable.Range(1, 12).Select(month => GetValue(year, month))).Where(value => value.HasValue).Select(value => value!.Value);
@@ -331,6 +435,8 @@
     {
         isLoading = true;
         errorMessage = null;
+        groupResult = null;
+        groupError = null;
         ClearExportStatus();
         try
         {
@@ -361,6 +467,7 @@
             monthlySales = results.ToDictionary(x => (x.Year, x.Month), x => x.Total);
             monthlyPurchases = purchaseResults.ToDictionary(x => (x.Year, x.Month), x => x.Total);
             currentYear = today.Year;
+            groupYear = today.Year;
             loadedDate = today;
         }
         catch (Exception ex)
@@ -374,9 +481,52 @@
         }
     }
 
+    private async Task LoadGroupAsync()
+    {
+        if (!loadedDate.HasValue || isLoading || isGroupLoading || isExporting || !SelectedYears.Contains(groupYear))
+            return;
+        isGroupLoading = true;
+        groupResult = null;
+        groupError = null;
+        ClearExportStatus();
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+            await Task.Yield();
+            groupResult = await SalesGroupAnalysis.LoadAsync(DatabaseOptions, InventoryDatabaseOptions, groupYear, loadedDate.Value);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Gagal memuat analisis penjualan per group");
+            groupError = "Analisis penjualan per group belum dapat dimuat. Silakan coba kembali.";
+        }
+        finally
+        {
+            isGroupLoading = false;
+        }
+    }
+
+    private void OnComparisonYearsChanged()
+    {
+        if (!SelectedYears.Contains(groupYear))
+        {
+            groupYear = currentYear;
+            groupResult = null;
+            groupError = null;
+        }
+        ClearExportStatus();
+    }
+
+    private void OnGroupYearChanged()
+    {
+        groupResult = null;
+        groupError = null;
+        ClearExportStatus();
+    }
+
     private async Task ExportPdfAsync()
     {
-        if (!loadedDate.HasValue || isLoading || isExporting)
+        if (!loadedDate.HasValue || isLoading || isGroupLoading || isExporting)
             return;
 
         isExporting = true;
@@ -387,7 +537,8 @@
             await Task.Yield();
             var report = new SalesChartReport(loadedDate.Value, SelectedYears.ToArray(),
                 new Dictionary<(int Year, int Month), decimal>(monthlySales),
-                new Dictionary<(int Year, int Month), decimal>(monthlyPurchases));
+                new Dictionary<(int Year, int Month), decimal>(monthlyPurchases),
+                groupResult, groupResult is null ? null : YearTotal(groupResult.Year));
             var pdf = SalesChartPdfExporter.Generate(report);
             using var stream = new MemoryStream(pdf);
             using var streamRef = new DotNetStreamReference(stream);
@@ -425,7 +576,14 @@
     private decimal YearTotal(int year) => Enumerable.Range(1, 12).Sum(month => GetValue(year, month) ?? 0);
     private decimal PurchaseYearTotal(int year) => Enumerable.Range(1, 12).Sum(month => GetPurchaseValue(year, month) ?? 0);
     private static string Money(decimal value) => value.ToString("N0", IndonesianCulture);
+    private static string DetailedNumber(decimal value) => value.ToString("N4", IndonesianCulture);
     private static string CssPercent(decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+    private static string GroupBarStyle(decimal value, SalesChartScale scale)
+    {
+        var width = scale.Range == 0 ? 0 : Math.Abs(value) / scale.Range * 100;
+        var left = value < 0 ? scale.ZeroPosition - width : scale.ZeroPosition;
+        return $"width:{CssPercent(width)}%;left:{CssPercent(left)}%";
+    }
     private static string BarStyle(decimal value, SalesChartScale scale)
     {
         var height = scale.Range == 0 ? 0 : Math.Abs(value) / scale.Range * 100;

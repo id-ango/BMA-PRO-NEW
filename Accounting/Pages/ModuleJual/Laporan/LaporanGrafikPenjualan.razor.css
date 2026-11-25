@@ -29,5 +29,9 @@
 .chart-bars { display: flex; justify-content: center; gap: 3px; height: 100%; padding: 0 4px; }
 .bar-slot { position: relative; flex: 1; max-width: 22px; height: 100%; }
 .chart-bar { position: absolute; left: 0; right: 0; border-radius: 3px; min-height: 1px; }
+.group-value-chart { position: relative; height: 14px; min-width: 180px; background: #f1f5f9; border-radius: 3px; }
+.group-value-zero { position: absolute; top: 0; bottom: 0; width: 1px; background: #64748b; }
+.group-value-bar { position: absolute; top: 1px; bottom: 1px; background: #2563eb; border-radius: 3px; }
+.group-value-bar.negative { background: #dc2626; }
 .month-label { position: absolute; top: calc(100% + .4rem); left: 0; right: 0; text-align: center; color: #475569; font-size: .8rem; }
 @media (max-width: 575px) { .sales-chart-panel { padding: .85rem; } .sales-chart-heading h1 { font-size: 1.6rem; } }

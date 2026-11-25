@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Globalization;
 using System.Text;
 using QuestPDF.Fluent;
@@ -10,7 +12,9 @@ public sealed record SalesChartReport(
     DateTime AsOfDate,
     IReadOnlyList<int> Years,
     IReadOnlyDictionary<(int Year, int Month), decimal> Sales,
-    IReadOnlyDictionary<(int Year, int Month), decimal> Purchases);
+    IReadOnlyDictionary<(int Year, int Month), decimal> Purchases,
+    SalesGroupResult? GroupAnalysis = null,
+    decimal? GroupChartTotal = null);
 
 public static class SalesChartPdfExporter
 {
@@ -69,7 +73,67 @@ public static class SalesChartPdfExporter
                     column.Item().Text("Tahun berjalan sampai tanggal laporan; tahun pembanding setahun penuh. Tanda - menunjukkan bulan yang belum berjalan.").FontSize(8);
                 });
             });
+            if (report.GroupAnalysis is not null)
+                AddGroupAnalysisPage(document, report, report.GroupAnalysis);
         }).GeneratePdf();
+    }
+
+    private static void AddGroupAnalysisPage(IDocumentContainer document, SalesChartReport report, SalesGroupResult analysis)
+    {
+        document.Page(page =>
+        {
+            ConfigurePage(page, report, "Analisis Penjualan per Group");
+            page.Content().PaddingVertical(8).Column(column =>
+            {
+                column.Spacing(8);
+                column.Item().Text($"Tahun {analysis.Year} hingga {analysis.Through.ToString("dd MMMM yyyy", IndonesianCulture)}. Penjualan dikurangi retur.").FontSize(9);
+                if (report.GroupChartTotal.HasValue && report.GroupChartTotal.Value != analysis.HeaderTotal)
+                    column.Item().Text("Total transaksi berubah sejak grafik dimuat; refresh data dan muat ulang analisis untuk membandingkan periode yang sama.").FontColor(Colors.Red.Darken2);
+                column.Item().Text("Peringkat berdasarkan nilai penjualan bersih (IDR)").FontSize(11).Bold();
+                if (analysis.Values.Count == 0)
+                    column.Item().Text("Tidak ada transaksi dalam periode ini.");
+                else
+                    column.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(columns => { columns.RelativeColumn(3); columns.RelativeColumn(2); });
+                        table.Header(header =>
+                        {
+                            header.Cell().Element(HeaderCell).Text("Group");
+                            header.Cell().Element(HeaderCell).AlignRight().Text("Nilai bersih (IDR)");
+                        });
+                        foreach (var value in analysis.Values)
+                        {
+                            table.Cell().Element(BodyCell).Text(value.Group);
+                            table.Cell().Element(BodyCell).AlignRight().Text(DetailedNumber(value.Amount));
+                        }
+                        table.Cell().Element(HeaderCell).Text("Total");
+                        table.Cell().Element(HeaderCell).AlignRight().Text(DetailedNumber(analysis.HeaderTotal));
+                    });
+                column.Item().Text("Peringkat berdasarkan jumlah bersih per satuan").FontSize(11).Bold();
+                if (analysis.Quantities.Count == 0)
+                    column.Item().Text("Tidak ada detail jumlah dengan satuan dalam periode ini.");
+                else
+                    column.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(columns => { columns.RelativeColumn(2); columns.RelativeColumn(3); columns.RelativeColumn(2); });
+                        table.Header(header =>
+                        {
+                            header.Cell().Element(HeaderCell).Text("Satuan");
+                            header.Cell().Element(HeaderCell).Text("Group");
+                            header.Cell().Element(HeaderCell).AlignRight().Text("Jumlah bersih");
+                        });
+                        foreach (var quantity in analysis.Quantities)
+                        {
+                            table.Cell().Element(BodyCell).Text(quantity.Unit);
+                            table.Cell().Element(BodyCell).Text(quantity.Group);
+                            table.Cell().Element(BodyCell).AlignRight().Text(DetailedNumber(quantity.Quantity));
+                        }
+                    });
+                if (analysis.HasUnknownUnitQuantities)
+                    column.Item().Text("Jumlah pada detail tanpa satuan tidak dimasukkan dalam peringkat jumlah. Periksa satuan pada transaksi terkait.").FontColor(Colors.Red.Darken2).FontSize(8);
+                column.Item().Text($"Total faktur dialokasikan sesuai proporsi nilai detail; retur dikurangi. Group mengikuti master item saat ini. Satuan berbeda tidak dijumlahkan. Faktur dengan detail kosong atau total detail nol: {analysis.UnallocatedDocuments}.").FontSize(8);
+            });
+        });
     }
 
     private static void ConfigurePage(PageDescriptor page, SalesChartReport report, string title)
@@ -211,5 +275,6 @@ public static class SalesChartPdfExporter
     }
 
     private static string Money(decimal value) => value.ToString("N0", IndonesianCulture);
+    private static string DetailedNumber(decimal value) => value.ToString("N4", IndonesianCulture);
     private static string F(decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 }
