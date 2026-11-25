@@ -1,0 +1,435 @@
+@page "/ModuleJual/LaporanGrafikPenjualan"
+@attribute [Authorize(Roles = "Admin, Finance")]
+@using System.Globalization
+@using Accounting.Services
+@using eSoft.Pembelian.Data
+@using eSoft.Penjualan.Data
+@using Microsoft.EntityFrameworkCore
+@inject DbContextOptions<DbContextJual> DatabaseOptions
+@inject DbContextOptions<DbContextBeli> PurchaseDatabaseOptions
+@inject ILogger<LaporanGrafikPenjualan> Logger
+@inject IJSRuntime JS
+
+<PageTitle>Grafik Penjualan</PageTitle>
+
+<div class="sales-chart-page">
+    <div class="sales-chart-heading">
+        <div>
+            <h1>Grafik Penjualan</h1>
+            <p class="text-muted mb-0">Penjualan bersih bulanan (penjualan dikurangi retur), dalam IDR.</p>
+        </div>
+        <div class="sales-chart-actions">
+            <button class="btn btn-outline-primary" @onclick="ExportPdfAsync" disabled="@(isLoading || isExporting || !loadedDate.HasValue || !string.IsNullOrEmpty(errorMessage))">
+                @if (isExporting)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                }
+                Simpan PDF
+            </button>
+            <button class="btn btn-primary" @onclick="LoadAsync" disabled="@(isLoading || isExporting)">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                }
+                Refresh Data
+            </button>
+        </div>
+    </div>
+
+    @if (isExporting)
+    {
+        <div class="alert alert-info mt-3" role="status">Menyiapkan PDF grafik dan rincian, mohon tunggu...</div>
+    }
+    else if (!string.IsNullOrEmpty(exportMessage))
+    {
+        <div class="alert @(exportFailed ? "alert-danger" : "alert-success") mt-3" role="status">@exportMessage</div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="alert alert-info mt-3" role="status">Memuat data penjualan dan pembelian, mohon tunggu...</div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3" role="alert">@errorMessage</div>
+    }
+    else if (loadedDate.HasValue)
+    {
+        var salesScale = new SalesChartScale(VisibleValues);
+        var combinedScale = new SalesChartScale(CombinedValues);
+        var differenceScale = new SalesChartScale(DifferenceValues);
+        <div class="sales-chart-panel mt-3">
+            <div class="sales-chart-controls">
+                <div>
+                    <label for="comparisonYears" class="form-label">Tahun pembanding</label>
+                    <select id="comparisonYears" class="form-select" @bind="comparisonYears" @bind:after="ClearExportStatus" disabled="@isExporting">
+                        <option value="0">Tanpa pembanding</option>
+                        <option value="1">1 tahun sebelumnya</option>
+                        <option value="2">2 tahun sebelumnya</option>
+                        <option value="3">3 tahun sebelumnya</option>
+                        <option value="4">4 tahun sebelumnya</option>
+                        <option value="5">5 tahun sebelumnya</option>
+                    </select>
+                </div>
+                <small class="text-muted">Tahun berjalan hingga @loadedDate.Value.ToString("dd MMMM yyyy", IndonesianCulture). Bulan berikutnya belum ditampilkan.</small>
+            </div>
+
+            <div class="chart-legend" aria-label="Keterangan tahun">
+                @foreach (var year in SelectedYears)
+                {
+                    <span><i class="legend-color year-@(currentYear - year)"></i>@year</span>
+                }
+            </div>
+
+            @if (monthlySales.Count == 0)
+            {
+                <div class="alert alert-light">Tidak ada transaksi penjualan atau retur dalam periode yang dimuat.</div>
+            }
+
+            <div class="chart-scroll">
+                <div class="chart-layout" style="min-width:@(Math.Max(720, 140 + (comparisonYears + 1) * 12 * 16))px" aria-label="Grafik penjualan bersih per bulan. Nilai lengkap tersedia pada tabel di bawah.">
+                    <div class="chart-axis">
+                        @foreach (var tick in salesScale.Ticks)
+                        {
+                            <span class="axis-tick" style="bottom:@CssPercent(tick.Position)%">@Money(tick.Value)</span>
+                        }
+                    </div>
+                    <div class="chart-months">
+                        @foreach (var tick in salesScale.Ticks)
+                        {
+                            <div class="chart-grid-line" style="bottom:@CssPercent(tick.Position)%"></div>
+                        }
+                        <div class="chart-zero-line" style="bottom:@CssPercent(salesScale.ZeroPosition)%"></div>
+                        @for (var month = 1; month <= 12; month++)
+                        {
+                            var currentMonth = month;
+                            <div class="chart-month">
+                                <div class="chart-bars">
+                                    @foreach (var year in SelectedYears)
+                                    {
+                                        var value = GetValue(year, currentMonth);
+                                        <div class="bar-slot">
+                                            @if (value.HasValue && value.Value != 0)
+                                            {
+                                                <div class="chart-bar year-@(currentYear - year)" style="@BarStyle(value.Value, salesScale)" title="@MonthNames[currentMonth - 1] @year: @Money(value.Value) IDR"></div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <span class="month-label">@MonthNames[currentMonth - 1]</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sales-chart-panel mt-3">
+            <h2>Perbandingan Penjualan dan Pembelian</h2>
+            <p class="text-muted mb-0">Nilai bersih dalam IDR; retur mengurangi penjualan atau pembelian.</p>
+            <div class="chart-legend" aria-label="Keterangan tahun">
+                @foreach (var year in SelectedYears)
+                {
+                    <span><i class="legend-color year-@(currentYear - year)"></i>@year</span>
+                }
+            </div>
+            <div class="chart-legend chart-type-legend" aria-label="Keterangan jenis transaksi">
+                <span><i class="legend-color transaction-sample"></i>Penjualan</span>
+                <span><i class="legend-color transaction-sample purchase-bar"></i>Pembelian</span>
+            </div>
+            @if (monthlySales.Count == 0 && monthlyPurchases.Count == 0)
+            {
+                <div class="alert alert-light">Tidak ada transaksi penjualan atau pembelian dalam periode yang dimuat.</div>
+            }
+            <div class="chart-scroll">
+                <div class="chart-layout combined-chart" style="min-width:@(Math.Max(720, 140 + (comparisonYears + 1) * 12 * 28))px" aria-label="Grafik kolom penjualan dan pembelian bersih per bulan. Nilai lengkap tersedia pada tabel di bawah.">
+                    <div class="chart-axis">
+                        @foreach (var tick in combinedScale.Ticks)
+                        {
+                            <span class="axis-tick" style="bottom:@CssPercent(tick.Position)%">@Money(tick.Value)</span>
+                        }
+                    </div>
+                    <div class="chart-months">
+                        @foreach (var tick in combinedScale.Ticks)
+                        {
+                            <div class="chart-grid-line" style="bottom:@CssPercent(tick.Position)%"></div>
+                        }
+                        <div class="chart-zero-line" style="bottom:@CssPercent(combinedScale.ZeroPosition)%"></div>
+                        @for (var month = 1; month <= 12; month++)
+                        {
+                            var currentMonth = month;
+                            <div class="chart-month">
+                                <div class="chart-bars">
+                                    @foreach (var year in SelectedYears)
+                                    {
+                                        var sale = GetValue(year, currentMonth);
+                                        var purchase = GetPurchaseValue(year, currentMonth);
+                                        <div class="bar-slot">
+                                            @if (sale.HasValue && sale.Value != 0)
+                                            {
+                                                <div class="chart-bar year-@(currentYear - year)" style="@BarStyle(sale.Value, combinedScale)" title="Penjualan @MonthNames[currentMonth - 1] @year: @Money(sale.Value) IDR"></div>
+                                            }
+                                        </div>
+                                        <div class="bar-slot">
+                                            @if (purchase.HasValue && purchase.Value != 0)
+                                            {
+                                                <div class="chart-bar purchase-bar year-@(currentYear - year)" style="@BarStyle(purchase.Value, combinedScale)" title="Pembelian @MonthNames[currentMonth - 1] @year: @Money(purchase.Value) IDR"></div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <span class="month-label">@MonthNames[currentMonth - 1]</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <small class="text-muted">Pembelian menggunakan nilai rupiah tersimpan jika ada kurs, atau jumlah transaksi jika tidak ada kurs.</small>
+        </div>
+
+        <div class="sales-chart-panel mt-3">
+            <h2>Selisih Penjualan dan Pembelian</h2>
+            <p class="text-muted mb-0">Penjualan bersih dikurangi pembelian bersih per bulan (IDR); selisih ini bukan laba.</p>
+            <div class="chart-legend" aria-label="Keterangan tahun">
+                @foreach (var year in SelectedYears)
+                {
+                    <span><i class="legend-color year-@(currentYear - year)"></i>@year</span>
+                }
+            </div>
+            <div class="chart-scroll">
+                <div class="chart-layout" style="min-width:@(Math.Max(720, 140 + (comparisonYears + 1) * 12 * 16))px" aria-label="Grafik selisih penjualan dan pembelian bersih per bulan. Nilai lengkap tersedia pada tabel di bawah.">
+                    <div class="chart-axis">
+                        @foreach (var tick in differenceScale.Ticks)
+                        {
+                            <span class="axis-tick" style="bottom:@CssPercent(tick.Position)%">@Money(tick.Value)</span>
+                        }
+                    </div>
+                    <div class="chart-months">
+                        @foreach (var tick in differenceScale.Ticks)
+                        {
+                            <div class="chart-grid-line" style="bottom:@CssPercent(tick.Position)%"></div>
+                        }
+                        <div class="chart-zero-line" style="bottom:@CssPercent(differenceScale.ZeroPosition)%"></div>
+                        @for (var month = 1; month <= 12; month++)
+                        {
+                            var currentMonth = month;
+                            <div class="chart-month">
+                                <div class="chart-bars">
+                                    @foreach (var year in SelectedYears)
+                                    {
+                                        var value = GetDifferenceValue(year, currentMonth);
+                                        <div class="bar-slot">
+                                            @if (value.HasValue && value.Value != 0)
+                                            {
+                                                <div class="chart-bar year-@(currentYear - year)" style="@BarStyle(value.Value, differenceScale)" title="Selisih @MonthNames[currentMonth - 1] @year: @Money(value.Value) IDR"></div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <span class="month-label">@MonthNames[currentMonth - 1]</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle">
+                    <thead><tr><th scope="col">Bulan</th>@foreach (var year in SelectedYears) { <th scope="col" class="text-end">@year (IDR)</th> }</tr></thead>
+                    <tbody>
+                        @for (var month = 1; month <= 12; month++)
+                        {
+                            var currentMonth = month;
+                            <tr>
+                                <th scope="row">@MonthNames[currentMonth - 1]</th>
+                                @foreach (var year in SelectedYears)
+                                {
+                                    var value = GetDifferenceValue(year, currentMonth);
+                                    <td class="text-end">@(value.HasValue ? Money(value.Value) : "—")</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><th scope="row">Total</th>@foreach (var year in SelectedYears) { <th class="text-end">@Money(YearTotal(year) - PurchaseYearTotal(year))</th> }</tr></tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="sales-chart-panel mt-3">
+            <h2>Rincian Penjualan Bulanan</h2>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle">
+                    <thead><tr><th scope="col">Bulan</th>@foreach (var year in SelectedYears) { <th scope="col" class="text-end">@year (IDR)</th> }</tr></thead>
+                    <tbody>
+                        @for (var month = 1; month <= 12; month++)
+                        {
+                            var currentMonth = month;
+                            <tr>
+                                <th scope="row">@MonthNames[currentMonth - 1]</th>
+                                @foreach (var year in SelectedYears)
+                                {
+                                    var value = GetValue(year, currentMonth);
+                                    <td class="text-end">@(value.HasValue ? Money(value.Value) : "—")</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><th scope="row">Total</th>@foreach (var year in SelectedYears) { <th class="text-end">@Money(YearTotal(year))</th> }</tr></tfoot>
+                </table>
+            </div>
+            <small class="text-muted">Total tahun berjalan hingga tanggal di atas; total tahun pembanding mencakup setahun penuh. Tanda — menunjukkan bulan yang belum berjalan.</small>
+        </div>
+
+        <div class="sales-chart-panel mt-3">
+            <h2>Rincian Pembelian Bulanan</h2>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle">
+                    <thead><tr><th scope="col">Bulan</th>@foreach (var year in SelectedYears) { <th scope="col" class="text-end">@year (IDR)</th> }</tr></thead>
+                    <tbody>
+                        @for (var month = 1; month <= 12; month++)
+                        {
+                            var currentMonth = month;
+                            <tr>
+                                <th scope="row">@MonthNames[currentMonth - 1]</th>
+                                @foreach (var year in SelectedYears)
+                                {
+                                    var value = GetPurchaseValue(year, currentMonth);
+                                    <td class="text-end">@(value.HasValue ? Money(value.Value) : "—")</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><th scope="row">Total</th>@foreach (var year in SelectedYears) { <th class="text-end">@Money(PurchaseYearTotal(year))</th> }</tr></tfoot>
+                </table>
+            </div>
+            <small class="text-muted">Total tahun berjalan hingga tanggal di atas; total tahun pembanding mencakup setahun penuh. Tanda — menunjukkan bulan yang belum berjalan.</small>
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly CultureInfo IndonesianCulture = CultureInfo.GetCultureInfo("id-ID");
+    private static readonly string[] MonthNames = { "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des" };
+    private Dictionary<(int Year, int Month), decimal> monthlySales = new();
+    private Dictionary<(int Year, int Month), decimal> monthlyPurchases = new();
+    private DateTime? loadedDate;
+    private int currentYear = DateTime.Today.Year;
+    private int comparisonYears;
+    private bool isLoading;
+    private bool isExporting;
+    private bool exportFailed;
+    private string? errorMessage;
+    private string exportMessage = string.Empty;
+
+    private IEnumerable<int> SelectedYears => Enumerable.Range(0, comparisonYears + 1).Select(offset => currentYear - offset);
+    private IEnumerable<decimal> VisibleValues => SelectedYears.SelectMany(year => Enumerable.Range(1, 12).Select(month => GetValue(year, month))).Where(value => value.HasValue).Select(value => value!.Value);
+    private IEnumerable<decimal> CombinedValues => VisibleValues.Concat(SelectedYears.SelectMany(year => Enumerable.Range(1, 12).Select(month => GetPurchaseValue(year, month))).Where(value => value.HasValue).Select(value => value!.Value));
+    private IEnumerable<decimal> DifferenceValues => SelectedYears.SelectMany(year => Enumerable.Range(1, 12).Select(month => GetDifferenceValue(year, month))).Where(value => value.HasValue).Select(value => value!.Value);
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        ClearExportStatus();
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+            await Task.Yield();
+            var today = DateTime.Today;
+            var start = new DateTime(today.Year - 5, 1, 1);
+            var end = today.AddDays(1);
+            await using var db = new DbContextJual(DatabaseOptions);
+            var results = await db.OeTransHs.AsNoTracking()
+                .Where(x => x.Tanggal >= start && x.Tanggal < end && (x.Kode == "94" || x.Kode == "95"))
+                .GroupBy(x => new { x.Tanggal.Year, x.Tanggal.Month })
+                .Select(g => new { g.Key.Year, g.Key.Month, Total = g.Sum(x => x.Kode == "94" ? x.Jumlah : -x.Jumlah) })
+                .ToListAsync();
+            await using var purchaseDb = new DbContextBeli(PurchaseDatabaseOptions);
+            var purchaseResults = await purchaseDb.IrTransHs.AsNoTracking()
+                .Where(x => x.Tanggal >= start && x.Tanggal < end && (x.Kode == "82" || x.Kode == "83"))
+                .GroupBy(x => new { x.Tanggal.Year, x.Tanggal.Month })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    Total = g.Sum(x => x.Kode == "82"
+                        ? (x.Kurs > 0 ? x.Nilai : x.Jumlah)
+                        : -(x.Kurs > 0 ? x.Nilai : x.Jumlah))
+                })
+                .ToListAsync();
+            monthlySales = results.ToDictionary(x => (x.Year, x.Month), x => x.Total);
+            monthlyPurchases = purchaseResults.ToDictionary(x => (x.Year, x.Month), x => x.Total);
+            currentYear = today.Year;
+            loadedDate = today;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Gagal memuat grafik penjualan dan pembelian");
+            errorMessage = "Data penjualan dan pembelian belum dapat dimuat. Silakan coba kembali.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ExportPdfAsync()
+    {
+        if (!loadedDate.HasValue || isLoading || isExporting)
+            return;
+
+        isExporting = true;
+        ClearExportStatus();
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+            await Task.Yield();
+            var report = new SalesChartReport(loadedDate.Value, SelectedYears.ToArray(),
+                new Dictionary<(int Year, int Month), decimal>(monthlySales),
+                new Dictionary<(int Year, int Month), decimal>(monthlyPurchases));
+            var pdf = SalesChartPdfExporter.Generate(report);
+            using var stream = new MemoryStream(pdf);
+            using var streamRef = new DotNetStreamReference(stream);
+            await JS.InvokeVoidAsync("downloadFileFromStream", $"Grafik_Penjualan_Pembelian_{loadedDate.Value:yyyyMMdd}.pdf", streamRef);
+            exportMessage = "PDF telah disiapkan dan unduhan dimulai.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Gagal membuat PDF grafik penjualan dan pembelian");
+            exportFailed = true;
+            exportMessage = "PDF belum dapat dibuat atau diunduh. Silakan coba kembali.";
+        }
+        finally
+        {
+            isExporting = false;
+        }
+    }
+
+    private void ClearExportStatus()
+    {
+        exportFailed = false;
+        exportMessage = string.Empty;
+    }
+
+    private decimal? GetValue(int year, int month) => year == currentYear && month > loadedDate!.Value.Month
+        ? null
+        : monthlySales.GetValueOrDefault((year, month));
+
+    private decimal? GetPurchaseValue(int year, int month) => year == currentYear && month > loadedDate!.Value.Month
+        ? null
+        : monthlyPurchases.GetValueOrDefault((year, month));
+
+    private decimal? GetDifferenceValue(int year, int month) => GetValue(year, month) - GetPurchaseValue(year, month);
+
+    private decimal YearTotal(int year) => Enumerable.Range(1, 12).Sum(month => GetValue(year, month) ?? 0);
+    private decimal PurchaseYearTotal(int year) => Enumerable.Range(1, 12).Sum(month => GetPurchaseValue(year, month) ?? 0);
+    private static string Money(decimal value) => value.ToString("N0", IndonesianCulture);
+    private static string CssPercent(decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+    private static string BarStyle(decimal value, SalesChartScale scale)
+    {
+        var height = scale.Range == 0 ? 0 : Math.Abs(value) / scale.Range * 100;
+        var bottom = value < 0 ? scale.ZeroPosition - height : scale.ZeroPosition;
+        return $"height:{CssPercent(height)}%;bottom:{CssPercent(bottom)}%";
+    }
+}
