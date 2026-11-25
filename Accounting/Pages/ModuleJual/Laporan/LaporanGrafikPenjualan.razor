@@ -21,14 +21,14 @@
             <p class="text-muted mb-0">Penjualan bersih bulanan (penjualan dikurangi retur), dalam IDR.</p>
         </div>
         <div class="sales-chart-actions">
-            <button class="btn btn-outline-primary" @onclick="ExportPdfAsync" disabled="@(isLoading || isGroupLoading || isExporting || !loadedDate.HasValue || !string.IsNullOrEmpty(errorMessage))">
+            <button class="btn btn-outline-primary" @onclick="ExportPdfAsync" disabled="@(isLoading || isGroupLoading || isAnnualLoading || isExporting || !loadedDate.HasValue || !string.IsNullOrEmpty(errorMessage))">
                 @if (isExporting)
                 {
                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                 }
                 Simpan PDF
             </button>
-            <button class="btn btn-primary" @onclick="LoadAsync" disabled="@(isLoading || isGroupLoading || isExporting)">
+            <button class="btn btn-primary" @onclick="LoadAsync" disabled="@(isLoading || isGroupLoading || isAnnualLoading || isExporting)">
                 @if (isLoading)
                 {
                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
@@ -64,7 +64,7 @@
             <div class="sales-chart-controls">
                 <div>
                     <label for="comparisonYears" class="form-label">Tahun pembanding</label>
-                    <select id="comparisonYears" class="form-select" @bind="comparisonYears" @bind:after="OnComparisonYearsChanged" disabled="@(isExporting || isGroupLoading)">
+                    <select id="comparisonYears" class="form-select" @bind="comparisonYears" @bind:after="OnComparisonYearsChanged" disabled="@(isExporting || isGroupLoading || isAnnualLoading)">
                         <option value="0">Tanpa pembanding</option>
                         <option value="1">1 tahun sebelumnya</option>
                         <option value="2">2 tahun sebelumnya</option>
@@ -195,14 +195,14 @@
             <div class="sales-chart-controls">
                 <div>
                     <label for="groupYear" class="form-label">Tahun analisis</label>
-                    <select id="groupYear" class="form-select" @bind="groupYear" @bind:after="OnGroupYearChanged" disabled="@(isGroupLoading || isExporting)">
+                    <select id="groupYear" class="form-select" @bind="groupYear" @bind:after="OnGroupYearChanged" disabled="@(isGroupLoading || isAnnualLoading || isExporting)">
                         @foreach (var year in SelectedYears)
                         {
                             <option value="@year">@year</option>
                         }
                     </select>
                 </div>
-                <button class="btn btn-outline-primary" @onclick="LoadGroupAsync" disabled="@(isGroupLoading || isExporting)">
+                <button class="btn btn-outline-primary" @onclick="LoadGroupAsync" disabled="@(isGroupLoading || isAnnualLoading || isExporting)">
                     @if (isGroupLoading)
                     {
                         <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
@@ -227,6 +227,13 @@
                     <div class="alert alert-warning" role="alert">Total transaksi berubah sejak grafik dimuat. Refresh Data dan muat ulang analisis agar periode yang sama dapat dibandingkan.</div>
                 }
                 <h3 class="h6 mt-3">Peringkat berdasarkan nilai penjualan bersih (IDR)</h3>
+                <div class="mb-3">
+                    <label for="itemSort" class="form-label">Urutkan rincian item berdasarkan</label>
+                    <select id="itemSort" class="form-select w-auto" @bind="itemSort" @bind:after="OnItemSortChanged" disabled="@isExporting">
+                        <option value="quantity">Jumlah terjual</option>
+                        <option value="amount">Nilai penjualan</option>
+                    </select>
+                </div>
                 @if (groupResult.Values.Count == 0)
                 {
                     <p class="text-muted">Tidak ada transaksi dalam periode ini.</p>
@@ -240,7 +247,15 @@
                                 @foreach (var entry in groupResult.Values)
                                 {
                                     <tr>
-                                        <th scope="row">@entry.Group</th>
+                                        <th scope="row">
+                                            @entry.Group
+                                            @if (entry.Items.Count > 0)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-primary ms-2" @onclick="() => ToggleGroup(entry.Id)" aria-expanded="@(expandedGroupId == entry.Id)">
+                                                    @(expandedGroupId == entry.Id ? "Tutup rincian" : $"Rincian item ({entry.Items.Count})")
+                                                </button>
+                                            }
+                                        </th>
                                         <td>
                                             <div class="group-value-chart" aria-hidden="true">
                                                 <div class="group-value-zero" style="left:@CssPercent(groupScale.ZeroPosition)%"></div>
@@ -252,37 +267,159 @@
                                         </td>
                                         <td class="text-end">@DetailedNumber(entry.Amount)</td>
                                     </tr>
+                                    @if (expandedGroupId == entry.Id)
+                                    {
+                                        var orderedItems = SortGroupItems(entry.Items);
+                                        var pageCount = (entry.Items.Count + ItemPageSize - 1) / ItemPageSize;
+                                        <tr>
+                                            <td colspan="3">
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-striped align-middle mb-2">
+                                                        <caption class="caption-top">Rincian item: @entry.Group</caption>
+                                                        <thead><tr><th scope="col">Kode item</th><th scope="col">Nama item</th><th scope="col" class="text-end">Qty bersih</th><th scope="col" class="text-end">Nilai bersih (IDR)</th></tr></thead>
+                                                        <tbody>
+                                                            @foreach (var item in orderedItems.Skip(itemPage * ItemPageSize).Take(ItemPageSize))
+                                                            {
+                                                                <tr>
+                                                                    <td>@(string.IsNullOrEmpty(item.Code) ? "—" : item.Code)</td>
+                                                                    <th scope="row">@item.Name</th>
+                                                                    <td class="text-end">@DetailedNumber(item.Quantity)@(item.UnitWarning ? " *" : "")</td>
+                                                                    <td class="text-end">@DetailedNumber(item.Amount)</td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                @if (pageCount > 1)
+                                                {
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="PreviousItemPage" disabled="@(itemPage == 0)">Sebelumnya</button>
+                                                        <span>Halaman @(itemPage + 1) dari @pageCount</span>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="NextItemPage" disabled="@(itemPage + 1 >= pageCount)">Berikutnya</button>
+                                                    </div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
                                 }
                             </tbody>
                             <tfoot><tr><th scope="row" colspan="2">Total</th><th class="text-end">@DetailedNumber(groupResult.HeaderTotal)</th></tr></tfoot>
                         </table>
                     </div>
                 }
-                <h3 class="h6 mt-3">Peringkat berdasarkan jumlah bersih per satuan</h3>
-                @if (groupResult.Quantities.Count == 0)
+                @if (groupResult.Values.Any(group => group.Items.Any(item => item.UnitWarning)))
                 {
-                    <p class="text-muted">Tidak ada detail jumlah dengan satuan dalam periode ini.</p>
+                    <div class="alert alert-warning" role="alert">* Qty dijumlahkan tanpa konversi; item bertanda memiliki satuan berbeda atau kosong sehingga jumlahnya perlu diperiksa.</div>
                 }
-                @foreach (var unitGroup in groupResult.Quantities.GroupBy(x => x.Unit))
+                <small class="text-muted">Nilai faktur dialokasikan sesuai proporsi nilai detail; retur dikurangi. Qty dijumlahkan sesuai transaksi tanpa konversi satuan. Group mengikuti master item saat ini. Faktur dengan detail kosong atau total detail nol: @groupResult.UnallocatedDocuments; nilainya ditampilkan sebagai nilai tidak teralokasi.</small>
+            }
+        </div>
+
+        <div class="sales-chart-panel mt-3">
+            <h2>Perbandingan Tahunan Group dan Item</h2>
+            <p class="text-muted">Gunakan pilihan tahun pembanding di atas. Tahun @currentYear sampai @loadedDate.Value.ToString("dd MMMM yyyy", IndonesianCulture); tahun sebelumnya setahun penuh, sehingga periodenya belum setara.</p>
+            <button class="btn btn-outline-primary" @onclick="LoadAnnualAsync" disabled="@(comparisonYears == 0 || isAnnualLoading || isGroupLoading || isExporting)">
+                @if (isAnnualLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                }
+                Muat Perbandingan Tahunan
+            </button>
+            @if (comparisonYears == 0)
+            {
+                <small class="d-block text-muted mt-2">Pilih minimal satu tahun pembanding untuk memuat perbandingan.</small>
+            }
+            @if (isAnnualLoading)
+            {
+                <div class="alert alert-info mt-3" role="status">Memuat perbandingan tahunan group dan item, mohon tunggu...</div>
+            }
+            else if (!string.IsNullOrEmpty(annualError))
+            {
+                <div class="alert alert-danger mt-3" role="alert">@annualError</div>
+            }
+            else if (annualResult is not null)
+            {
+                <div class="alert alert-success mt-3" role="status">Perbandingan tahunan selesai dimuat.</div>
+                @if (annualResult.HeaderTotals.Any(x => x.Value != YearTotal(x.Key)))
+                {
+                    <div class="alert alert-warning" role="alert">Total transaksi berubah sejak grafik dimuat. Refresh Data dan muat ulang perbandingan agar periode yang sama dapat dibandingkan.</div>
+                }
+                <div class="mb-3">
+                    <label for="annualItemSort" class="form-label">Urutkan item berdasarkan tahun @annualResult.Years[0]</label>
+                    <select id="annualItemSort" class="form-select w-auto" @bind="annualItemSort" @bind:after="OnAnnualSortChanged" disabled="@isExporting">
+                        <option value="quantity">Qty bersih</option>
+                        <option value="amount">Nilai bersih</option>
+                    </select>
+                </div>
+                @if (annualResult.Groups.Count == 0)
+                {
+                    <p class="text-muted">Tidak ada transaksi dalam tahun yang dipilih.</p>
+                }
+                else
                 {
                     <div class="table-responsive">
                         <table class="table table-sm table-striped align-middle">
-                            <caption class="caption-top">Satuan: @unitGroup.Key</caption>
-                            <thead><tr><th scope="col">Group</th><th scope="col" class="text-end">Jumlah bersih</th></tr></thead>
+                            <thead><tr><th scope="col">Group</th>@foreach (var year in annualResult.Years) { <th scope="col" class="text-end">@year (IDR)</th> }</tr></thead>
                             <tbody>
-                                @foreach (var entry in unitGroup)
+                                @foreach (var group in annualResult.Groups)
                                 {
-                                    <tr><th scope="row">@entry.Group</th><td class="text-end">@DetailedNumber(entry.Quantity)</td></tr>
+                                    <tr>
+                                        <th scope="row">
+                                            @group.Group
+                                            @if (group.Items.Count > 0)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-primary ms-2" @onclick="() => ToggleAnnualGroup(group.Id)" aria-expanded="@(expandedAnnualGroupId == group.Id)">@(expandedAnnualGroupId == group.Id ? "Tutup rincian" : $"Rincian item ({group.Items.Count})")</button>
+                                            }
+                                        </th>
+                                        @foreach (var year in annualResult.Years) { <td class="text-end">@DetailedNumber(group.Values.GetValueOrDefault(year))</td> }
+                                    </tr>
+                                    @if (expandedAnnualGroupId == group.Id)
+                                    {
+                                        var sortedItems = SalesGroupAnnualAnalysis.SortItems(group.Items, annualResult.Years[0], annualSortByQuantity);
+                                        var pages = (group.Items.Count + ItemPageSize - 1) / ItemPageSize;
+                                        <tr><td colspan="@(annualResult.Years.Count + 1)">
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-striped align-middle mb-2">
+                                                    <caption class="caption-top">Rincian tahunan: @group.Group</caption>
+                                                    <thead><tr><th scope="col">Kode item</th><th scope="col">Nama item</th>@foreach (var year in annualResult.Years) { <th scope="col" class="text-end">Qty @year</th><th scope="col" class="text-end">Nilai @year (IDR)</th> }</tr></thead>
+                                                    <tbody>
+                                                        @foreach (var item in sortedItems.Skip(annualItemPage * ItemPageSize).Take(ItemPageSize))
+                                                        {
+                                                            <tr>
+                                                                <td>@(string.IsNullOrEmpty(item.Code) ? "—" : item.Code)</td>
+                                                                <th scope="row">@item.Name@(item.UnitWarning ? " *" : "")</th>
+                                                                @foreach (var year in annualResult.Years)
+                                                                {
+                                                                    var value = item.Values.GetValueOrDefault(year);
+                                                                    <td class="text-end">@DetailedNumber(value?.Quantity ?? 0)</td>
+                                                                    <td class="text-end">@DetailedNumber(value?.Amount ?? 0)</td>
+                                                                }
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            @if (pages > 1)
+                                            {
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="PreviousAnnualPage" disabled="@(annualItemPage == 0)">Sebelumnya</button>
+                                                    <span>Halaman @(annualItemPage + 1) dari @pages</span>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="NextAnnualPage" disabled="@(annualItemPage + 1 >= pages)">Berikutnya</button>
+                                                </div>
+                                            }
+                                        </td></tr>
+                                    }
                                 }
                             </tbody>
+                            <tfoot><tr><th scope="row">Total</th>@foreach (var year in annualResult.Years) { <th class="text-end">@DetailedNumber(annualResult.HeaderTotals[year])</th> }</tr></tfoot>
                         </table>
                     </div>
                 }
-                @if (groupResult.HasUnknownUnitQuantities)
+                @if (annualResult.Groups.Any(group => group.Items.Any(item => item.UnitWarning)))
                 {
-                    <div class="alert alert-warning" role="alert">Jumlah pada detail tanpa satuan tidak dimasukkan dalam peringkat jumlah. Periksa satuan pada transaksi terkait.</div>
+                    <div class="alert alert-warning" role="alert">* Qty dijumlahkan tanpa konversi; item bertanda memiliki satuan berbeda atau kosong dalam tahun yang dipilih.</div>
                 }
-                <small class="text-muted">Total faktur dialokasikan sesuai proporsi nilai detail; retur dikurangi. Group mengikuti master item saat ini. Satuan berbeda tidak dijumlahkan. Faktur dengan detail kosong atau total detail nol: @groupResult.UnallocatedDocuments.</small>
+                <small class="text-muted">Nilai bersih adalah penjualan dikurangi retur dan dialokasikan dari total faktur. Group mengikuti master item saat ini. Nilai tanpa dasar detail ditampilkan sebagai nilai tidak teralokasi.</small>
             }
         </div>
 
@@ -409,6 +546,7 @@
 #nullable enable
     private static readonly CultureInfo IndonesianCulture = CultureInfo.GetCultureInfo("id-ID");
     private static readonly string[] MonthNames = { "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des" };
+    private const int ItemPageSize = 100;
     private Dictionary<(int Year, int Month), decimal> monthlySales = new();
     private Dictionary<(int Year, int Month), decimal> monthlyPurchases = new();
     private DateTime? loadedDate;
@@ -417,12 +555,33 @@
     private int groupYear;
     private bool isLoading;
     private bool isGroupLoading;
+    private bool isAnnualLoading;
     private bool isExporting;
     private bool exportFailed;
     private string? errorMessage;
     private string exportMessage = string.Empty;
     private string? groupError;
     private SalesGroupResult? groupResult;
+    private string? expandedGroupId;
+    private int itemPage;
+    private bool sortItemsByQuantity = true;
+    private SalesGroupAnnualResult? annualResult;
+    private string? annualError;
+    private string? expandedAnnualGroupId;
+    private int annualItemPage;
+    private bool annualSortByQuantity = true;
+
+    private string itemSort
+    {
+        get => sortItemsByQuantity ? "quantity" : "amount";
+        set => sortItemsByQuantity = value == "quantity";
+    }
+
+    private string annualItemSort
+    {
+        get => annualSortByQuantity ? "quantity" : "amount";
+        set => annualSortByQuantity = value == "quantity";
+    }
 
     private IEnumerable<int> SelectedYears => Enumerable.Range(0, comparisonYears + 1).Select(offset => currentYear - offset);
     private IEnumerable<decimal> VisibleValues => SelectedYears.SelectMany(year => Enumerable.Range(1, 12).Select(month => GetValue(year, month))).Where(value => value.HasValue).Select(value => value!.Value);
@@ -437,6 +596,10 @@
         errorMessage = null;
         groupResult = null;
         groupError = null;
+        expandedGroupId = null;
+        annualResult = null;
+        annualError = null;
+        expandedAnnualGroupId = null;
         ClearExportStatus();
         try
         {
@@ -483,17 +646,20 @@
 
     private async Task LoadGroupAsync()
     {
-        if (!loadedDate.HasValue || isLoading || isGroupLoading || isExporting || !SelectedYears.Contains(groupYear))
+        if (!loadedDate.HasValue || isLoading || isGroupLoading || isAnnualLoading || isExporting || !SelectedYears.Contains(groupYear))
             return;
         isGroupLoading = true;
         groupResult = null;
         groupError = null;
+        expandedGroupId = null;
         ClearExportStatus();
         try
         {
             await InvokeAsync(StateHasChanged);
             await Task.Yield();
             groupResult = await SalesGroupAnalysis.LoadAsync(DatabaseOptions, InventoryDatabaseOptions, groupYear, loadedDate.Value);
+            expandedGroupId = groupResult.Values.FirstOrDefault(group => group.Items.Count > 0)?.Id;
+            itemPage = 0;
         }
         catch (Exception ex)
         {
@@ -508,11 +674,15 @@
 
     private void OnComparisonYearsChanged()
     {
+        annualResult = null;
+        annualError = null;
+        expandedAnnualGroupId = null;
         if (!SelectedYears.Contains(groupYear))
         {
             groupYear = currentYear;
             groupResult = null;
             groupError = null;
+            expandedGroupId = null;
         }
         ClearExportStatus();
     }
@@ -521,12 +691,73 @@
     {
         groupResult = null;
         groupError = null;
+        expandedGroupId = null;
         ClearExportStatus();
     }
 
+    private void ToggleGroup(string id)
+    {
+        expandedGroupId = expandedGroupId == id ? null : id;
+        itemPage = 0;
+    }
+
+    private void OnItemSortChanged()
+    {
+        itemPage = 0;
+        ClearExportStatus();
+    }
+
+    private void PreviousItemPage() => itemPage = Math.Max(0, itemPage - 1);
+    private void NextItemPage() => itemPage++;
+    private IEnumerable<SalesGroupItemTotal> SortGroupItems(IReadOnlyList<SalesGroupItemTotal> items) =>
+        SalesGroupAnalysis.SortItems(items, sortItemsByQuantity);
+
+    private async Task LoadAnnualAsync()
+    {
+        if (!loadedDate.HasValue || comparisonYears == 0 || isLoading || isGroupLoading || isAnnualLoading || isExporting)
+            return;
+        isAnnualLoading = true;
+        annualResult = null;
+        annualError = null;
+        expandedAnnualGroupId = null;
+        ClearExportStatus();
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+            await Task.Yield();
+            annualResult = await SalesGroupAnnualAnalysis.LoadAsync(DatabaseOptions, InventoryDatabaseOptions, SelectedYears.ToArray(), loadedDate.Value);
+            expandedAnnualGroupId = annualResult.Groups.FirstOrDefault(group => group.Items.Count > 0)?.Id;
+            annualItemPage = 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Gagal memuat perbandingan tahunan group dan item");
+            annualError = "Perbandingan tahunan belum dapat dimuat. Silakan coba kembali.";
+        }
+        finally
+        {
+            isAnnualLoading = false;
+        }
+    }
+
+    private void ToggleAnnualGroup(string id)
+    {
+        expandedAnnualGroupId = expandedAnnualGroupId == id ? null : id;
+        annualItemPage = 0;
+    }
+
+    private void OnAnnualSortChanged()
+    {
+        annualItemPage = 0;
+        ClearExportStatus();
+    }
+
+    private void PreviousAnnualPage() => annualItemPage = Math.Max(0, annualItemPage - 1);
+    private void NextAnnualPage() => annualItemPage++;
+
     private async Task ExportPdfAsync()
     {
-        if (!loadedDate.HasValue || isLoading || isGroupLoading || isExporting)
+        if (!loadedDate.HasValue || isLoading || isGroupLoading || isAnnualLoading || isExporting)
             return;
 
         isExporting = true;
@@ -538,7 +769,7 @@
             var report = new SalesChartReport(loadedDate.Value, SelectedYears.ToArray(),
                 new Dictionary<(int Year, int Month), decimal>(monthlySales),
                 new Dictionary<(int Year, int Month), decimal>(monthlyPurchases),
-                groupResult, groupResult is null ? null : YearTotal(groupResult.Year));
+                groupResult, groupResult is null ? null : YearTotal(groupResult.Year), sortItemsByQuantity, annualResult, annualSortByQuantity);
             var pdf = SalesChartPdfExporter.Generate(report);
             using var stream = new MemoryStream(pdf);
             using var streamRef = new DotNetStreamReference(stream);

@@ -33,6 +33,7 @@
 - Cash-bank CbTransD.Terima/Bayar can be mixed currencies: identify their currency from CbTransH.Kurs, group totals by that currency, and never aggregate amounts with missing currency codes.
 - Search both header and detail descriptions, counting each matching document once and totaling all its detail lines. 
 - For sales, OeTransH.Jumlah and receivable ArPiutng.Sisa are always IDR; sales compare code 94 less 95 and show no percentage when previous net sales are nonpositive.
+- For the sales report's annual comparison PDF, show item quantity and net sales value together in one table per group, matching the browser rather than separate quantity and value tables.
 
 ## API Setup Guidelines
 - For the user's Gemini restricted API-key dialog, use Request permission (not Write) when guiding the setup of Asisten Bos.

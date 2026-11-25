@@ -14,7 +14,10 @@ public sealed record SalesChartReport(
     IReadOnlyDictionary<(int Year, int Month), decimal> Sales,
     IReadOnlyDictionary<(int Year, int Month), decimal> Purchases,
     SalesGroupResult? GroupAnalysis = null,
-    decimal? GroupChartTotal = null);
+    decimal? GroupChartTotal = null,
+    bool SortItemsByQuantity = true,
+    SalesGroupAnnualResult? AnnualComparison = null,
+    bool SortAnnualItemsByQuantity = true);
 
 public static class SalesChartPdfExporter
 {
@@ -75,7 +78,97 @@ public static class SalesChartPdfExporter
             });
             if (report.GroupAnalysis is not null)
                 AddGroupAnalysisPage(document, report, report.GroupAnalysis);
+            if (report.AnnualComparison is not null)
+                AddAnnualComparisonPage(document, report, report.AnnualComparison);
         }).GeneratePdf();
+    }
+
+    private static void AddAnnualComparisonPage(IDocumentContainer document, SalesChartReport report, SalesGroupAnnualResult analysis)
+    {
+        document.Page(page =>
+        {
+            ConfigurePage(page, report, "Perbandingan Tahunan Group dan Item", analysis.Years.Count > 4);
+            page.Content().PaddingVertical(8).Column(column =>
+            {
+                column.Spacing(8);
+                column.Item().Text($"Tahun {report.AsOfDate.Year} sampai {report.AsOfDate.ToString("dd MMMM yyyy", IndonesianCulture)}; tahun sebelumnya setahun penuh, sehingga periodenya belum setara.").FontSize(8);
+                if (analysis.HeaderTotals.Any(x => x.Value != report.Sales.Where(sale => sale.Key.Year == x.Key).Sum(sale => sale.Value)))
+                    column.Item().Text("Total transaksi berubah sejak grafik dimuat; refresh data dan muat ulang perbandingan.").FontColor(Colors.Red.Darken2).FontSize(8);
+                column.Item().Text("Nilai penjualan bersih per group (IDR)").FontSize(11).Bold();
+                if (analysis.Groups.Count == 0)
+                    column.Item().Text("Tidak ada transaksi dalam tahun yang dipilih.");
+                else
+                    column.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(2.5f);
+                            foreach (var _ in analysis.Years) columns.RelativeColumn(1.6f);
+                        });
+                        table.Header(header =>
+                        {
+                            header.Cell().Element(HeaderCell).Text("Group");
+                            foreach (var year in analysis.Years) header.Cell().Element(HeaderCell).AlignRight().Text(year.ToString(CultureInfo.InvariantCulture));
+                        });
+                        foreach (var group in analysis.Groups)
+                        {
+                            table.Cell().Element(BodyCell).Text(group.Group);
+                            foreach (var year in analysis.Years) table.Cell().Element(BodyCell).AlignRight().Text(DetailedNumber(group.Values.GetValueOrDefault(year))).FontSize(7);
+                        }
+                        table.Cell().Element(HeaderCell).Text("Total");
+                        foreach (var year in analysis.Years) table.Cell().Element(HeaderCell).AlignRight().Text(DetailedNumber(analysis.HeaderTotals[year])).FontSize(7);
+                    });
+                column.Item().Text(report.SortAnnualItemsByQuantity ? "Item diurutkan berdasarkan qty tahun terbaru" : "Item diurutkan berdasarkan nilai tahun terbaru").FontSize(9);
+                foreach (var group in analysis.Groups.Where(x => x.Items.Count > 0))
+                {
+                    AddAnnualItemsTable(column, analysis, group, report.SortAnnualItemsByQuantity);
+                }
+                if (analysis.Groups.Any(group => group.Items.Any(item => item.UnitWarning)))
+                    column.Item().Text("* Qty dijumlahkan tanpa konversi; item bertanda memiliki satuan berbeda atau kosong dalam tahun yang dipilih.").FontColor(Colors.Red.Darken2).FontSize(8);
+                column.Item().Text("Nilai bersih adalah penjualan dikurangi retur dan dialokasikan dari total faktur. Group mengikuti master item saat ini. Nilai tanpa dasar detail ditampilkan sebagai nilai tidak teralokasi.").FontSize(8);
+            });
+        });
+    }
+
+    private static void AddAnnualItemsTable(ColumnDescriptor column, SalesGroupAnnualResult analysis, SalesGroupAnnualGroup group, bool sortByQuantity)
+    {
+        column.Item().Table(table =>
+        {
+            table.ColumnsDefinition(columns =>
+            {
+                columns.RelativeColumn(1.5f);
+                columns.RelativeColumn(2.5f);
+                foreach (var _ in analysis.Years)
+                {
+                    columns.RelativeColumn(1.1f);
+                    columns.RelativeColumn(1.9f);
+                }
+            });
+            table.Header(header =>
+            {
+                header.Cell().ColumnSpan((uint)(analysis.Years.Count * 2 + 2)).Element(HeaderCell).Text(group.Group).Bold();
+                header.Cell().RowSpan(2).Element(HeaderCell).Text("Kode");
+                header.Cell().RowSpan(2).Element(HeaderCell).Text("Nama item");
+                foreach (var year in analysis.Years)
+                    header.Cell().ColumnSpan(2).Element(HeaderCell).AlignCenter().Text(year.ToString(CultureInfo.InvariantCulture));
+                foreach (var _ in analysis.Years)
+                {
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Qty").FontSize(7);
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Nilai (IDR)").FontSize(7);
+                }
+            });
+            foreach (var item in SalesGroupAnnualAnalysis.SortItems(group.Items, analysis.Years[0], sortByQuantity))
+            {
+                table.Cell().Element(BodyCell).Text(string.IsNullOrEmpty(item.Code) ? "-" : item.Code).FontSize(7);
+                table.Cell().Element(BodyCell).Text(item.Name + (item.UnitWarning ? " *" : "")).FontSize(7);
+                foreach (var year in analysis.Years)
+                {
+                    var value = item.Values.GetValueOrDefault(year);
+                    table.Cell().Element(BodyCell).AlignRight().Text(DetailedNumber(value?.Quantity ?? 0)).FontSize(7);
+                    table.Cell().Element(BodyCell).AlignRight().Text(DetailedNumber(value?.Amount ?? 0)).FontSize(7);
+                }
+            }
+        });
     }
 
     private static void AddGroupAnalysisPage(IDocumentContainer document, SalesChartReport report, SalesGroupResult analysis)
@@ -109,36 +202,39 @@ public static class SalesChartPdfExporter
                         table.Cell().Element(HeaderCell).Text("Total");
                         table.Cell().Element(HeaderCell).AlignRight().Text(DetailedNumber(analysis.HeaderTotal));
                     });
-                column.Item().Text("Peringkat berdasarkan jumlah bersih per satuan").FontSize(11).Bold();
-                if (analysis.Quantities.Count == 0)
-                    column.Item().Text("Tidak ada detail jumlah dengan satuan dalam periode ini.");
-                else
+                column.Item().Text(report.SortItemsByQuantity ? "Rincian item diurutkan berdasarkan qty bersih" : "Rincian item diurutkan berdasarkan nilai bersih").FontSize(11).Bold();
+                foreach (var group in analysis.Values.Where(x => x.Items.Count > 0))
+                {
                     column.Item().Table(table =>
                     {
-                        table.ColumnsDefinition(columns => { columns.RelativeColumn(2); columns.RelativeColumn(3); columns.RelativeColumn(2); });
+                        table.ColumnsDefinition(columns => { columns.RelativeColumn(2); columns.RelativeColumn(5); columns.RelativeColumn(2); columns.RelativeColumn(2.5f); });
                         table.Header(header =>
                         {
-                            header.Cell().Element(HeaderCell).Text("Satuan");
-                            header.Cell().Element(HeaderCell).Text("Group");
-                            header.Cell().Element(HeaderCell).AlignRight().Text("Jumlah bersih");
+                            header.Cell().ColumnSpan(4).Element(HeaderCell).Text($"{group.Group} — Nilai bersih: {DetailedNumber(group.Amount)} IDR").Bold();
+                            header.Cell().Element(HeaderCell).Text("Kode item");
+                            header.Cell().Element(HeaderCell).Text("Nama item");
+                            header.Cell().Element(HeaderCell).AlignRight().Text("Qty bersih");
+                            header.Cell().Element(HeaderCell).AlignRight().Text("Nilai bersih (IDR)");
                         });
-                        foreach (var quantity in analysis.Quantities)
+                        foreach (var item in SalesGroupAnalysis.SortItems(group.Items, report.SortItemsByQuantity))
                         {
-                            table.Cell().Element(BodyCell).Text(quantity.Unit);
-                            table.Cell().Element(BodyCell).Text(quantity.Group);
-                            table.Cell().Element(BodyCell).AlignRight().Text(DetailedNumber(quantity.Quantity));
+                            table.Cell().Element(BodyCell).Text(string.IsNullOrEmpty(item.Code) ? "-" : item.Code);
+                            table.Cell().Element(BodyCell).Text(item.Name);
+                            table.Cell().Element(BodyCell).AlignRight().Text(DetailedNumber(item.Quantity) + (item.UnitWarning ? " *" : ""));
+                            table.Cell().Element(BodyCell).AlignRight().Text(DetailedNumber(item.Amount));
                         }
                     });
-                if (analysis.HasUnknownUnitQuantities)
-                    column.Item().Text("Jumlah pada detail tanpa satuan tidak dimasukkan dalam peringkat jumlah. Periksa satuan pada transaksi terkait.").FontColor(Colors.Red.Darken2).FontSize(8);
-                column.Item().Text($"Total faktur dialokasikan sesuai proporsi nilai detail; retur dikurangi. Group mengikuti master item saat ini. Satuan berbeda tidak dijumlahkan. Faktur dengan detail kosong atau total detail nol: {analysis.UnallocatedDocuments}.").FontSize(8);
+                }
+                if (analysis.Values.Any(group => group.Items.Any(item => item.UnitWarning)))
+                    column.Item().Text("* Qty dijumlahkan tanpa konversi; item bertanda memiliki satuan berbeda atau kosong sehingga jumlahnya perlu diperiksa.").FontColor(Colors.Red.Darken2).FontSize(8);
+                column.Item().Text($"Nilai faktur dialokasikan sesuai proporsi nilai detail; retur dikurangi. Qty dijumlahkan sesuai transaksi tanpa konversi satuan. Group mengikuti master item saat ini. Faktur dengan detail kosong atau total detail nol: {analysis.UnallocatedDocuments}; nilainya ditampilkan sebagai nilai tidak teralokasi.").FontSize(8);
             });
         });
     }
 
-    private static void ConfigurePage(PageDescriptor page, SalesChartReport report, string title)
+    private static void ConfigurePage(PageDescriptor page, SalesChartReport report, string title, bool wide = false)
     {
-        page.Size(PageSizes.A4.Landscape());
+        page.Size(wide ? PageSizes.A3.Landscape() : PageSizes.A4.Landscape());
         page.Margin(24);
         page.DefaultTextStyle(style => style.FontSize(9).FontColor(Colors.Grey.Darken4));
         page.Header().Column(column =>
